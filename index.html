@@ -36,10 +36,6 @@
     display:flex;align-items:center;justify-content:center;margin-bottom:4px}
   .send:hover{background:var(--earth-deep)}
   .send svg{width:18px;height:18px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
-  .chip{border:1px solid var(--line);background:rgba(255,255,255,.6);color:var(--ink);
-    border-radius:999px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit}
-  .chip:hover{background:#fff;border-color:var(--sky-deep)}
   .send:disabled{opacity:.55;cursor:default}
   .thread{display:none;margin-top:20px;text-align:left}
   .thread.show{display:block}
@@ -55,7 +51,6 @@
   body.chatting .center{justify-content:flex-start;padding-top:28px}
   body.chatting .logo,body.chatting h1{display:none}
   body.chatting .thread{padding-bottom:190px}
-  body.chatting .chips{display:none!important}
   body.chatting .composer-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;
     display:flex;flex-direction:column;align-items:center;
     padding:24px 20px 22px;
@@ -90,13 +85,6 @@
         </button>
       </div>
 
-      <div class="chips" id="chips">
-        <button class="chip" type="button">Should I take this deal?</button>
-        <button class="chip" type="button">How do I lead through a layoff?</button>
-        <button class="chip" type="button">Is it okay to walk away from a partner?</button>
-        <button class="chip" type="button">Help me build my next big idea</button>
-      </div>
-
       <div class="emailstep" id="emailStep">
         <p>Want to save this answer or get early access when Biblicall fully launches? Leave your email below.</p>
         <form class="emailrow" id="emailForm" action="mailto:hello@biblicall.com" method="post" enctype="text/plain">
@@ -117,7 +105,6 @@
 
   const q = document.getElementById('q');
   const sendBtn = document.getElementById('sendBtn');
-  const chips = document.getElementById('chips');
   const threadBox = document.getElementById('thread');
   const emailStep = document.getElementById('emailStep');
   const emailForm = document.getElementById('emailForm');
@@ -125,14 +112,6 @@
   let conversation = [];
 
   q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = q.scrollHeight + 'px'; });
-
-  chips.addEventListener('click', (e) => {
-    if (e.target.classList.contains('chip')) {
-      q.value = e.target.textContent;
-      q.dispatchEvent(new Event('input'));
-      q.focus();
-    }
-  });
 
   function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -175,7 +154,6 @@
     if (question.length === 0) { q.focus(); return; }
 
     document.body.classList.add('chatting');
-    chips.style.display = 'none';
     sendBtn.disabled = true;
     q.value = '';
     q.style.height = 'auto';
