@@ -54,14 +54,15 @@
   .emailstep{display:none;margin-top:18px;text-align:left}
   body.chatting .center{justify-content:flex-start;padding-top:28px}
   body.chatting .logo,body.chatting h1{display:none}
-  body.chatting .thread{padding-bottom:150px}
-  body.chatting .emailstep{margin-bottom:150px}
+  body.chatting .thread{padding-bottom:190px}
   body.chatting .chips{display:none!important}
   body.chatting .composer-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;
     display:flex;flex-direction:column;align-items:center;
     padding:24px 20px 22px;
     background:linear-gradient(180deg, rgba(207,231,246,0) 0%, var(--sky-bottom) 45%)}
   body.chatting .composer-dock .composer{width:100%;max-width:680px}
+  body.chatting .composer-dock .emailstep{width:100%;max-width:680px;margin-top:14px}
+  body.chatting .composer-dock .emailstep p{font-size:13px;margin:0 0 8px}
   .emailstep.show{display:block}
   .emailstep p{font-size:14px;color:var(--muted);margin:0 0 10px}
   .emailrow{display:flex;gap:8px;flex-wrap:wrap}
@@ -95,17 +96,17 @@
         <button class="chip" type="button">Is it okay to walk away from a partner?</button>
         <button class="chip" type="button">Help me build my next big idea</button>
       </div>
+
+      <div class="emailstep" id="emailStep">
+        <p>Want to save this answer or get early access when Biblicall fully launches? Leave your email below.</p>
+        <form class="emailrow" id="emailForm" action="mailto:hello@biblicall.com" method="post" enctype="text/plain">
+          <input type="email" id="email" name="email" placeholder="you@email.com" required>
+          <button type="submit">Notify Me</button>
+        </form>
+      </div>
     </div>
 
     <div class="thread" id="thread"></div>
-
-    <div class="emailstep" id="emailStep">
-      <p>Want to save this answer or get early access when Biblicall fully launches? Leave your email below.</p>
-      <form class="emailrow" id="emailForm" action="mailto:hello@biblicall.com" method="post" enctype="text/plain">
-        <input type="email" id="email" name="email" placeholder="you@email.com" required>
-        <button type="submit">Notify Me</button>
-      </form>
-    </div>
   </div>
 </div>
 
