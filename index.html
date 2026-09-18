@@ -40,6 +40,12 @@
   .chip{border:1px solid var(--line);background:rgba(255,255,255,.6);color:var(--ink);
     border-radius:999px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit}
   .chip:hover{background:#fff;border-color:var(--sky-deep)}
+  .send:disabled{opacity:.55;cursor:default}
+  .answer{display:none;margin-top:20px;text-align:left;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;padding:22px 24px;
+    font-size:16px;line-height:1.65;color:var(--ink);white-space:pre-wrap}
+  .answer.show{display:block}
+  .answer.loading{color:var(--muted);font-style:italic}
   .emailstep{display:none;margin-top:18px;text-align:left}
   .emailstep.show{display:block}
   .emailstep p{font-size:14px;color:var(--muted);margin:0 0 10px}
@@ -67,6 +73,8 @@
       </button>
     </div>
 
+    <div class="answer" id="answer"></div>
+
     <div class="chips" id="chips">
       <button class="chip" type="button">Should I take this deal?</button>
       <button class="chip" type="button">How do I lead through a layoff?</button>
@@ -75,7 +83,7 @@
     </div>
 
     <div class="emailstep" id="emailStep">
-      <p>Biblicall is coming soon. Leave your email and we'll send your answer — plus early access at launch.</p>
+      <p>Want to save this answer or get early access when Biblicall fully launches? Leave your email below.</p>
       <form class="emailrow" id="emailForm" action="mailto:hello@biblicall.com" method="post" enctype="text/plain">
         <input type="email" id="email" name="email" placeholder="you@email.com" required>
         <button type="submit">Notify Me</button>
@@ -87,9 +95,12 @@
 <footer>Coming soon &middot; <a href="mailto:hello@biblicall.com">hello@biblicall.com</a></footer>
 
 <script>
+  const WORKER_URL = 'https://noisy-morning-3bbc.graphics-a4c.workers.dev';
+
   const q = document.getElementById('q');
   const sendBtn = document.getElementById('sendBtn');
   const chips = document.getElementById('chips');
+  const answerBox = document.getElementById('answer');
   const emailStep = document.getElementById('emailStep');
   const emailForm = document.getElementById('emailForm');
 
@@ -103,12 +114,34 @@
     }
   });
 
-  function reveal() {
-    if (q.value.trim().length === 0) { q.focus(); return; }
+  async function reveal() {
+    const question = q.value.trim();
+    if (question.length === 0) { q.focus(); return; }
+
+    chips.style.display = 'none';
+    sendBtn.disabled = true;
+    answerBox.classList.add('show', 'loading');
+    answerBox.textContent = 'Thinking…';
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Upstream error');
+      answerBox.classList.remove('loading');
+      answerBox.textContent = data.answer;
+    } catch (err) {
+      answerBox.classList.remove('loading');
+      answerBox.textContent = "Biblicall couldn't answer that just now. Leave your email below and we'll follow up with a real answer personally.";
+    }
+
+    sendBtn.disabled = false;
     emailStep.classList.add('show');
     emailForm.action = 'mailto:hello@biblicall.com?subject=' + encodeURIComponent('Biblicall waitlist') +
-      '&body=' + encodeURIComponent('My question: ' + q.value);
-    document.getElementById('email').focus();
+      '&body=' + encodeURIComponent('My question: ' + question);
   }
   sendBtn.addEventListener('click', reveal);
   q.addEventListener('keydown', (e) => {
