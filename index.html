@@ -121,17 +121,37 @@
     }
   });
 
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function formatAnswer(str) {
+    let s = escapeHtml(str);
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|\n)[-*]\s+/g, '$1• ');
+    return s;
+  }
+
   function renderThread() {
     threadBox.innerHTML = '';
+    let lastRow = null;
     conversation.forEach((m) => {
       const row = document.createElement('div');
       row.className = 'msg-row ' + m.role;
       const bubble = document.createElement('div');
       bubble.className = 'msg ' + m.role + (m.loading ? ' loading' : '');
-      bubble.textContent = m.content;
+      if (m.role === 'assistant' && !m.loading) {
+        bubble.innerHTML = formatAnswer(m.content);
+      } else {
+        bubble.textContent = m.content;
+      }
       row.appendChild(bubble);
       threadBox.appendChild(row);
+      lastRow = row;
     });
+    if (lastRow) {
+      lastRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   }
 
   async function reveal() {
