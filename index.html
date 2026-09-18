@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BibliCall — Your North Star, built in</title>
-<meta name="description" content="Ask BibliCall anything. A full AI assistant for entrepreneurs, with a moral North Star built in.">
+<title>Biblicall — Your North Star, built in</title>
+<meta name="description" content="Ask Biblicall anything. A full AI assistant for entrepreneurs, with a moral North Star built in.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
@@ -61,7 +61,7 @@
     <h1>What are you building today?</h1>
 
     <div class="composer">
-      <textarea id="q" rows="1" placeholder="Ask BibliCall anything — business, life, hard calls..."></textarea>
+      <textarea id="q" rows="1" placeholder="Ask Biblicall anything — business, life, hard calls..."></textarea>
       <button class="send" id="sendBtn" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
       </button>
@@ -75,7 +75,7 @@
     </div>
 
     <div class="emailstep" id="emailStep">
-      <p>BibliCall is coming soon. Leave your email and we'll send your answer — plus early access at launch.</p>
+      <p>Biblicall is coming soon. Leave your email and we'll send your answer — plus early access at launch.</p>
       <form class="emailrow" id="emailForm" action="mailto:hello@biblicall.com" method="post" enctype="text/plain">
         <input type="email" id="email" name="email" placeholder="you@email.com" required>
         <button type="submit">Notify Me</button>
@@ -106,7 +106,7 @@
   function reveal() {
     if (q.value.trim().length === 0) { q.focus(); return; }
     emailStep.classList.add('show');
-    emailForm.action = 'mailto:hello@biblicall.com?subject=' + encodeURIComponent('BibliCall waitlist') +
+    emailForm.action = 'mailto:hello@biblicall.com?subject=' + encodeURIComponent('Biblicall waitlist') +
       '&body=' + encodeURIComponent('My question: ' + q.value);
     document.getElementById('email').focus();
   }
