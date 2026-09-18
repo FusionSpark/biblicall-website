@@ -10,14 +10,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --sky-top:#eaf5fc; --sky-bottom:#cfe7f6; --sky-deep:#2f6690;
-    --earth:#664336; --earth-deep:#4a2f26; --card:#ffffff;
-    --ink:#1e3646; --muted:#5c7688; --line:#c3ddec;
+    --bg:#f4ead9; --bg-rgb:244,234,217;
+    --earth:#664336; --earth-deep:#4a2f26; --card:#fffaf2;
+    --ink:#2c2117; --muted:#8a7862; --line:#e3d3bb;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;
-    background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-bottom) 100%);
+    background:var(--bg);
     color:var(--ink);display:flex;flex-direction:column;min-height:100vh}
   .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
   .wrap{width:100%;max-width:680px;text-align:center}
@@ -25,7 +25,7 @@
   h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(24px,4vw,34px);
      color:var(--earth-deep);margin:0 0 34px;line-height:1.3}
   .composer{background:var(--card);border:1px solid var(--line);border-radius:20px;
-    box-shadow:0 8px 28px rgba(47,102,144,.12);padding:8px 8px 8px 20px;
+    box-shadow:0 8px 28px rgba(74,47,38,.14);padding:8px 8px 8px 20px;
     display:flex;align-items:flex-end;gap:8px;text-align:left}
   .composer textarea{flex:1;border:none;outline:none;resize:none;font-family:inherit;
     font-size:16px;line-height:1.5;color:var(--ink);padding:12px 0;background:transparent;
@@ -39,10 +39,10 @@
   .send:disabled{opacity:.55;cursor:default}
   .thread{display:none;margin-top:20px;text-align:left}
   .thread.show{display:block}
-  .msg-row{display:flex;margin-bottom:16px}
+  .msg-row{display:flex;margin-bottom:6px}
   .msg-row.assistant{justify-content:flex-start}
   .msg-row.user{justify-content:flex-end}
-  .msg{font-size:16px;line-height:1.65;white-space:pre-wrap}
+  .msg{font-size:17px;line-height:1.32;font-weight:500;white-space:pre-wrap}
   .msg.assistant{color:var(--ink);max-width:100%}
   .msg.assistant.loading{color:var(--muted);font-style:italic}
   .msg.user{background:var(--card);border:1px solid var(--line);border-radius:16px;
@@ -54,7 +54,7 @@
   body.chatting .composer-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;
     display:flex;flex-direction:column;align-items:center;
     padding:24px 20px 22px;
-    background:linear-gradient(180deg, rgba(207,231,246,0) 0%, var(--sky-bottom) 45%)}
+    background:linear-gradient(180deg, rgba(var(--bg-rgb),0) 0%, var(--bg) 45%)}
   body.chatting .composer-dock .composer{width:100%;max-width:680px}
   body.chatting .composer-dock .emailstep{width:100%;max-width:680px;margin-top:14px}
   body.chatting .composer-dock .emailstep p{font-size:13px;margin:0 0 8px}
@@ -119,6 +119,7 @@
 
   function formatAnswer(str) {
     let s = escapeHtml(str);
+    s = s.replace(/\n{2,}/g, '\n');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|\n)[-*]\s+/g, '$1• ');
     return s;
