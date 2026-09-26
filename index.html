@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Biblicall — Your North Star, built in</title>
-<meta name="description" content="Ask Biblicall anything. A full AI assistant for entrepreneurs, with a moral North Star built in.">
+<meta name="description" content="Ask Biblicall anything. A full AI assistant guided by biblical wisdom, with every answer ending in a North Star: scripture, quoted word for word from the King James Bible, that deepens what you just learned.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f4ead9; --bg-rgb:244,234,217;
@@ -66,6 +66,20 @@
   .emailrow button{padding:12px 18px;border:none;border-radius:10px;background:var(--earth);
     color:#fff;font-weight:600;cursor:pointer;font-family:inherit}
   .emailrow button:hover{background:var(--earth-deep)}
+  .ns{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+    margin:12px 0 26px;display:flex;flex-direction:column;gap:14px}
+  .ns h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;color:var(--earth);
+    margin:0;display:flex;align-items:center;gap:8px}
+  .ns h2 svg{width:20px;height:20px;flex:none}
+  .ns .teach{margin:0;font-size:16px;line-height:1.5}
+  .ns .verse{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:5px}
+  .ns blockquote{margin:0;font-family:'Fraunces',Georgia,serif;font-style:italic;font-weight:400;font-size:18px;line-height:1.5}
+  .ns .ref{font-size:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .ns .ref b{color:var(--earth)}
+  .ns .ok{color:#3f7a4a;font-size:12px;font-weight:600}
+  .ns .why{margin:0;font-size:14px;color:var(--muted)}
+  .ns .reflect{margin:0;border-left:3px solid var(--earth);padding-left:12px;font-family:'Fraunces',Georgia,serif;font-size:17px}
+  .ns.loading{color:var(--muted);font-style:italic}
   footer{text-align:center;padding:22px 20px;font-size:13px;color:var(--muted)}
   footer a{color:var(--earth)}
 </style>
@@ -98,7 +112,7 @@
   </div>
 </div>
 
-<footer>Coming soon &middot; <a href="mailto:hello@biblicall.com">hello@biblicall.com</a></footer>
+<footer>Every North Star verse is checked word for word against the King James Bible before it appears. &middot; <a href="mailto:hello@biblicall.com">hello@biblicall.com</a></footer>
 
 <script>
   const WORKER_URL = 'https://noisy-morning-3bbc.graphics-a4c.workers.dev';
@@ -110,6 +124,70 @@
   const emailForm = document.getElementById('emailForm');
 
   let conversation = [];
+
+  // ---- North Star: biblical wisdom, verified against the KJV ----
+  const COMPASS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>';
+  let BIBLE = null, biblePromise = null;
+  function loadBible() {
+    if (!biblePromise) biblePromise = fetch('kjv.json').then((r) => r.json()).then((d) => (BIBLE = d)).catch(() => null);
+    return biblePromise;
+  }
+  const BOOK_ALIAS = { 'psalm':'psalms', 'song of songs':'song of solomon', 'songs':'song of solomon', 'canticles':'song of solomon', 'revelations':'revelation' };
+  function bookIndex(name) {
+    let s = name.trim().replace(/\./g, '').replace(/\s+/g, ' ').toLowerCase();
+    s = s.replace(/^(1|first|1st)\s+/, 'i ').replace(/^(2|second|2nd)\s+/, 'ii ').replace(/^(3|third|3rd)\s+/, 'iii ');
+    s = BOOK_ALIAS[s] || s;
+    return BIBLE.books.findIndex((b) => b.toLowerCase() === s);
+  }
+  function lookupVerse(ref) {
+    const m = String(ref).trim().match(/^(.+?)\s+(\d+):(\d+)(?:\s*[-–—,]\s*(\d+))?$/);
+    if (!m || !BIBLE) return null;
+    const bi = bookIndex(m[1]); if (bi < 0) return null;
+    const ch = BIBLE.text[bi][+m[2] - 1]; if (!ch) return null;
+    const a = +m[3], b = m[4] ? +m[4] : a;
+    if (a < 1 || b < a || b > ch.length || b - a > 5) return null;
+    return { label: BIBLE.books[bi] + ' ' + m[2] + ':' + a + (b > a ? '–' + b : ''), text: ch.slice(a - 1, b).join(' ') };
+  }
+  function northStarPrompt(question) {
+    return 'You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that.\n\n' +
+      'The user asked:\n"""' + question.slice(0, 2000) + '"""\n\n' +
+      'In 2 to 4 sentences, teach how biblical wisdom deepens understanding of this exact topic, so the user learns something about the subject and about living well. Warm, never preachy. ' +
+      'Then choose 2 or 3 King James Version passages that truly fit, each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the KJV and discarded if it does not match. Do not quote the verse text.\n\n' +
+      'Reply with ONLY this JSON and nothing else:\n{"northStar": "2-4 sentences", "verses": [{"ref": "Book C:V", "why": "one sentence on why it applies"}], "reflect": "one short question for the user to ponder"}';
+  }
+  function parseJson(text) {
+    try { return JSON.parse(text); } catch (e) {}
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) { try { return JSON.parse(text.slice(a, b + 1)); } catch (e) {} }
+    return null;
+  }
+  async function fetchNorthStar(question) {
+    try {
+      const [res] = await Promise.all([
+        fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: [{ role: 'user', content: northStarPrompt(question) }] }) }),
+        loadBible()
+      ]);
+      const data = await res.json();
+      if (!res.ok || data.error || !BIBLE) return null;
+      const ns = parseJson(String(data.answer || ''));
+      if (!ns || !ns.northStar) return null;
+      const verses = (Array.isArray(ns.verses) ? ns.verses : [])
+        .map((v) => { const hit = lookupVerse(v && v.ref); return hit ? { ...hit, why: v.why || '' } : null; })
+        .filter(Boolean);
+      if (!verses.length) return null;
+      return { teach: String(ns.northStar), verses, reflect: ns.reflect ? String(ns.reflect) : '' };
+    } catch (e) { return null; }
+  }
+  function northStarHtml(ns) {
+    const inline = (t) => escapeHtml(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return '<h2>' + COMPASS + 'North Star</h2>' +
+      '<p class="teach">' + inline(ns.teach) + '</p>' +
+      ns.verses.map((v) => '<div class="verse"><blockquote>' + escapeHtml(v.text) + '</blockquote>' +
+        '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">✓ Verified in the KJV</span></div>' +
+        (v.why ? '<p class="why">' + inline(v.why) + '</p>' : '') + '</div>').join('') +
+      (ns.reflect ? '<p class="reflect">' + inline(ns.reflect) + '</p>' : '');
+  }
 
   q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = q.scrollHeight + 'px'; });
 
@@ -141,6 +219,14 @@
       row.appendChild(bubble);
       threadBox.appendChild(row);
       lastRow = row;
+      if (m.role === 'assistant' && m.ns) {
+        const panel = document.createElement('aside');
+        panel.className = 'ns' + (m.ns === 'loading' ? ' loading' : '');
+        if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
+        else panel.innerHTML = northStarHtml(m.ns);
+        threadBox.appendChild(panel);
+        lastRow = panel;
+      }
     });
     if (lastRow) {
       const dock = document.getElementById('composerDock');
@@ -164,6 +250,9 @@
     threadBox.classList.add('show');
     renderThread();
 
+    const turn = conversation.length - 1;
+    const nsPromise = fetchNorthStar(question);
+
     try {
       const res = await fetch(WORKER_URL, {
         method: 'POST',
@@ -174,9 +263,12 @@
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Upstream error');
-      conversation[conversation.length - 1] = { role: 'assistant', content: data.answer };
+      conversation[turn] = { role: 'assistant', content: data.answer, ns: 'loading' };
+      renderThread();
+      const ns = await nsPromise;
+      conversation[turn].ns = ns || null;
     } catch (err) {
-      conversation[conversation.length - 1] = {
+      conversation[turn] = {
         role: 'assistant',
         content: "Biblicall couldn't answer that just now. Leave your email below and we'll follow up with a real answer personally."
       };
