@@ -91,7 +91,8 @@ export default {
         console.error('Anthropic error', resp.status, data && data.error && data.error.type);
         return json({ error: 'Upstream error' }, 502);
       }
-      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n\n').trim();
+      // With web search the answer arrives in pieces split around citations; join them back into one text.
+      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/\n{3,}/g, '\n\n').trim();
       return json({ answer: text || "Sorry, I couldn't come up with an answer just now." });
     } catch (err) {
       console.error('Worker error', err && err.message);
