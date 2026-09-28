@@ -47,11 +47,14 @@ export default {
 
     // Fair use: each visitor (by IP) gets VISITOR_LIMIT calls a minute; the call server shares ROOMS_LIMIT.
     const fromRooms = request.headers.get('X-Biblicall-Source') === 'rooms';
-    const limiter = fromRooms ? env.ROOMS_LIMIT : env.VISITOR_LIMIT;
-    if (limiter) {
-      const key = fromRooms ? 'rooms' : (request.headers.get('CF-Connecting-IP') || 'unknown');
-      const { success } = await limiter.limit({ key });
-      if (!success) return json({ error: 'busy', message: 'Too many questions at once. Please wait a minute and try again.' }, 429);
+    const busy = () => json({ error: 'busy', message: 'Too many questions at once. Please wait a minute and try again.' }, 429);
+    if (fromRooms) {
+      // Each call has its own allowance, inside an overall cap for all calls together.
+      const roomKey = 'room:' + String(request.headers.get('X-Biblicall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      if (env.ROOM_LIMIT && !(await env.ROOM_LIMIT.limit({ key: roomKey })).success) return busy();
+      if (env.ROOMS_LIMIT && !(await env.ROOMS_LIMIT.limit({ key: 'rooms' })).success) return busy();
+    } else if (env.VISITOR_LIMIT) {
+      if (!(await env.VISITOR_LIMIT.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' })).success) return busy();
     }
 
     let body;

@@ -11,7 +11,14 @@ name = "VISITOR_LIMIT"
 namespace_id = "7101"
 simple = { limit = 20, period = 60 }
 
+# All live calls together (safety cap).
 [[ratelimits]]
 name = "ROOMS_LIMIT"
 namespace_id = "7102"
-simple = { limit = 120, period = 60 }
+simple = { limit = 600, period = 60 }
+
+# Each live call on its own, so one busy room never slows the others.
+[[ratelimits]]
+name = "ROOM_LIMIT"
+namespace_id = "7103"
+simple = { limit = 40, period = 60 }
