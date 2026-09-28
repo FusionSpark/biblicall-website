@@ -10,7 +10,6 @@ class_name = "Room"
 tag = "v1"
 new_sqlite_classes = ["Room"]
 
-# The existing Biblicall AI worker (answers + North Star), reached by service binding.
-[[services]]
-binding = "AI"
-service = "noisy-morning-3bbc"
+[vars]
+# The existing Biblicall AI worker (answers + North Star). It lives in another Cloudflare account, so it is called over HTTPS.
+AI_URL = "https://noisy-morning-3bbc.graphics-a4c.workers.dev"
