@@ -419,6 +419,7 @@
   function formatAnswer(str) {
     let s = escapeHtml(str);
     s = s.replace(/\n{2,}/g, '\n');
+    s = s.replace(/(^|\n)#{1,6}\s+([^\n]+)/g, '$1<strong>$2</strong>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|\n)[-*]\s+/g, '$1• ');
     return s;
