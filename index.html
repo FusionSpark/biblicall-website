@@ -43,6 +43,14 @@
   .send:hover{background:var(--earth-deep)}
   .send svg{width:18px;height:18px}
   .send:disabled{opacity:.55;cursor:default}
+  .mic{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;background:transparent;
+    color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+  .mic[hidden]{display:none}
+  .mic svg{width:20px;height:20px}
+  .mic:hover{background:var(--bg)}
+  .mic.listening{color:#fff;background:var(--earth);animation:micpulse 1.4s ease-in-out infinite}
+  @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(102,67,54,.45)}50%{box-shadow:0 0 0 7px rgba(102,67,54,0)}}
+  @media (prefers-reduced-motion:reduce){.mic.listening{animation:none}}
   .thread{display:none;margin-top:20px;text-align:left}
   .thread.show{display:block}
   .msg-row{display:flex;margin-bottom:6px}
@@ -102,6 +110,9 @@
     <div class="composer-dock" id="composerDock">
       <div class="composer">
         <textarea id="q" rows="1" placeholder="Ask Biblicall anything…"></textarea>
+        <button class="mic" id="micBtn" type="button" aria-label="Speak your question" title="Speak your question" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10v1a7 7 0 0 0 14 0v-1"></path><line x1="12" y1="18" x2="12" y2="22"></line></svg>
+        </button>
         <button class="send" id="sendBtn" aria-label="Send">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
         </button>
@@ -341,9 +352,52 @@
     emailStep.classList.add('show');
     lastQuestion = question;
   }
+  // ---- Speech to text (microphone button) ----
+  const micBtn = document.getElementById('micBtn');
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null, listening = false, baseText = '';
+  function stopListening() { if (recog && listening) { try { recog.stop(); } catch (e) {} } }
+  if (SpeechRec) {
+    micBtn.hidden = false;
+    recog = new SpeechRec();
+    recog.lang = navigator.language || 'en-US';
+    recog.interimResults = true;
+    recog.continuous = false;
+    recog.onstart = () => {
+      listening = true;
+      micBtn.classList.add('listening');
+      micBtn.setAttribute('aria-label', 'Stop listening');
+      q.placeholder = 'Listening…';
+    };
+    recog.onresult = (e) => {
+      let spoken = '';
+      for (let i = 0; i < e.results.length; i++) spoken += e.results[i][0].transcript;
+      q.value = (baseText ? baseText + ' ' : '') + spoken.trim();
+      q.dispatchEvent(new Event('input'));
+    };
+    recog.onend = () => {
+      listening = false;
+      micBtn.classList.remove('listening');
+      micBtn.setAttribute('aria-label', 'Speak your question');
+      q.placeholder = 'Ask Biblicall anything…';
+      q.focus();
+    };
+    recog.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        q.placeholder = 'Allow microphone access to speak your question';
+      }
+    };
+    micBtn.addEventListener('click', () => {
+      if (listening) { stopListening(); return; }
+      baseText = q.value.trim();
+      try { recog.start(); } catch (e) {}
+    });
+    sendBtn.addEventListener('click', stopListening);
+  }
+
   sendBtn.addEventListener('click', reveal);
   q.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); reveal(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (typeof stopListening === 'function') stopListening(); reveal(); }
   });
 </script>
 </body>
