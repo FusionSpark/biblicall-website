@@ -33,6 +33,13 @@ function isAck(text) {
   const w = t.split(/\s+/);
   return w.length <= 6 && w.every((x) => ACK.has(x));
 }
+function isChatter(text) {
+  const t = String(text).trim();
+  if (isAck(t)) return true;
+  if (t.includes('?')) return false;
+  const words = t.split(/\s+/).filter(Boolean);
+  return words.length <= 5;
+}
 function parseJson(text) {
   try { return JSON.parse(text); } catch (e) {}
   const a = text.indexOf('{'), b = text.lastIndexOf('}');
@@ -153,6 +160,8 @@ export class Room extends DurableObject {
       const names = new Set(recent.filter((m) => m.role === 'user').map((m) => m.name));
       const group = this.ctx.getWebSockets().length > 1 || names.size > 1;
       const mustAnswer = !group || addressed;
+      // Quick chatter between friends ("lol", "amen", "see you Tuesday") never needs Biblicall: skip the check entirely.
+      if (group && !addressed && isChatter(lastUser.content)) return;
       if (mustAnswer) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
 
       const turns = [];
@@ -191,7 +200,7 @@ export class Room extends DurableObject {
   async ai(messages, opts) {
     const r = await fetch(this.env.AI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com', 'X-Biblicall-Source': 'rooms' },
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com', 'X-Biblicall-Source': 'rooms', 'X-Biblicall-Room': this.ctx.id.toString() },
       body: JSON.stringify({ messages, ...(opts || {}) })
     });
     const j = await r.json();
