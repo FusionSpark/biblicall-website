@@ -146,7 +146,7 @@ export class Room extends DurableObject {
         const ctx = recent.slice(-6, -1).map((m) => (m.role === 'user' ? m.name + ': ' : 'Biblicall: ') + String(m.content).slice(0, 600)).join('\n');
         const nsP = isAck(content) ? Promise.resolve(null) : this.northStar(content, ctx);
         let answer;
-        try { answer = await this.ai(turns); }
+        try { answer = await this.ai(turns, { group: multi }); }
         catch (e) { answer = "Biblicall couldn't answer that just now. Please try again in a moment."; }
         const ns = await nsP;
         await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'Biblicall', ns: ns || undefined, offer: !ns && !isAck(content) });
@@ -165,11 +165,11 @@ export class Room extends DurableObject {
     return { teach: clean(ns.northStar || ns.teach, 1200), verses, reflect: clean(ns.reflect, 300) };
   }
 
-  async ai(messages) {
+  async ai(messages, opts) {
     const r = await fetch(this.env.AI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com' },
-      body: JSON.stringify({ messages })
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com', 'X-Biblicall-Source': 'rooms' },
+      body: JSON.stringify({ messages, ...(opts || {}) })
     });
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(j.error || 'ai');
@@ -177,7 +177,7 @@ export class Room extends DurableObject {
   }
   async northStar(question, ctx) {
     try {
-      const out = parseJson(await this.ai([{ role: 'user', content: nsPrompt(question, ctx) }]));
+      const out = parseJson(await this.ai([{ role: 'user', content: nsPrompt(question, ctx) }], { mode: 'northstar' }));
       if (!out || out.skip) return null;
       return this.cleanNs(out) || null;
     } catch (e) { return null; }
