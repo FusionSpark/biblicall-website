@@ -1,7 +1,7 @@
-# Biblicall AI worker (noisy-morning-3bbc)
+# Biblicall AI worker (biblicall-ai)
 
 Answers questions for biblicall.com and runs the North Star step. Deployed by Cloudflare Workers Builds
-in the Graphics@hinsdalemag.com account (root directory `ai-worker`).
+in the sjonlich@hinsdalemag.com account (root directory `ai-worker`).
 
 - Only requests from biblicall.com are accepted. Each visitor gets 20 calls a minute (a question uses two);
   the biblicall-rooms call server shares its own bucket of 120 a minute.
