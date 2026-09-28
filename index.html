@@ -175,15 +175,15 @@
 <dialog class="callwin" id="callWin" aria-labelledby="callTitle">
   <button type="button" class="close" id="callClose" aria-label="Close">&times;</button>
   <h2 id="callTitle">Invite a friend to the call</h2>
-  <p id="callIntro">Enter a friend's cell number and we'll open a text with a Biblicall link. When they tap it, they join this conversation. Invite as many friends as you like.</p>
+  <p id="callIntro">Enter a friend's cell number or email and we'll open a text or email with a Biblicall link. When they tap it, they join this conversation. Invite as many friends as you like.</p>
   <form id="callForm" class="row" novalidate>
-    <input type="tel" id="callPhone" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" aria-label="Friend's cell phone number">
+    <input type="text" id="callPhone" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cell # or email" aria-label="Friend's cell phone number or email address">
     <button type="submit" class="primary">Send invite</button>
   </form>
   <div class="links"><button type="button" id="callCopy">Copy invite link</button><button type="button" id="callShare" hidden>Share another way</button></div>
   <p class="status" id="callStatus" aria-live="polite"></p>
   <ul id="callList"></ul>
-  <p class="fine">The text is sent from your own phone. Biblicall never stores your friends' numbers.</p>
+  <p class="fine">Invites are sent from your own phone or email. Biblicall never stores your friends' numbers or addresses.</p>
 </dialog>
 
 <footer>Every North Star verse is checked word for word against the King James Bible before it appears. &middot; <a href="mailto:hello@biblicall.com">hello@biblicall.com</a></footer>
@@ -559,9 +559,24 @@
 
   document.getElementById('callForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const phone = normalizePhone(callPhone.value);
-    if (!phone) { callStatus.textContent = 'Please enter a full cell number, like (555) 123-4567.'; return; }
+    const raw = callPhone.value.trim();
+    const isEmail = raw.includes('@');
+    const email = isEmail && /^[^\s@,;]+@[^\s@,;]+\.[A-Za-z]{2,}$/.test(raw) ? raw : null;
+    const phone = isEmail ? null : normalizePhone(raw);
+    if (!email && !phone) {
+      callStatus.textContent = isEmail ? 'Please check the email address, like friend@email.com.' : 'Please enter a full cell number, like (555) 123-4567, or an email address.';
+      return;
+    }
     const body = inviteText(await inviteLink());
+    if (email) {
+      window.location.href = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent('Join my call on Biblicall') + '&body=' + encodeURIComponent(body);
+      const li = document.createElement('li');
+      li.textContent = '\u2713 Invite ready for ' + email;
+      callList.prepend(li);
+      callStatus.textContent = 'Your email app is opening. Tap send, then invite another friend!';
+      callPhone.value = '';
+      return;
+    }
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     window.location.href = 'sms:' + phone + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
     invited++;
