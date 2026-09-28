@@ -110,7 +110,7 @@
   .ns-note{margin:-12px 0 20px;font-size:13px;color:var(--muted)}
   .brandrow{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:22px}
   .brandrow .logo{margin-bottom:0}
-  .callbar{display:flex;justify-content:center;margin:0 0 10px}
+  .callbar{display:flex;justify-content:center;margin:12px 0 0}
   .callbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:50%;min-width:180px;padding:5px 16px;border-radius:999px;border:1px solid var(--earth);
     background:var(--card);color:var(--earth);font-family:inherit;font-size:14px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
   .callbtn:hover{background:var(--earth);color:#fff}
@@ -242,7 +242,6 @@
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="Biblicall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
-      <div class="callbar"><button type="button" class="callbtn" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Add Call</button></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to Biblicall's memory">Remember</button>
         <textarea id="q" rows="1" placeholder="Ask Biblicall anything…"></textarea>
@@ -254,6 +253,7 @@
         </button>
       </div>
 
+      <div class="callbar"><button type="button" class="callbtn" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Invite Friends</button></div>
       <div class="emailstep" id="emailStep">
         <p>Want to save this answer or get early access when Biblicall fully launches? Leave your email below.</p>
         <form class="emailrow" id="emailForm">
