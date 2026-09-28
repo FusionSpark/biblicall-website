@@ -639,8 +639,10 @@
   const narrow = window.matchMedia ? matchMedia('(max-width: 520px)') : { matches: false };
   var remOn = false;
   function setPlaceholder() {
+    const inGroup = typeof room !== 'undefined' && room && room.people && room.people.length > 1;
     q.placeholder = remOn ? (narrow.matches ? 'Type it here\u2026' : 'What should Biblicall remember?')
-                          : (narrow.matches ? 'Ask anything\u2026' : 'Ask Biblicall anything\u2026');
+      : inGroup ? (narrow.matches ? 'Say \u201cBiblicall\u201d to ask\u2026' : 'Message the call\u2026 say \u201cBiblicall\u201d to ask')
+      : (narrow.matches ? 'Ask anything\u2026' : 'Ask Biblicall anything\u2026');
   }
   function setRem(on) {
     remOn = on;
@@ -1028,7 +1030,7 @@
         document.body.classList.add('chatting'); threadBox.classList.add('show');
         renderThread();
       } else if (d.type === 'presence') {
-        room.people = d.people || []; drawRoomBar();
+        room.people = d.people || []; drawRoomBar(); setPlaceholder();
       } else if (d.type === 'thinking') {
         room.thinking = !!d.on; renderThread();
       } else if (d.type === 'error') {
@@ -1068,6 +1070,7 @@
     room.left = true;
     try { room.ws && room.ws.close(1000); } catch (e) {}
     room = null;
+    try { setPlaceholder(); } catch (e) {}
     const u = new URL(location.href); u.searchParams.delete('room');
     history.replaceState(null, '', u.pathname + u.search);
     drawRoomBar(); renderThread();
