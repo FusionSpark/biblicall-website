@@ -386,7 +386,7 @@
     try {
       const [res] = await Promise.all([
         fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [{ role: 'user', content: northStarPrompt(question, history, force) }] }) }),
+          body: JSON.stringify({ mode: 'northstar', messages: [{ role: 'user', content: northStarPrompt(question, history, force) }] }) }),
         loadBible()
       ]);
       const data = await res.json();
@@ -568,10 +568,10 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember) })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text) })
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Upstream error');
+      if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
       conversation[turn] = { role: 'assistant', content: data.answer, q: question, hist: history };
       renderThread();
       const ns = await nsPromise;
@@ -583,7 +583,9 @@
     } catch (err) {
       conversation[turn] = {
         role: 'assistant',
-        content: "Biblicall couldn't answer that just now. Leave your email below and we'll follow up with a real answer personally."
+        content: err && err.message === 'busy'
+          ? "You're asking faster than Biblicall can keep up. Please wait a minute, then try again."
+          : "Biblicall couldn't answer that just now. Leave your email below and we'll follow up with a real answer personally."
       };
     }
     renderThread();
@@ -621,11 +623,6 @@
   function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); }
   function apiMessages(justSaved) {
     const msgs = conversation.filter((m) => !m.loading).map(({ role, content }) => ({ role, content }));
-    const first = msgs.find((m) => m.role === 'user');
-    if (first && memory.length) {
-      first.content = 'Things I have asked Biblicall to remember about me (use them only when they are relevant; do not list them back to me):\n' +
-        memory.slice(0, 40).map((m) => '- ' + m.text).join('\n') + '\n\n' + first.content;
-    }
     if (justSaved) {
       const last = msgs[msgs.length - 1];
       if (last && last.role === 'user') last.content += '\n\n(I just saved this to my Biblicall memory, so you will remember it in future conversations. Acknowledge it warmly and briefly.)';

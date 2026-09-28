@@ -1,0 +1,17 @@
+# Biblicall AI worker: answers + North Star. Lives in the hello@biblicall.com Cloudflare account.
+# The Anthropic key is the secret ANTHROPIC_API_KEY, set in the Cloudflare dashboard (never in this repo).
+name = "noisy-morning-3bbc"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+keep_vars = true
+
+# Fair-use limits (per 60 seconds).
+[[ratelimits]]
+name = "VISITOR_LIMIT"
+namespace_id = "7101"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "ROOMS_LIMIT"
+namespace_id = "7102"
+simple = { limit = 120, period = 60 }
