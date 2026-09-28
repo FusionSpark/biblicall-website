@@ -4,6 +4,8 @@ const ORIGINS = ['https://biblicall.com', 'https://www.biblicall.com'];
 const MAX_KEEP = 120;          // messages kept per room
 const AI_TURNS = 20;           // messages sent to the AI as context
 const IDLE_MS = 30 * 86400000; // delete rooms after 30 idle days
+const PASS = '[[PASS]]';
+const ADDRESSED = /(^|[^a-z])@?biblicall\b/i;
 
 export default {
   async fetch(req, env) {
@@ -125,36 +127,57 @@ export class Room extends DurableObject {
       const content = clean(d.content, 2000);
       if (!content) return;
       const now = Date.now();
-      if (now - (me.last || 0) < 2500) { ws.send(JSON.stringify({ type: 'error', text: 'One moment, please send one message at a time.' })); return; }
-      if (this.busy) { ws.send(JSON.stringify({ type: 'error', text: 'Biblicall is still answering. Try again in a moment.' })); return; }
+      if (now - (me.last || 0) < 1200) { ws.send(JSON.stringify({ type: 'error', text: 'One moment, please send one message at a time.' })); return; }
       me.last = now; ws.serializeAttachment(me);
-      this.busy = true;
-      this.broadcast({ type: 'thinking', on: true });
-      try {
-        await this.add({ role: 'user', content, from: me.id, name: me.name });
-        const all = await this.messages();
-        const people = new Set(all.filter((m) => m.role === 'user').map((m) => m.name));
-        const multi = people.size > 1;
-        const recent = all.slice(-AI_TURNS);
-        const turns = [];
-        for (const m of recent) {
-          const text = m.role === 'user' && multi ? m.name + ': ' + m.content : m.content;
-          const last = turns[turns.length - 1];
-          if (last && last.role === m.role) last.content += '\n\n' + text; else turns.push({ role: m.role, content: text });
-        }
-        while (turns.length && turns[0].role !== 'user') turns.shift();
-        const ctx = recent.slice(-6, -1).map((m) => (m.role === 'user' ? m.name + ': ' : 'Biblicall: ') + String(m.content).slice(0, 600)).join('\n');
-        const nsP = isAck(content) ? Promise.resolve(null) : this.northStar(content, ctx);
-        let answer;
-        try { answer = await this.ai(turns, { group: multi }); }
-        catch (e) { answer = "Biblicall couldn't answer that just now. Please try again in a moment."; }
-        const ns = await nsP;
-        await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'Biblicall', ns: ns || undefined, offer: !ns && !isAck(content) });
-      } finally {
-        this.busy = false;
-        this.broadcast({ type: 'thinking', on: false });
+      await this.add({ role: 'user', content, from: me.id, name: me.name });
+      const addressed = ADDRESSED.test(content);
+      if (this.busy) {
+        // Friends keep talking while Biblicall thinks; if someone calls on it, it answers next.
+        if (addressed) this.pending = true;
+        return;
       }
+      await this.respond(addressed);
       return;
+    }
+  }
+
+  // Decide whether Biblicall speaks, and if so answer (plus a North Star when it fits).
+  async respond(addressed) {
+    this.busy = true;
+    let showed = false;
+    try {
+      const all = await this.messages();
+      const recent = all.slice(-AI_TURNS);
+      const lastUser = [...all].reverse().find((m) => m.role === 'user');
+      if (!lastUser) return;
+      const names = new Set(recent.filter((m) => m.role === 'user').map((m) => m.name));
+      const group = this.ctx.getWebSockets().length > 1 || names.size > 1;
+      const mustAnswer = !group || addressed;
+      if (mustAnswer) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
+
+      const turns = [];
+      for (const m of recent) {
+        const text = m.role === 'user' && group ? m.name + ': ' + m.content : m.content;
+        const last = turns[turns.length - 1];
+        if (last && last.role === m.role) last.content += '\n\n' + text; else turns.push({ role: m.role, content: text });
+      }
+      while (turns.length && turns[0].role !== 'user') turns.shift();
+      const ctx = recent.slice(-7, -1).map((m) => (m.role === 'user' ? m.name + ': ' : 'Biblicall: ') + String(m.content).slice(0, 600)).join('\n');
+      const question = lastUser.content;
+
+      // Solo: answer and North Star in parallel. Group: only look for a North Star once Biblicall decides to speak.
+      const nsEarly = !group && !isAck(question) ? this.northStar(question, ctx) : null;
+      let answer;
+      try { answer = await this.ai(turns, { group, decide: group && !addressed }); }
+      catch (e) { answer = mustAnswer ? "Biblicall couldn't answer that just now. Please try again in a moment." : PASS; }
+      if (!answer || answer.includes(PASS)) return; // stays quiet, keeps listening
+      if (!showed) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
+      const ns = nsEarly ? await nsEarly : (group && !isAck(question) ? await this.northStar(question, ctx) : null);
+      await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'Biblicall', ns: ns || undefined, offer: !ns && !isAck(question) });
+    } finally {
+      this.busy = false;
+      if (showed) this.broadcast({ type: 'thinking', on: false });
+      if (this.pending) { this.pending = false; this.respond(true); }
     }
   }
 
