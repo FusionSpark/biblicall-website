@@ -1,4 +1,4 @@
-# Biblicall AI worker (noisy-morning-3bbc)
+# Biblicall AI worker (biblicall-ai)
 
 Answers questions for biblicall.com and runs the North Star step. Deployed by Cloudflare Workers Builds
 in the hello@biblicall.com account (root directory `ai-worker`).
