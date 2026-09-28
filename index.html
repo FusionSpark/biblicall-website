@@ -110,6 +110,28 @@
   .dockbrand img{height:35px;width:auto}
   .dockbrand .callbtn{padding:6px 13px;font-size:14px}
   body.chatting .dockbrand{display:flex}
+  .roombar{display:none;margin:0 0 16px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+    font-size:14px;color:var(--ink);text-align:left}
+  .roombar.show{display:block}
+  .roombar .live{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--earth)}
+  .roombar .dot{width:8px;height:8px;border-radius:50%;background:#3f7a4a}
+  .roombar .dot.off{background:#b9a58c}
+  .roombar .people{color:var(--muted)}
+  .roombar .top{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+  .roombar .leave{margin-left:auto;border:none;background:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
+  .roombar form{display:flex;gap:8px;margin-top:10px}
+  .roombar input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit}
+  .roombar form button{padding:9px 14px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-weight:600;font-family:inherit;cursor:pointer}
+  .roombar .err{margin:8px 0 0;color:var(--earth);font-size:13px}
+  .msg-col{display:flex;flex-direction:column;max-width:80%}
+  .msg-row.user.other{justify-content:flex-start}
+  .msg-row.user.other .msg.user{background:#fff;max-width:100%}
+  .msg-row.user .msg-col .msg.user{max-width:100%}
+  .who{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 3px 6px}
+  .msg-row.user.mine .who{text-align:right;margin:0 6px 3px 0}
+  .callwin label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
+  .callwin .namerow{margin-bottom:12px}
+  .callwin .namerow input{width:100%}
   .shared-banner{display:none;margin:0 0 16px;padding:10px 14px;border:1px dashed var(--line);border-radius:12px;
     font-size:14px;color:var(--muted);text-align:center}
   .shared-banner.show{display:block}
@@ -168,6 +190,7 @@
     </div>
 
     <p class="shared-banner" id="sharedBanner">A friend invited you into this Biblicall conversation. Read along, then keep it going below.</p>
+    <div class="roombar" id="roomBar"></div>
     <div class="thread" id="thread"></div>
   </div>
 </div>
@@ -175,7 +198,8 @@
 <dialog class="callwin" id="callWin" aria-labelledby="callTitle">
   <button type="button" class="close" id="callClose" aria-label="Close">&times;</button>
   <h2 id="callTitle">Invite a friend to the call</h2>
-  <p id="callIntro">Enter a friend's cell number or email and we'll open a text or email with a Biblicall link. When they tap it, they join this conversation. Invite as many friends as you like.</p>
+  <p id="callIntro">Enter a friend's cell number or email and we'll open a text or email with a Biblicall link. When they tap it, they join this conversation live, and everyone sees new messages as they happen. Invite as many friends as you like.</p>
+  <div class="namerow"><label for="callName">Your name (so friends know who invited them)</label><input type="text" id="callName" autocomplete="given-name" maxlength="40" placeholder="First name"></div>
   <form id="callForm" class="row" novalidate>
     <input type="text" id="callPhone" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cell # or email" aria-label="Friend's cell phone number or email address">
     <button type="submit" class="primary">Send invite</button>
@@ -190,6 +214,7 @@
 
 <script>
   const WORKER_URL = 'https://noisy-morning-3bbc.graphics-a4c.workers.dev';
+  const ROOMS_WS = ''; // live call rooms, e.g. 'wss://biblicall-rooms.<subdomain>.workers.dev/room/'
 
   const q = document.getElementById('q');
   const sendBtn = document.getElementById('sendBtn');
@@ -355,7 +380,8 @@
     let lastRow = null;
     conversation.forEach((m) => {
       const row = document.createElement('div');
-      row.className = 'msg-row ' + m.role;
+      const mine = !room || !m.from || m.from === room.you;
+      row.className = 'msg-row ' + m.role + (m.role === 'user' && room ? (mine ? ' mine' : ' other') : '');
       const bubble = document.createElement('div');
       bubble.className = 'msg ' + m.role + (m.loading ? ' loading' : '');
       if (m.role === 'assistant' && !m.loading) {
@@ -363,7 +389,17 @@
       } else {
         bubble.textContent = m.content;
       }
-      row.appendChild(bubble);
+      if (m.role === 'user' && room && m.name) {
+        const col = document.createElement('div');
+        col.className = 'msg-col';
+        const who = document.createElement('div');
+        who.className = 'who';
+        who.textContent = mine ? 'You' : m.name;
+        col.appendChild(who); col.appendChild(bubble);
+        row.appendChild(col);
+      } else {
+        row.appendChild(bubble);
+      }
       threadBox.appendChild(row);
       lastRow = row;
       if (m.role === 'assistant' && m.ns) {
@@ -390,6 +426,13 @@
         }
       }
     });
+    if (room && room.thinking) {
+      const row = document.createElement('div');
+      row.className = 'msg-row assistant';
+      row.innerHTML = '<div class="msg assistant loading">Biblicall is thinking\u2026</div>';
+      threadBox.appendChild(row);
+      lastRow = row;
+    }
     if (lastRow) {
       const dock = document.getElementById('composerDock');
       const dockHeight = dock ? dock.offsetHeight : 0;
@@ -411,6 +454,14 @@
   async function reveal() {
     const question = q.value.trim();
     if (question.length === 0) { q.focus(); return; }
+    if (room && room.live) {
+      if (!roomSend({ type: 'ask', content: question })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
+      document.body.classList.add('chatting');
+      q.value = ''; q.style.height = 'auto';
+      lastQuestion = question;
+      emailStep.classList.add('show');
+      return;
+    }
 
     document.body.classList.add('chatting');
     sendBtn.disabled = true;
@@ -533,11 +584,16 @@
     return JSON.parse(new TextDecoder().decode(bytes));
   }
   async function inviteLink() {
+    if (ROOMS_WS) {
+      const id = await ensureRoom();
+      if (id) return SITE + '?room=' + id;
+    }
     const code = await packConvo();
     return code ? SITE + '#c=' + code : SITE + '?invite=1';
   }
   function inviteText(link) {
-    return "Join my call on Biblicall, an AI assistant guided by biblical wisdom. Tap to join the conversation: " + link;
+    const who = myName();
+    return (who ? who + ' invited you to' : 'Join me in') + " a live call on Biblicall, an AI assistant guided by biblical wisdom. Tap to join the conversation: " + link;
   }
   function normalizePhone(v) {
     const plus = v.trim().startsWith('+');
@@ -549,8 +605,12 @@
   }
   function prettyPhone(p) { const m = p.match(/^\+1(\d{3})(\d{3})(\d{4})$/); return m ? '(' + m[1] + ') ' + m[2] + '-' + m[3] : p; }
 
+  const callName = document.getElementById('callName');
+  callName.value = myName();
+  callName.addEventListener('change', () => setMyName(callName.value));
   document.querySelectorAll('[data-call]').forEach((b) => b.addEventListener('click', () => {
     callStatus.textContent = '';
+    callName.value = myName();
     callWin.showModal();
     setTimeout(() => callPhone.focus(), 50);
   }));
@@ -559,6 +619,7 @@
 
   document.getElementById('callForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (callName.value.trim()) setMyName(callName.value);
     const raw = callPhone.value.trim();
     const isEmail = raw.includes('@');
     const email = isEmail && /^[^\s@,;]+@[^\s@,;]+\.[A-Za-z]{2,}$/.test(raw) ? raw : null;
@@ -588,6 +649,7 @@
   });
 
   document.getElementById('callCopy').addEventListener('click', async () => {
+    if (callName.value.trim()) setMyName(callName.value);
     const link = await inviteLink();
     try { await navigator.clipboard.writeText(inviteText(link)); callStatus.textContent = 'Invite copied. Paste it into any text or message.'; }
     catch (e) { callStatus.textContent = link; }
@@ -600,6 +662,130 @@
       try { await navigator.share({ title: 'Join my Biblicall call', text: inviteText(link), url: link }); } catch (e) {}
     });
   }
+
+  // ---- Live call rooms (biblicall-rooms worker) ----
+  var room = null;
+  const roomBar = document.getElementById('roomBar');
+  function myName() { try { return localStorage.getItem('bc_name') || ''; } catch (e) { return ''; } }
+  function setMyName(v) {
+    v = String(v || '').trim().slice(0, 40);
+    try { localStorage.setItem('bc_name', v); } catch (e) {}
+    if (room) roomSend({ type: 'hello', name: v || 'Guest' });
+  }
+  function newRoomId() { const b = new Uint8Array(12); crypto.getRandomValues(b); return b64url(b); }
+  function roomSend(obj) {
+    if (!room || !room.ws || room.ws.readyState !== 1) return false;
+    room.ws.send(JSON.stringify(obj)); return true;
+  }
+  function roomError(text) { room && (room.err = text); drawRoomBar(); setTimeout(() => { if (room && room.err === text) { room.err = ''; drawRoomBar(); } }, 5000); }
+  function mapRoomMsg(x, prevUser) {
+    const out = { role: x.role === 'assistant' ? 'assistant' : 'user', content: String(x.content || ''), from: x.from, name: x.name };
+    if (out.role === 'assistant') {
+      out.q = prevUser || ''; out.hist = [];
+      if (x.ns && Array.isArray(x.ns.verses)) {
+        const verses = x.ns.verses.map((v) => { const hit = lookupVerse(v && v.ref); return hit ? { ...hit, why: String(v.why || '') } : null; }).filter(Boolean).slice(0, 3);
+        if (verses.length) out.ns = { teach: String(x.ns.teach || ''), verses, reflect: String(x.ns.reflect || '') };
+      }
+      if (!out.ns && x.offer) out.nsOffer = true;
+    }
+    return out;
+  }
+  function drawRoomBar() {
+    if (!room) { roomBar.classList.remove('show'); roomBar.innerHTML = ''; return; }
+    roomBar.classList.add('show');
+    const others = (room.people || []).filter((p) => p.id !== room.you).map((p) => p.name);
+    const who = others.length ? 'with ' + (others.length > 4 ? others.slice(0, 4).join(', ') + ' and ' + (others.length - 4) + ' more' : others.join(', ')) : 'waiting for friends to join';
+    roomBar.innerHTML = '<div class="top"><span class="live"><span class="dot' + (room.live ? '' : ' off') + '"></span>' + (room.live ? 'Live call' : 'Connecting…') + '</span>' +
+      '<span class="people"></span><button type="button" class="leave">Leave call</button></div>' +
+      (room.askName ? '<form class="namef"><input type="text" maxlength="40" placeholder="Your first name" aria-label="Your name"><button type="submit">Join</button></form>' : '') +
+      (room.err ? '<p class="err"></p>' : '');
+    roomBar.querySelector('.people').textContent = who;
+    if (room.err) roomBar.querySelector('.err').textContent = room.err;
+    roomBar.querySelector('.leave').addEventListener('click', leaveRoom);
+    const nf = roomBar.querySelector('.namef');
+    if (nf) nf.addEventListener('submit', (e) => { e.preventDefault(); const v = nf.querySelector('input').value.trim(); if (!v) return; setMyName(v); room.askName = false; drawRoomBar(); q.focus(); });
+  }
+  function connectRoom() {
+    if (!room) return;
+    let ws;
+    try { ws = new WebSocket(ROOMS_WS + room.id); } catch (e) { return; }
+    room.ws = ws;
+    ws.onopen = () => { roomSend({ type: 'hello', name: myName() || 'Guest' }); };
+    ws.onmessage = async (ev) => {
+      let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
+      if (d.type === 'welcome') {
+        await loadBible();
+        room.you = d.you; room.live = true; room.tries = 0; room.thinking = !!d.thinking;
+        if (room.seed && (!d.msgs || !d.msgs.length) && room.seed.length) {
+          conversation = []; // the seeded messages stream back from the room
+          roomSend({ type: 'seed', msgs: room.seed });
+          room.seed = null;
+        } else {
+          room.seed = null;
+          let prev = '';
+          conversation = (d.msgs || []).map((x) => { const m = mapRoomMsg(x, prev); if (m.role === 'user') prev = m.content; return m; });
+        }
+        if (room.onReady) { room.onReady(room.id); room.onReady = null; }
+        drawRoomBar(); renderThread();
+      } else if (d.type === 'msg') {
+        const prev = [...conversation].reverse().find((m) => m.role === 'user');
+        const m = mapRoomMsg(d.msg, prev ? prev.content : '');
+        if (m.role === 'user' && m.from === room.you && conversation.length && conversation[conversation.length - 1].pending) conversation.pop();
+        conversation.push(m);
+        document.body.classList.add('chatting'); threadBox.classList.add('show');
+        renderThread();
+      } else if (d.type === 'presence') {
+        room.people = d.people || []; drawRoomBar();
+      } else if (d.type === 'thinking') {
+        room.thinking = !!d.on; renderThread();
+      } else if (d.type === 'error') {
+        roomError(d.text || 'Something went wrong.');
+      }
+    };
+    ws.onclose = () => {
+      if (!room || room.ws !== ws) return;
+      room.live = false; drawRoomBar();
+      if (room.left) return;
+      room.tries = (room.tries || 0) + 1;
+      setTimeout(() => { if (room && !room.left) connectRoom(); }, Math.min(30000, 1000 * Math.pow(2, room.tries)));
+    };
+  }
+  function openRoom(id, opts) {
+    room = { id, people: [], live: false, thinking: false, seed: opts && opts.seed, askName: opts && opts.askName, onReady: opts && opts.onReady };
+    const u = new URL(location.href); u.searchParams.set('room', id); u.hash = '';
+    history.replaceState(null, '', u.pathname + u.search);
+    drawRoomBar();
+    connectRoom();
+  }
+  function ensureRoom() {
+    if (room && room.live) return Promise.resolve(room.id);
+    if (room) return new Promise((res) => { const t = setTimeout(() => res(null), 6000); room.onReady = (id) => { clearTimeout(t); res(id); }; });
+    const seed = conversation.filter((m) => !m.loading).slice(-8).map((m) => {
+      const o = { role: m.role, content: String(m.content).slice(0, 4000) };
+      if (m.ns && m.ns !== 'loading') o.ns = { northStar: m.ns.teach, verses: m.ns.verses.map((v) => ({ ref: v.label, why: v.why })), reflect: m.ns.reflect };
+      return o;
+    });
+    return new Promise((res) => {
+      const t = setTimeout(() => { leaveRoom(); res(null); }, 6000);
+      openRoom(newRoomId(), { seed, onReady: (id) => { clearTimeout(t); res(id); } });
+    });
+  }
+  function leaveRoom() {
+    if (!room) return;
+    room.left = true;
+    try { room.ws && room.ws.close(1000); } catch (e) {}
+    room = null;
+    const u = new URL(location.href); u.searchParams.delete('room');
+    history.replaceState(null, '', u.pathname + u.search);
+    drawRoomBar(); renderThread();
+  }
+  (function joinFromLink() {
+    const id = new URLSearchParams(location.search).get('room');
+    if (!ROOMS_WS || !id || !/^[A-Za-z0-9_-]{12,40}$/.test(id)) return;
+    document.body.classList.add('chatting');
+    threadBox.classList.add('show');
+    openRoom(id, { askName: !myName() });
+  })();
 
   // ---- Joining from an invite link ----
   (async () => {
