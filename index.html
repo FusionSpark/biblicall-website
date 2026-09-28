@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="theme-color" content="#f4ead9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Biblicall">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Biblicall — Learn anything, guided by a true North Star</title>
 <meta name="description" content="Ask Biblicall anything. A full AI assistant guided by biblical wisdom. When it matters most, Biblicall adds a North Star: scripture, quoted word for word from the King James Bible, to guide your decisions and encourage you.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -150,11 +158,73 @@
   .callwin li{padding:4px 0;border-top:1px solid var(--line)}
   .callwin .close{position:absolute;top:10px;right:12px;border:none;background:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
   .callwin .fine{font-size:12px;margin:12px 0 0}
+  .remchip{flex-shrink:0;margin:0 0 9px -8px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;
+    color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .remchip:hover{border-color:var(--earth);color:var(--earth)}
+  .remchip.on{background:var(--earth);border-color:var(--earth);color:#fff}
+  .savednote{text-align:right;font-size:12px;font-weight:600;color:#3f7a4a;margin:-2px 4px 10px}
+  .memoffer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 20px;font-size:14px;color:var(--muted)}
+  .memoffer button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-family:inherit;font-size:13px;font-weight:600;color:var(--earth);cursor:pointer}
+  .memoffer button.yes{background:var(--earth);border-color:var(--earth);color:#fff}
+  .memoffer .done{color:#3f7a4a;font-weight:600}
+  .menubtn{position:fixed;top:12px;left:12px;z-index:20;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;
+    color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .menubtn:hover{background:var(--card);border-color:var(--line);color:var(--earth)}
+  .menubtn svg{width:22px;height:22px}
+  .drawer-back{position:fixed;inset:0;z-index:40;background:rgba(44,33,23,.32)}
+  .drawer{position:fixed;top:0;bottom:0;left:0;z-index:41;width:min(340px,88vw);background:var(--card);border-right:1px solid var(--line);
+    box-shadow:8px 0 30px rgba(74,47,38,.18);display:flex;flex-direction:column;text-align:left}
+  .drawer[hidden],.drawer-back[hidden]{display:none}
+  .dr-head{display:flex;align-items:center;gap:8px;padding:14px 14px 10px}
+  .dr-new{flex:1;padding:10px 14px;border:1px solid var(--earth);border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+  .dr-new:hover{background:var(--earth-deep)}
+  .dr-close{border:none;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 8px}
+  .dr-tabs{display:flex;gap:4px;padding:0 14px 8px;border-bottom:1px solid var(--line)}
+  .dr-tabs button{flex:1;padding:8px;border:none;border-radius:10px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+  .dr-tabs button.on{background:var(--bg);color:var(--earth-deep)}
+  .dr-body{flex:1;overflow-y:auto;padding:10px 8px}
+  .dr-empty{padding:14px 10px;font-size:14px;line-height:1.5;color:var(--muted)}
+  .dr-item{display:flex;align-items:center;gap:6px;border-radius:10px}
+  .dr-item:hover{background:var(--bg)}
+  .dr-item.cur{background:var(--bg)}
+  .dr-open{flex:1;min-width:0;border:none;background:none;text-align:left;padding:9px 10px;font-family:inherit;cursor:pointer;color:var(--ink)}
+  .dr-open b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dr-open small{font-size:12px;color:var(--muted)}
+  .dr-del{border:none;background:none;color:var(--muted);font-size:20px;line-height:1;padding:6px 10px;cursor:pointer;border-radius:8px}
+  .dr-del:hover{color:var(--earth-deep);background:var(--line)}
+  .mem-intro{padding:6px 10px 10px;font-size:13px;line-height:1.5;color:var(--muted)}
+  .mem-add{display:flex;gap:6px;padding:0 6px 10px}
+  .mem-add input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff}
+  .mem-add button{padding:9px 12px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-weight:600;cursor:pointer}
+  .mem-text{flex:1;min-width:0;padding:9px 10px;font-size:14px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+  .mem-clear{margin:12px 10px 4px;border:none;background:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+  .dr-fine{margin:0;padding:10px 16px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+  .toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:50;background:var(--earth-deep);color:#fff;padding:9px 16px;border-radius:999px;
+    font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(44,33,23,.25);opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+  .toast.show{opacity:1}
+  .installtip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;width:min(440px,calc(100vw - 32px));background:var(--card);
+    border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(74,47,38,.2);padding:12px 40px 12px 14px;display:flex;align-items:center;gap:12px;text-align:left;font-size:14px;line-height:1.4}
+  .installtip[hidden]{display:none}
+  body.chatting .installtip{display:none}
+  .installtip img{width:40px;height:40px;border-radius:10px;flex:none}
+  .installtip .go{margin-left:auto;padding:7px 12px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-weight:600;cursor:pointer}
+  .installtip .x{position:absolute;top:6px;right:8px;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer}
   footer{text-align:center;padding:22px 20px;font-size:13px;color:var(--muted)}
   footer a{color:var(--earth)}
 </style>
 </head>
 <body>
+
+<button type="button" class="menubtn" id="menuBtn" aria-label="Your conversations and memory" title="Your conversations and memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg></button>
+<div class="drawer-back" id="drawerBack" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
+  <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Conversations</button><button type="button" data-tab="memory">Memory</button></div>
+  <div class="dr-body" id="drBody"></div>
+  <p class="dr-fine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
+</aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="installtip" id="installTip" hidden><img src="apple-touch-icon.png" alt=""><span id="installText"></span><button type="button" class="go" id="installGo" hidden>Install</button><button type="button" class="x" id="installX" aria-label="Dismiss">&times;</button></div>
 
 <div class="center">
   <div class="wrap">
@@ -169,6 +239,7 @@
       <div class="dockbrand"><img id="dockLogo" alt="Biblicall"></div>
       <div class="callbar"><button type="button" class="callbtn" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Add Call</button></div>
       <div class="composer">
+        <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to Biblicall's memory">Remember</button>
         <textarea id="q" rows="1" placeholder="Ask Biblicall anything…"></textarea>
         <button class="mic" id="micBtn" type="button" aria-label="Speak your question" title="Speak your question" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10v1a7 7 0 0 0 14 0v-1"></path><line x1="12" y1="18" x2="12" y2="22"></line></svg>
@@ -401,6 +472,13 @@
       }
       threadBox.appendChild(row);
       lastRow = row;
+      if (m.role === 'user' && m.saved) {
+        const note = document.createElement('div');
+        note.className = 'savednote';
+        note.textContent = '\u2713 Saved to memory';
+        threadBox.appendChild(note);
+        lastRow = note;
+      }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
         panel.className = 'ns' + (m.ns === 'loading' ? ' loading' : '');
@@ -425,6 +503,23 @@
         }
       }
     });
+    threadBox.querySelectorAll('.memoffer').forEach((n) => n.remove());
+    const offerIdx = conversation.findIndex((m) => m.memOffer);
+    if (offerIdx >= 0) {
+      const m = conversation[offerIdx];
+      const box = document.createElement('div');
+      box.className = 'memoffer';
+      if (m.memOffer === 'done') {
+        box.innerHTML = '<span class="done">\u2713 Saved to memory</span>';
+      } else {
+        box.innerHTML = '<span>Want Biblicall to remember this?</span><button type="button" class="yes">Remember</button><button type="button" class="no">No thanks</button>';
+        box.querySelector('.yes').addEventListener('click', () => { addMemory(m.memOffer); m.memOffer = 'done'; toast('Saved to memory'); renderThread(); });
+        box.querySelector('.no').addEventListener('click', () => { delete m.memOffer; renderThread(); });
+      }
+      threadBox.appendChild(box);
+      if (offerIdx === conversation.length - 1) lastRow = box;
+    }
+    schedulePersist();
     if (room && room.thinking) {
       const row = document.createElement('div');
       row.className = 'msg-row assistant';
@@ -453,6 +548,18 @@
   async function reveal() {
     const question = q.value.trim();
     if (question.length === 0) { q.focus(); return; }
+    if (/^\s*forget\b/i.test(question) && !remOn) {
+      q.value = ''; q.style.height = 'auto';
+      openDrawer('memory');
+      toast('Tap \u00d7 next to anything Biblicall should forget.');
+      return;
+    }
+    const wantsRemember = remOn || /^\s*remember\b/i.test(question);
+    if (wantsRemember) {
+      const item = addMemory(stripRemember(question));
+      setRem(false);
+      toast(item ? 'Saved to memory' : 'Already in memory');
+    }
     if (room && room.live) {
       if (!roomSend({ type: 'ask', content: question })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
       document.body.classList.add('chatting');
@@ -467,7 +574,8 @@
     q.value = '';
     q.style.height = 'auto';
 
-    conversation.push({ role: 'user', content: question });
+    conversation.forEach((m) => { delete m.memOffer; });
+    conversation.push({ role: 'user', content: question, saved: wantsRemember || undefined });
     conversation.push({ role: 'assistant', content: 'Thinking…', loading: true });
     threadBox.classList.add('show');
     renderThread();
@@ -481,9 +589,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: conversation.filter((m) => !m.loading).map(({ role, content }) => ({ role, content }))
-        })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember) })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Upstream error');
@@ -492,6 +598,9 @@
       const ns = await nsPromise;
       if (ns) conversation[turn].ns = ns;
       else if (!ack) conversation[turn].nsOffer = true;
+      if (!wantsRemember && !ack && personalFact(question) && !conversation.some((m) => m.memOffer) && !memory.some((x) => x.text === memText(question))) {
+        conversation[turn].memOffer = memText(question);
+      }
     } catch (err) {
       conversation[turn] = {
         role: 'assistant',
@@ -505,6 +614,208 @@
     emailStep.classList.add('show');
     lastQuestion = question;
   }
+  // ---- Local storage helpers (this device only) ----
+  function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+  function toast(text) {
+    toastEl.textContent = text; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+  }
+
+  // ---- Memory: facts the user chose to save ----
+  let memory = lsGet('bc_memory', []);
+  if (!Array.isArray(memory)) memory = [];
+  function stripRemember(t) { return String(t).replace(/^\s*remember\s*(that\s*)?[:,\-–—]?\s*/i, ''); }
+  function memText(t) { return stripRemember(t).replace(/\s+/g, ' ').trim().slice(0, 300); }
+  function addMemory(text) {
+    text = memText(text);
+    if (!text) return null;
+    if (memory.some((m) => m.text.toLowerCase() === text.toLowerCase())) return null;
+    const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text, t: Date.now() };
+    memory.unshift(item);
+    memory = memory.slice(0, 100);
+    lsSet('bc_memory', memory); drawDrawer();
+    return item;
+  }
+  function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); }
+  function apiMessages(justSaved) {
+    const msgs = conversation.filter((m) => !m.loading).map(({ role, content }) => ({ role, content }));
+    const first = msgs.find((m) => m.role === 'user');
+    if (first && memory.length) {
+      first.content = 'Things I have asked Biblicall to remember about me (use them only when they are relevant; do not list them back to me):\n' +
+        memory.slice(0, 40).map((m) => '- ' + m.text).join('\n') + '\n\n' + first.content;
+    }
+    if (justSaved) {
+      const last = msgs[msgs.length - 1];
+      if (last && last.role === 'user') last.content += '\n\n(I just saved this to my Biblicall memory, so you will remember it in future conversations. Acknowledge it warmly and briefly.)';
+    }
+    return msgs;
+  }
+  function personalFact(t) {
+    const s = String(t).toLowerCase();
+    if (s.length < 20 || s.length > 600) return false;
+    return /\b(i am|i'm|im|i have|i've|i just|i started|i work|i run|i own|i lead|i'm starting|we have|we just|my (wife|husband|son|daughter|kids|children|family|business|company|job|church|mom|dad|mother|father|team|boss))\b/.test(s);
+  }
+  const remChip = document.getElementById('remChip');
+  const defaultPlaceholder = q.placeholder;
+  var remOn = false;
+  function setRem(on) {
+    remOn = on;
+    remChip.classList.toggle('on', on);
+    remChip.setAttribute('aria-pressed', on ? 'true' : 'false');
+    q.placeholder = on ? 'What should Biblicall remember?' : defaultPlaceholder;
+  }
+  remChip.addEventListener('click', () => { setRem(!remOn); q.focus(); });
+
+  // ---- Saved conversations ----
+  let convos = lsGet('bc_convos', []);
+  if (!Array.isArray(convos)) convos = [];
+  let convId = null, persistTimer = null;
+  function schedulePersist() { clearTimeout(persistTimer); persistTimer = setTimeout(persistConvo, 400); }
+  function persistConvo() {
+    const msgs = conversation.filter((m) => !m.loading && !m.pending).map((m) => {
+      const o = { role: m.role, content: String(m.content).slice(0, 8000) };
+      if (m.name) o.name = m.name;
+      if (m.saved) o.saved = true;
+      if (m.ns && m.ns !== 'loading') o.ns = m.ns;
+      return o;
+    });
+    const first = msgs.find((m) => m.role === 'user');
+    if (!first) return;
+    if (!convId) convId = 'c' + Date.now().toString(36);
+    const prev = convos.find((c) => c.id === convId);
+    const rec = { id: convId, title: first.content.replace(/\s+/g, ' ').slice(0, 70), t: Date.now(), msgs: msgs.slice(-60), room: room ? room.id : (prev && prev.room) || null };
+    if (prev && JSON.stringify(prev.msgs) === JSON.stringify(rec.msgs) && prev.room === rec.room) return;
+    convos = [rec].concat(convos.filter((c) => c.id !== convId)).slice(0, 50);
+    if (!lsSet('bc_convos', convos)) { convos = convos.slice(0, 15); lsSet('bc_convos', convos); }
+    drawDrawer();
+  }
+  function openConvo(id) {
+    const c = convos.find((x) => x.id === id);
+    if (!c) return;
+    closeDrawer();
+    if (c.room) { location.href = '/?room=' + encodeURIComponent(c.room); return; }
+    if (room) leaveRoom();
+    convId = c.id;
+    let prevQ = '';
+    conversation = c.msgs.map((m) => {
+      const o = { ...m };
+      if (o.role === 'user') prevQ = o.content; else { o.q = prevQ; o.hist = []; }
+      return o;
+    });
+    document.body.classList.add('chatting');
+    threadBox.classList.add('show');
+    renderThread();
+  }
+  function newConvo() {
+    closeDrawer();
+    if (room) leaveRoom();
+    convId = null;
+    conversation = [];
+    threadBox.innerHTML = '';
+    threadBox.classList.remove('show');
+    document.body.classList.remove('chatting');
+    emailStep.classList.remove('show');
+    window.scrollTo(0, 0);
+    q.value = ''; q.style.height = 'auto';
+    q.focus();
+  }
+  function deleteConvo(id) {
+    convos = convos.filter((c) => c.id !== id);
+    lsSet('bc_convos', convos);
+    if (id === convId) convId = 'c' + Date.now().toString(36) + 'x';
+    drawDrawer();
+  }
+
+  // ---- Drawer: conversations + memory ----
+  const drawer = document.getElementById('drawer');
+  const drawerBack = document.getElementById('drawerBack');
+  const drBody = document.getElementById('drBody');
+  let drTab = 'convos', clearArmed = false;
+  function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function fmtDate(t) {
+    const d = new Date(t), now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+  function drawDrawer() {
+    if (drawer.hidden) return;
+    drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === drTab));
+    drBody.innerHTML = '';
+    if (drTab === 'convos') {
+      if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
+      convos.forEach((c) => {
+        const row = el('div', 'dr-item' + (c.id === convId ? ' cur' : ''));
+        const open = el('button', 'dr-open'); open.type = 'button';
+        open.appendChild(el('b', null, c.title || 'Conversation'));
+        open.appendChild(el('small', null, fmtDate(c.t) + (c.room ? ' · Live call' : '')));
+        open.addEventListener('click', () => openConvo(c.id));
+        const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Delete conversation');
+        del.addEventListener('click', () => deleteConvo(c.id));
+        row.appendChild(open); row.appendChild(del); drBody.appendChild(row);
+      });
+    } else {
+      drBody.appendChild(el('p', 'mem-intro', 'Biblicall uses these in future answers. To add one, tap the Remember chip in the chat box, start a message with “Remember”, or type it here.'));
+      const f = el('form', 'mem-add');
+      const inp = el('input'); inp.type = 'text'; inp.maxLength = 300; inp.placeholder = 'e.g. I have three kids'; inp.setAttribute('aria-label', 'Add something to remember');
+      const add = el('button', null, 'Add'); add.type = 'submit';
+      f.appendChild(inp); f.appendChild(add);
+      f.addEventListener('submit', (e) => { e.preventDefault(); if (addMemory(inp.value)) toast('Saved to memory'); inp.value = ''; });
+      drBody.appendChild(f);
+      if (!memory.length) drBody.appendChild(el('p', 'dr-empty', 'Nothing saved yet.'));
+      memory.forEach((m) => {
+        const row = el('div', 'dr-item');
+        row.appendChild(el('div', 'mem-text', m.text));
+        const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Forget this');
+        del.addEventListener('click', () => { removeMemory(m.id); toast('Forgotten'); });
+        row.appendChild(del); drBody.appendChild(row);
+      });
+      if (memory.length > 1) {
+        const clr = el('button', 'mem-clear', clearArmed ? 'Tap again to forget everything' : 'Forget everything'); clr.type = 'button';
+        clr.addEventListener('click', () => {
+          if (!clearArmed) { clearArmed = true; drawDrawer(); setTimeout(() => { clearArmed = false; drawDrawer(); }, 4000); return; }
+          clearArmed = false; memory = []; lsSet('bc_memory', memory); drawDrawer(); toast('Memory cleared');
+        });
+        drBody.appendChild(clr);
+      }
+    }
+  }
+  function openDrawer(tab) { if (tab) drTab = tab; drawer.hidden = false; drawerBack.hidden = false; drawDrawer(); }
+  function closeDrawer() { drawer.hidden = true; drawerBack.hidden = true; }
+  document.getElementById('menuBtn').addEventListener('click', () => openDrawer());
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  drawerBack.addEventListener('click', closeDrawer);
+  document.getElementById('newChat').addEventListener('click', newConvo);
+  drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.addEventListener('click', () => { drTab = b.dataset.tab; drawDrawer(); }));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) closeDrawer(); });
+
+  // ---- Keep Biblicall on the home screen ----
+  (function installTip() {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+    if (standalone || lsGet('bc_tip_done', false)) return;
+    const tip = document.getElementById('installTip');
+    const text = document.getElementById('installText');
+    const go = document.getElementById('installGo');
+    const done = () => { tip.hidden = true; lsSet('bc_tip_done', true); };
+    document.getElementById('installX').addEventListener('click', done);
+    const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (iosDevice) {
+      text.textContent = 'Keep Biblicall on your phone: tap Share, then “Add to Home Screen.”';
+      setTimeout(() => { if (!document.body.classList.contains('chatting')) tip.hidden = false; }, 3000);
+    }
+    let deferred = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault(); deferred = e;
+      text.textContent = 'Keep Biblicall on your home screen, one tap away.';
+      go.hidden = false; tip.hidden = false;
+    });
+    go.addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; done(); });
+    window.addEventListener('appinstalled', done);
+  })();
+
   // ---- Speech to text (microphone button) ----
   const micBtn = document.getElementById('micBtn');
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
