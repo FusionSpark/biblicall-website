@@ -166,7 +166,7 @@ export class Room extends DurableObject {
   }
 
   async ai(messages) {
-    const r = await this.env.AI.fetch('https://biblicall-ai/', {
+    const r = await fetch(this.env.AI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com' },
       body: JSON.stringify({ messages })
