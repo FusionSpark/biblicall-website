@@ -11,5 +11,5 @@ tag = "v1"
 new_sqlite_classes = ["Room"]
 
 [vars]
-# The existing Biblicall AI worker (answers + North Star). It lives in another Cloudflare account, so it is called over HTTPS.
-AI_URL = "https://noisy-morning-3bbc.graphics-a4c.workers.dev"
+# The existing Biblicall AI worker (answers + North Star). Same Cloudflare account; called over HTTPS.
+AI_URL = "https://biblicall-ai.sjonlich.workers.dev"
