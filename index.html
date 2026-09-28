@@ -663,7 +663,7 @@
   const narrow = window.matchMedia ? matchMedia('(max-width: 520px)') : { matches: false };
   var remOn = false;
   function setPlaceholder() {
-    q.placeholder = remOn ? (narrow.matches ? 'What to remember?' : 'What should Biblicall remember?')
+    q.placeholder = remOn ? (narrow.matches ? 'Type it here\u2026' : 'What should Biblicall remember?')
                           : (narrow.matches ? 'Ask anything\u2026' : 'Ask Biblicall anything\u2026');
   }
   function setRem(on) {
