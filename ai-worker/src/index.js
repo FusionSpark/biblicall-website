@@ -1,11 +1,44 @@
 // Biblicall AI worker.
-//   POST { messages: [{role, content}], memory?: [string], mode?: "answer" | "northstar", group?: bool } -> { answer }
+//   POST { messages: [{role, content}], memory?: [string], mode?: "answer" | "northstar", group?: bool,
+//          attachments?: [{kind: "image"|"pdf"|"text", name, media_type?, data?, text?}] } -> { answer }
+//   attachments are files the visitor uploaded; they are given to Claude with the latest user message.
 // Only biblicall.com (and the biblicall-rooms call server) may use it, with a fair-use limit per visitor.
 
 const ORIGINS = ['https://biblicall.com', 'https://www.biblicall.com'];
 const MODEL = 'claude-sonnet-4-5';
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 4000;
+// Uploaded files: at most 5 per request, about 24 MB of file data in total.
+const MAX_FILES = 5;
+const MAX_IMAGE_B64 = 7_000_000;   // about 5 MB per image
+const MAX_PDF_B64 = 20_000_000;    // about 15 MB per PDF
+const MAX_TEXT_CHARS = 60_000;     // per text or Word document
+const MAX_TOTAL_B64 = 24_000_000;
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+function attachmentBlocks(list) {
+  if (!Array.isArray(list)) return [];
+  const blocks = [];
+  let total = 0;
+  for (const a of list.slice(0, MAX_FILES)) {
+    if (!a || typeof a !== 'object') continue;
+    const name = String(a.name || 'file').replace(/[\r\n]+/g, ' ').slice(0, 120);
+    if (a.kind === 'image' && IMAGE_TYPES.includes(a.media_type) && typeof a.data === 'string'
+        && a.data.length <= MAX_IMAGE_B64 && total + a.data.length <= MAX_TOTAL_B64 && B64_RE.test(a.data.slice(0, 2000))) {
+      total += a.data.length;
+      blocks.push({ type: 'text', text: 'Image: ' + name });
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: a.media_type, data: a.data } });
+    } else if (a.kind === 'pdf' && typeof a.data === 'string'
+        && a.data.length <= MAX_PDF_B64 && total + a.data.length <= MAX_TOTAL_B64 && B64_RE.test(a.data.slice(0, 2000))) {
+      total += a.data.length;
+      blocks.push({ type: 'document', title: name, source: { type: 'base64', media_type: 'application/pdf', data: a.data } });
+    } else if (a.kind === 'text' && typeof a.text === 'string' && a.text.trim()) {
+      blocks.push({ type: 'document', title: name, source: { type: 'text', media_type: 'text/plain', data: a.text.slice(0, MAX_TEXT_CHARS) } });
+    }
+  }
+  return blocks;
+}
 
 function systemPrompt(today, memory, group, decide) {
   let s = `You are Biblicall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
@@ -13,6 +46,8 @@ function systemPrompt(today, memory, group, decide) {
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
 
 When a question touches decisions, character, relationships, work, money, or hardship, let biblical wisdom (honesty, justice, mercy, humility, stewardship, love of neighbor) shape your judgment, the way a wise and trusted mentor would: warmly, naturally, never preachy or condemning. Don't quote verses yourself; Biblicall adds verified scripture in its North Star when it fits. Respect people of every background, and never take partisan political sides.
+
+When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
 
 Be direct, warm, and practical. Keep responses focused and conversational, typically under 180 words unless the question genuinely requires more depth. Behind every question is a person trying to build something: a business, a family, a life. Help them build it well.`;
   if (group) {
@@ -74,6 +109,11 @@ export default {
     if (!messages.length || messages[messages.length - 1].role !== 'user') return json({ error: 'Empty question' }, 400);
 
     const northStar = body.mode === 'northstar';
+    const files = northStar ? [] : attachmentBlocks(body.attachments);
+    if (files.length) {
+      const last = messages[messages.length - 1];
+      last.content = [...files, { type: 'text', text: last.content }];
+    }
     const memory = Array.isArray(body.memory)
       ? body.memory.filter((m) => typeof m === 'string' && m.trim()).slice(0, 40).map((m) => m.replace(/\s+/g, ' ').trim().slice(0, 300))
       : [];
@@ -82,7 +122,7 @@ export default {
     const payload = northStar
       ? { model: MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide), messages,
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
         };
 
