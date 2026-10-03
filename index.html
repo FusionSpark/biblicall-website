@@ -55,6 +55,22 @@
   .mic{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;background:transparent;
     color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
   .mic[hidden]{display:none}
+  .attach{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;background:transparent;
+    color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+  .attach svg{width:20px;height:20px}
+  .attach:hover{background:var(--bg)}
+  .attachrow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px;text-align:left}
+  .attachrow[hidden]{display:none}
+  .fchip{display:flex;align-items:center;gap:8px;max-width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:5px 6px 5px 6px;font-size:13px;color:var(--ink)}
+  .fchip img,.fchip .ficon{width:32px;height:32px;border-radius:7px;object-fit:cover;flex:none}
+  .fchip .ficon{display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--earth);font-size:10px;font-weight:700;letter-spacing:.04em}
+  .fchip .fname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+  .fchip.busy{opacity:.6}
+  .fchip button{border:none;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 6px}
+  .fchip button:hover{color:var(--earth)}
+  .attnote{font-size:12px;color:var(--muted);text-align:right;margin:-2px 4px 10px;overflow-wrap:anywhere}
+  .composer.dragover{border-color:var(--earth);box-shadow:0 0 0 3px rgba(102,67,54,.18)}
   .mic svg{width:20px;height:20px}
   .mic:hover{background:var(--bg)}
   .mic.listening{color:#fff;background:var(--earth);animation:micpulse 1.4s ease-in-out infinite}
@@ -242,9 +258,14 @@
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="Biblicall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
+      <div class="attachrow" id="attachRow" hidden aria-live="polite"></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to Biblicall's memory">Remember</button>
         <textarea id="q" rows="1" placeholder="Ask Biblicall anything…"></textarea>
+        <button class="attach" id="attachBtn" type="button" aria-label="Upload a file or photo" title="Upload a file or photo (PDF, Word, text, image)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+        </button>
+        <input type="file" id="fileIn" multiple hidden accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.rtf,application/pdf,text/plain,text/csv,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
         <button class="mic" id="micBtn" type="button" aria-label="Speak your question" title="Speak your question" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10v1a7 7 0 0 0 14 0v-1"></path><line x1="12" y1="18" x2="12" y2="22"></line></svg>
         </button>
@@ -452,6 +473,13 @@
       }
       threadBox.appendChild(row);
       lastRow = row;
+      if (m.role === 'user' && m.files && m.files.length) {
+        const note = document.createElement('div');
+        note.className = 'attnote';
+        note.textContent = 'Attached: ' + m.files.join(', ');
+        threadBox.appendChild(note);
+        lastRow = note;
+      }
       if (m.role === 'user' && m.saved) {
         const note = document.createElement('div');
         note.className = 'savednote';
@@ -526,8 +554,11 @@
   }
 
   async function reveal() {
-    const question = q.value.trim();
+    if (pendingFiles.some((f) => !f.ready)) { toast('Still reading your file\u2026'); return; }
+    const sending = pendingFiles.slice();
+    const question = q.value.trim() || (sending.length ? (sending.length > 1 ? 'Please look at these files.' : 'Please look at this file.') : '');
     if (question.length === 0) { q.focus(); return; }
+    if (sending.length && room && room.live) { toast('Files can\u2019t be shared in a live call yet.'); return; }
     if (/^\s*forget\b/i.test(question) && !remOn) {
       q.value = ''; q.style.height = 'auto';
       openDrawer('memory');
@@ -555,8 +586,11 @@
     q.style.height = 'auto';
 
     conversation.forEach((m) => { delete m.memOffer; });
-    conversation.push({ role: 'user', content: question, saved: wantsRemember || undefined });
+    conversation.push({ role: 'user', content: question, saved: wantsRemember || undefined, files: sending.length ? sending.map((f) => f.name) : undefined });
     conversation.push({ role: 'assistant', content: 'Thinking…', loading: true });
+    if (sending.length) { fileContext = { files: sending.map(fileFields), turnsLeft: 6 }; pendingFiles = []; drawAttachRow(); }
+    else if (fileContext && --fileContext.turnsLeft < 0) fileContext = null;
+    const attachments = fileContext ? fileContext.files : undefined;
     threadBox.classList.add('show');
     renderThread();
 
@@ -569,7 +603,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text) })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -622,6 +656,116 @@
     return item;
   }
   function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); }
+  // ---- Uploads: photos, PDFs, Word and text files, sent to Biblicall with the next question ----
+  const MAX_FILES = 5;
+  const attachRow = document.getElementById('attachRow');
+  const fileIn = document.getElementById('fileIn');
+  let pendingFiles = [];   // files waiting to be sent: {id, name, kind, media_type, data|text, thumb, ready}
+  let fileContext = null;  // files from the latest upload, kept for a few follow-up questions
+  const fid = () => Math.random().toString(36).slice(2, 9);
+  const extOf = (n) => (String(n).split('.').pop() || '').toLowerCase();
+  const TEXT_EXT = ['txt', 'md', 'csv', 'json', 'html', 'htm', 'rtf'];
+  function blobToB64(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1] || '');
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(blob);
+    });
+  }
+  async function shrinkImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const max = 1568, scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+      const t = document.createElement('canvas'); const ts = 64 / Math.max(c.width, c.height);
+      t.width = Math.round(c.width * ts); t.height = Math.round(c.height * ts); t.getContext('2d').drawImage(c, 0, 0, t.width, t.height);
+      return { data: await blobToB64(blob), thumb: t.toDataURL('image/jpeg', 0.7) };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  let mammothLoad = null;
+  function loadMammoth() {
+    if (window.mammoth) return Promise.resolve(window.mammoth);
+    if (!mammothLoad) mammothLoad = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js';
+      sc.onload = () => res(window.mammoth); sc.onerror = () => { mammothLoad = null; rej(new Error('load')); };
+      document.head.appendChild(sc);
+    });
+    return mammothLoad;
+  }
+  async function readFile(file) {
+    const ext = extOf(file.name), type = file.type || '';
+    if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
+      if (file.size > 25e6) throw new Error('That photo is too large. Try one under 25 MB.');
+      try { const r = await shrinkImage(file); return { kind: 'image', media_type: 'image/jpeg', data: r.data, thumb: r.thumb }; }
+      catch (e) { throw new Error("That photo couldn't be opened. Try a JPG or PNG."); }
+    }
+    if (type === 'application/pdf' || ext === 'pdf') {
+      if (file.size > 15e6) throw new Error('That PDF is too large. Try one under 15 MB.');
+      return { kind: 'pdf', data: await blobToB64(file) };
+    }
+    if (ext === 'docx' || type.includes('wordprocessingml')) {
+      if (file.size > 20e6) throw new Error('That Word file is too large.');
+      let m; try { m = await loadMammoth(); } catch (e) { throw new Error("Word files can't be read right now. Try saving it as a PDF."); }
+      const r = await m.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      if (!r.value.trim()) throw new Error('That Word file looks empty.');
+      return { kind: 'text', text: r.value.slice(0, 60000) };
+    }
+    if (ext === 'doc') throw new Error('Older .doc files aren\u2019t supported. Save it as .docx or PDF and try again.');
+    if (type.startsWith('text/') || TEXT_EXT.includes(ext) || type === 'application/json') {
+      if (file.size > 2e6) throw new Error('That text file is too large.');
+      const t = await file.text();
+      if (!t.trim()) throw new Error('That file looks empty.');
+      return { kind: 'text', text: t.slice(0, 60000) };
+    }
+    throw new Error('Biblicall can read photos, PDFs, Word (.docx) and text files.');
+  }
+  function drawAttachRow() {
+    attachRow.innerHTML = '';
+    attachRow.hidden = !pendingFiles.length;
+    pendingFiles.forEach((f) => {
+      const chip = document.createElement('div');
+      chip.className = 'fchip' + (f.ready ? '' : ' busy');
+      if (f.thumb) { const im = document.createElement('img'); im.src = f.thumb; im.alt = ''; chip.appendChild(im); }
+      else { const ic = document.createElement('span'); ic.className = 'ficon'; ic.textContent = (extOf(f.name) || 'file').slice(0, 4).toUpperCase(); chip.appendChild(ic); }
+      const nm = document.createElement('span'); nm.className = 'fname'; nm.textContent = f.ready ? f.name : 'Reading ' + f.name + '\u2026'; chip.appendChild(nm);
+      const x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + f.name); x.textContent = '\u00d7';
+      x.addEventListener('click', () => { pendingFiles = pendingFiles.filter((p) => p.id !== f.id); drawAttachRow(); });
+      chip.appendChild(x);
+      attachRow.appendChild(chip);
+    });
+  }
+  async function addFiles(list) {
+    const files = Array.from(list || []);
+    if (!files.length) return;
+    if (room && room.live) { toast('Files can\u2019t be shared in a live call yet.'); return; }
+    for (const file of files) {
+      if (pendingFiles.length >= MAX_FILES) { toast('Up to ' + MAX_FILES + ' files at a time.'); break; }
+      const entry = { id: fid(), name: file.name || 'pasted image', ready: false };
+      pendingFiles.push(entry); drawAttachRow();
+      try { Object.assign(entry, await readFile(file), { ready: true }); }
+      catch (e) { pendingFiles = pendingFiles.filter((p) => p.id !== entry.id); toast(e.message || 'That file couldn\u2019t be read.'); }
+      drawAttachRow();
+    }
+    q.focus();
+  }
+  const fileFields = (f) => ({ kind: f.kind, name: f.name, media_type: f.media_type, data: f.data, text: f.text });
+  document.getElementById('attachBtn').addEventListener('click', () => fileIn.click());
+  fileIn.addEventListener('change', () => { addFiles(fileIn.files); fileIn.value = ''; });
+  q.addEventListener('paste', (e) => {
+    const imgs = Array.from((e.clipboardData && e.clipboardData.files) || []);
+    if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+  });
+  const composerEl = document.querySelector('.composer');
+  ['dragenter', 'dragover'].forEach((t) => composerEl.addEventListener(t, (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { e.preventDefault(); composerEl.classList.add('dragover'); } }));
+  ['dragleave', 'drop'].forEach((t) => composerEl.addEventListener(t, () => composerEl.classList.remove('dragover')));
+  composerEl.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); addFiles(e.dataTransfer.files); } });
+
   function apiMessages(justSaved) {
     const msgs = conversation.filter((m) => !m.loading).map(({ role, content }) => ({ role, content }));
     if (justSaved) {
@@ -664,6 +808,7 @@
       const o = { role: m.role, content: String(m.content).slice(0, 8000) };
       if (m.name) o.name = m.name;
       if (m.saved) o.saved = true;
+      if (m.files) o.files = m.files;
       if (m.ns && m.ns !== 'loading') o.ns = m.ns;
       return o;
     });
@@ -683,6 +828,7 @@
     closeDrawer();
     if (c.room) { location.href = '/?room=' + encodeURIComponent(c.room); return; }
     if (room) leaveRoom();
+    fileContext = null;
     convId = c.id;
     let prevQ = '';
     conversation = c.msgs.map((m) => {
@@ -699,6 +845,7 @@
     if (room) leaveRoom();
     convId = null;
     conversation = [];
+    fileContext = null;
     threadBox.innerHTML = '';
     threadBox.classList.remove('show');
     document.body.classList.remove('chatting');
