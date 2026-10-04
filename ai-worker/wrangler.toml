@@ -1,4 +1,4 @@
-# Biblicall AI worker: answers + North Star. Lives in the hello@biblicall.com Cloudflare account (with biblicall-rooms).
+# Biblicall AI worker: answers + North Star. Lives in the Biblicall Cloudflare account (with biblicall-rooms).
 # The Anthropic key is the secret ANTHROPIC_API_KEY, set in the Cloudflare dashboard (never in this repo).
 name = "biblicall-ai"
 main = "src/index.js"

@@ -252,6 +252,24 @@ export async function accountOp(env, body, helpers) {
     return await signedIn(uid);
   }
 
+  // Waitlist: saved here, and (if the NOTIFY_EMAIL secret is set) emailed to the owner. Keeps any personal address out of the public page.
+  if (op === 'waitlist') {
+    const email = normEmail(body.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: 'Please enter a valid email address.' };
+    if (helpers && !(await helpers.underQuota('w:' + email, 'email', 1, 3))) return { ok: true };
+    const question = String(body.question || '').slice(0, 300);
+    await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: Date.now() } });
+    if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
+      const esc = (x) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      await fetch('https://api.resend.com/emails', { method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: 'New Biblicall waitlist signup',
+          html: '<p><b>' + esc(email) + '</b> joined the Biblicall waitlist.</p>' + (question ? '<p>Last question asked: ' + esc(question) + '</p>' : ''),
+          text: email + ' joined the Biblicall waitlist.' + (question ? '\nLast question asked: ' + question : '') }) }).catch(() => {});
+    }
+    return { ok: true };
+  }
+
   if (op === 'email.start') {
     if (!env.RESEND_API_KEY) return { error: 'Email sign-in is coming soon.' };
     const email = normEmail(body.email);

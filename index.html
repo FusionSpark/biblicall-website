@@ -582,8 +582,7 @@
   let lastQuestion = '';
 
 
-  // ---- Waitlist signups (FormSubmit sends each signup to the owner's inbox) ----
-  const WAITLIST_URL = 'https://formsubmit.co/ajax/hello@biblicall.com';
+  // ---- Waitlist signups (saved by the Biblicall worker; no personal address appears in this page) ----
   emailForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const note = document.getElementById('emailNote');
@@ -592,12 +591,13 @@
     const btn = emailForm.querySelector('button');
     btn.disabled = true; note.textContent = 'Saving…';
     try {
-      const res = await fetch(WAITLIST_URL, {
+      const res = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ email, question: lastQuestion, _subject: 'New Biblicall waitlist signup', _template: 'table', _captcha: 'false' })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'account', op: 'waitlist', email, question: lastQuestion })
       });
-      if (!res.ok) throw new Error('bad');
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || 'bad');
       note.textContent = "You're on the list. We'll email you when Biblicall fully launches.";
       emailForm.reset();
     } catch (err) {
@@ -820,7 +820,7 @@
       lastRow = row;
     }
     // Scroll only when something new asked for it, and bring the START of that message to the top of the
-    // screen (like opening a letter at "Dear friend,"). Later updates (North Star arriving, buttons) never move the page.
+    // screen (like opening a letter at its greeting). Later updates (North Star arriving, buttons) never move the page.
     if (scrollReq) {
       const el = scrollReq.msg === 'thinking' ? lastRow : msgRows.get(scrollReq.msg);
       scrollReq = null;
