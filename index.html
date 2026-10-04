@@ -265,8 +265,9 @@
   /* ---- Sky through the day (visitor's local time): sunrise, day, sunset, night ----
      Layers: html::before = sky color gradient, body::after = stars (night), body::before = drifting clouds. */
   :root{--sky:linear-gradient(180deg,#bfe0f7 0%,#d6eaf8 100%);--cloud-op:.9;--star-op:0}
-  html[data-sky="sunrise"]{--bg:#fbe3c8;--bg-rgb:251,227,200;--card:#fffdfa;--line:#ecd3bd;
-    --sky:linear-gradient(180deg,#c8dcf1 0%,#e9dbe6 32%,#f8d6c8 62%,#fbe3c8 100%);--cloud-op:.55}
+  html[data-sky="sunrise"]{--bg:#fcd9a6;--bg-rgb:252,217,166;--card:#fffdf8;--line:#efcfae;
+    --sky:radial-gradient(120% 55% at 50% 100%,rgba(255,236,170,.95) 0%,rgba(255,206,140,.55) 35%,rgba(255,190,150,0) 70%),
+          linear-gradient(180deg,#a8c8ea 0%,#cfc4e3 22%,#f0c3cf 45%,#f9c6a9 68%,#fcd9a6 100%);--cloud-op:.5}
   html[data-sky="sunset"]{--bg:#fbd9ae;--bg-rgb:251,217,174;--card:#fffaf3;--line:#efc9a4;
     --sky:linear-gradient(180deg,#e7a08f 0%,#f2b388 34%,#f8c792 66%,#fbd9ae 100%);--cloud-op:.42}
   html[data-sky="night"]{--bg:#1a2850;--bg-rgb:26,40,80;--card:#eef2fb;--line:#3a4c7c;--muted:#c9d3ea;
@@ -326,14 +327,14 @@
 </head>
 <body>
 <script>
-  // Sky by local time: sunrise 5-9am, day 9am-5pm, sunset 5-8pm, night 8pm-5am. Preview any with ?sky=sunrise|day|sunset|night
+  // Sky by local time: sunrise 6-9am, day 9am-5pm, sunset 5-8pm, night 8pm-6am. Preview any with ?sky=sunrise|day|sunset|night
   (function () {
     var forced = (location.search.match(/[?&]sky=(sunrise|day|sunset|night)/) || [])[1];
-    var colors = { sunrise: '#fbe3c8', day: '#d3e9f8', sunset: '#fbd9ae', night: '#1a2850' };
+    var colors = { sunrise: '#fcd9a6', day: '#d3e9f8', sunset: '#fbd9ae', night: '#1a2850' };
     function pick() {
       if (forced) return forced;
       var h = new Date().getHours();
-      return h >= 5 && h < 9 ? 'sunrise' : h >= 9 && h < 17 ? 'day' : h >= 17 && h < 20 ? 'sunset' : 'night';
+      return h >= 6 && h < 9 ? 'sunrise' : h >= 9 && h < 17 ? 'day' : h >= 17 && h < 20 ? 'sunset' : 'night';
     }
     function apply() {
       var sky = pick();
