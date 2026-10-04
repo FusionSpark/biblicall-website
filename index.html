@@ -350,6 +350,26 @@
   /* During a conversation, give the reading area more room: the email signup steps aside (it shows on the home screen). */
   body.chatting .composer-dock .emailstep{display:none !important}
   body.chatting footer{display:none}
+  /* ---- Account tab ---- */
+  .acct{display:flex;flex-direction:column;gap:10px;padding:8px 10px 6px}
+  .acct h3{margin:4px 0 0;font-size:21px;font-weight:800;color:var(--earth-deep)}
+  .acct h4{margin:10px 0 0;font-size:16px;font-weight:700;color:var(--muted)}
+  .acct p{margin:0;font-size:16px;line-height:1.45;color:var(--ink)}
+  .acct .acct-fine{font-size:14px;color:var(--muted)}
+  .acct .acct-msg{font-size:15px;font-weight:600;color:var(--earth);background:var(--bg);border-radius:10px;padding:8px 10px}
+  .acct input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:17px;background:#fff;color:#2c2117}
+  .acct-btn{width:100%;padding:12px 14px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer}
+  .acct-btn.ghost{background:transparent;color:var(--earth)}
+  .acct-btn:disabled{opacity:.6;cursor:default}
+  .acct-row{display:flex;gap:8px}
+  .acct-row input{flex:1;min-width:0}
+  .acct-row button{flex:none;padding:10px 14px;border:none;border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .acct-link{align-self:flex-start;border:none;background:none;padding:4px 0;color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;text-decoration:underline;cursor:pointer}
+  .acct-code{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1.5px dashed var(--earth);border-radius:12px}
+  .acct-code b{font-size:19px;letter-spacing:.06em;font-variant-numeric:tabular-nums;user-select:all;color:#2c2117}
+  .dr-star{border:none;background:none;color:var(--muted);font-size:22px;line-height:1;padding:6px 8px;cursor:pointer;border-radius:8px}
+  .dr-star.on{color:#c58a1d}
+  .dr-star:hover{background:var(--line)}
 </style>
 </head>
 <body>
@@ -378,9 +398,9 @@
 <div class="drawer-back" id="drawerBack" hidden></div>
 <aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Conversations</button><button type="button" data-tab="memory">Memory</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
-  <p class="dr-fine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
+  <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
 </aside>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="installtip" id="installTip" hidden><img src="apple-touch-icon.png" alt=""><span id="installText"></span><button type="button" class="go" id="installGo" hidden>Install</button><button type="button" class="x" id="installX" aria-label="Dismiss">&times;</button></div>
@@ -925,7 +945,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -976,10 +996,10 @@
     const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text, t: Date.now() };
     memory.unshift(item);
     memory = memory.slice(0, 100);
-    lsSet('bc_memory', memory); drawDrawer();
+    lsSet('bc_memory', memory); drawDrawer(); syncMemorySoon();
     return item;
   }
-  function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); }
+  function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); syncMemorySoon(); }
   // ---- Uploads: photos, PDFs, Word and text files, sent to Biblicall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -1143,15 +1163,26 @@
     if (!first) return;
     if (!convId) convId = 'c' + Date.now().toString(36);
     const prev = convos.find((c) => c.id === convId);
-    const rec = { id: convId, title: first.content.replace(/\s+/g, ' ').slice(0, 70), t: Date.now(), msgs: msgs.slice(-60), room: room ? room.id : (prev && prev.room) || null };
+    const kept = !!(prev && prev.kept);
+    const rec = { id: convId, title: first.content.replace(/\s+/g, ' ').slice(0, 70), t: Date.now(), msgs: msgs.slice(kept ? -200 : -60), room: room ? room.id : (prev && prev.room) || null, kept: kept || undefined };
     if (prev && JSON.stringify(prev.msgs) === JSON.stringify(rec.msgs) && prev.room === rec.room) return;
-    convos = [rec].concat(convos.filter((c) => c.id !== convId)).slice(0, 50);
+    // The 50 most recent conversations stay on this device, plus every conversation kept forever.
+    const rest = convos.filter((c) => c.id !== convId);
+    let others = 0;
+    convos = [rec].concat(rest.filter((c) => c.kept || ++others <= 49));
+    if (rec.kept) uploadKeptSoon(rec);
     if (!lsSet('bc_convos', convos)) { convos = convos.slice(0, 15); lsSet('bc_convos', convos); }
     drawDrawer();
   }
-  function openConvo(id) {
+  async function openConvo(id) {
     const c = convos.find((x) => x.id === id);
     if (!c) return;
+    if (!c.msgs) {
+      toast('Opening your kept conversation\u2026');
+      const r = await acctApi('keep.get', { id }).catch(() => ({}));
+      if (!r || !r.convo) { toast('That conversation couldn\u2019t be opened. Please try again.'); return; }
+      c.msgs = r.convo.msgs || []; lsSet('bc_convos', convos);
+    }
     closeDrawer();
     if (c.room) { location.href = '/?room=' + encodeURIComponent(c.room); return; }
     if (room) leaveRoom();
@@ -1185,6 +1216,8 @@
     q.focus();
   }
   function deleteConvo(id) {
+    const gone = convos.find((c) => c.id === id);
+    if (gone && gone.kept && acct) acctApi('keep.del', { id }).catch(() => {});
     convos = convos.filter((c) => c.id !== id);
     lsSet('bc_convos', convos);
     if (id === convId) convId = 'c' + Date.now().toString(36) + 'x';
@@ -1206,17 +1239,24 @@
     if (drawer.hidden) return;
     drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === drTab));
     drBody.innerHTML = '';
+    const fine = document.getElementById('drFine');
+    if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your Biblicall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Account tab) to keep memory and chosen conversations forever.';
+    if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
         const row = el('div', 'dr-item' + (c.id === convId ? ' cur' : ''));
         const open = el('button', 'dr-open'); open.type = 'button';
         open.appendChild(el('b', null, c.title || 'Conversation'));
-        open.appendChild(el('small', null, fmtDate(c.t) + (c.room ? ' · Live call' : '')));
+        open.appendChild(el('small', null, fmtDate(c.t) + (c.room ? ' · Live call' : '') + (c.kept ? ' · Kept forever' : '')));
         open.addEventListener('click', () => openConvo(c.id));
+        const star = el('button', 'dr-star' + (c.kept ? ' on' : ''), c.kept ? '\u2605' : '\u2606'); star.type = 'button';
+        star.setAttribute('aria-label', c.kept ? 'Kept forever. Tap to stop keeping' : 'Keep this conversation forever');
+        star.title = c.kept ? 'Kept forever' : 'Keep forever';
+        star.addEventListener('click', () => toggleKeep(c));
         const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Delete conversation');
         del.addEventListener('click', () => deleteConvo(c.id));
-        row.appendChild(open); row.appendChild(del); drBody.appendChild(row);
+        row.appendChild(open); row.appendChild(star); row.appendChild(del); drBody.appendChild(row);
       });
     } else {
       drBody.appendChild(el('p', 'mem-intro', 'Biblicall uses these in future answers. To add one, tap the Remember chip in the chat box, start a message with “Remember”, or type it here.'));
@@ -1238,7 +1278,7 @@
         const clr = el('button', 'mem-clear', clearArmed ? 'Tap again to forget everything' : 'Forget everything'); clr.type = 'button';
         clr.addEventListener('click', () => {
           if (!clearArmed) { clearArmed = true; drawDrawer(); setTimeout(() => { clearArmed = false; drawDrawer(); }, 4000); return; }
-          clearArmed = false; memory = []; lsSet('bc_memory', memory); drawDrawer(); toast('Memory cleared');
+          clearArmed = false; memory = []; lsSet('bc_memory', memory); drawDrawer(); syncMemorySoon(); toast('Memory cleared');
         });
         drBody.appendChild(clr);
       }
@@ -1252,6 +1292,189 @@
   document.getElementById('newChat').addEventListener('click', newConvo);
   drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.addEventListener('click', () => { drTab = b.dataset.tab; drawDrawer(); }));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) closeDrawer(); });
+
+  // ---- Accounts: memory and kept conversations saved forever, on every device ----
+  // Sign in with Face ID / Touch ID (passkey), an account code, or an emailed link.
+  let acct = lsGet('bc_acct', null);              // { token, name, email }
+  let acctStatus = { email: false };
+  let acctBusy = false, acctMsg = '', shownCode = '';
+  const pre = { reg: null, login: null };         // passkey challenges fetched ahead, so Face ID opens right on tap
+  const fromB64u = (s) => { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+  const toB64u = (buf) => { const b = new Uint8Array(buf); let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  async function acctApi(op, data) {
+    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ mode: 'account', op, token: acct ? acct.token : undefined }, data || {})) });
+    const j = await res.json().catch(() => ({ error: 'Something went wrong. Please try again.' }));
+    if (j && j.error === 'signed_out') { acct = null; lsSet('bc_acct', null); drawDrawer(); }
+    return j;
+  }
+  const passkeysOk = () => !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+  async function prefetchChallenges() {
+    if (acct || !passkeysOk()) return;
+    const fresh = (p) => p && Date.now() - p.at < 4 * 60000;
+    try {
+      if (!fresh(pre.reg)) { const r = await acctApi('passkey.begin', { purpose: 'register' }); if (r.challenge) pre.reg = { ...r, at: Date.now() }; }
+      if (!fresh(pre.login)) { const r = await acctApi('passkey.begin', { purpose: 'login' }); if (r.challenge) pre.login = { ...r, at: Date.now() }; }
+    } catch (e) {}
+  }
+  function cleanMem(list) { return (list || []).filter((m) => m && m.text); }
+  function mergeMemory(a, b) {
+    const seen = new Set(), out = [];
+    cleanMem(a).concat(cleanMem(b)).forEach((m) => { const k = m.text.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(m); } });
+    return out.slice(0, 200);
+  }
+  let memSyncTimer = null;
+  function syncMemorySoon() {
+    if (!acct) return;
+    clearTimeout(memSyncTimer);
+    memSyncTimer = setTimeout(() => acctApi('memory.set', { memory }).catch(() => {}), 800);
+  }
+  const keepTimers = {};
+  function uploadKeptSoon(c) {
+    if (!acct || !c || !c.kept || !c.msgs) return;
+    clearTimeout(keepTimers[c.id]);
+    keepTimers[c.id] = setTimeout(() => acctApi('keep.put', { convo: { id: c.id, title: c.title, t: c.t, room: c.room || null, msgs: c.msgs } }).catch(() => {}), 1200);
+  }
+  function applyAccount(me, isNewSignIn) {
+    if (!me || me.error) return;
+    if (me.profile) { acct.name = me.profile.name || acct.name || ''; acct.email = me.profile.email || ''; }
+    const cloudMem = cleanMem(me.memory);
+    const merged = isNewSignIn ? mergeMemory(memory, cloudMem) : mergeMemory(cloudMem, []);
+    memory = merged; lsSet('bc_memory', memory);
+    if (isNewSignIn && merged.length !== cloudMem.length) acctApi('memory.set', { memory }).catch(() => {});
+    // Kept conversations: show every one saved to the account; download a conversation's messages when it's opened.
+    (me.kept || []).forEach((k) => {
+      const local = convos.find((c) => c.id === k.id);
+      if (local) local.kept = true;
+      else convos.push({ id: k.id, title: k.title, t: k.t, room: k.room, kept: true, msgs: null });
+    });
+    if (isNewSignIn) convos.filter((c) => c.kept && c.msgs).forEach(uploadKeptSoon);
+    convos.sort((a, b) => b.t - a.t);
+    lsSet('bc_acct', acct); lsSet('bc_convos', convos);
+    drawDrawer();
+  }
+  async function finishSignIn(r) {
+    if (!r || r.error || !r.token) { acctMsg = (r && r.error) || "Sign-in didn't work. Please try again."; acctBusy = false; drawDrawer(); return; }
+    acct = { token: r.token, name: (r.profile && r.profile.name) || '', email: (r.profile && r.profile.email) || '' };
+    acctMsg = ''; acctBusy = false;
+    applyAccount(r, true);
+    toast('Signed in. Your memory and kept conversations are saved to your account.');
+  }
+  async function createWithPasskey(name) {
+    if (!pre.reg) { acctMsg = 'One moment, getting ready… tap again.'; drawDrawer(); prefetchChallenges(); return; }
+    const p = pre.reg; pre.reg = null; acctBusy = true; acctMsg = ''; drawDrawer();
+    try {
+      const cred = await navigator.credentials.create({ publicKey: {
+        challenge: fromB64u(p.challenge), rp: { id: 'biblicall.com', name: 'Biblicall' },
+        user: { id: fromB64u(p.uid), name: (name || 'Friend') + ' (Biblicall)', displayName: name || 'Biblicall' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { residentKey: 'required', requireResidentKey: true, userVerification: 'preferred' },
+        attestation: 'none', timeout: 120000 } });
+      const r = await acctApi('passkey.register', { uid: p.uid, challenge: p.challenge, name,
+        clientDataJSON: toB64u(cred.response.clientDataJSON), attestationObject: toB64u(cred.response.attestationObject) });
+      await finishSignIn(r);
+    } catch (e) {
+      acctBusy = false; acctMsg = e && e.name === 'NotAllowedError' ? 'Face ID was cancelled. Tap again when you’re ready.' : 'Your account couldn’t be created. Please try again.';
+      drawDrawer();
+    }
+    prefetchChallenges();
+  }
+  async function signInWithPasskey() {
+    if (!pre.login) { acctMsg = 'One moment, getting ready… tap again.'; drawDrawer(); prefetchChallenges(); return; }
+    const p = pre.login; pre.login = null; acctBusy = true; acctMsg = ''; drawDrawer();
+    try {
+      const cred = await navigator.credentials.get({ publicKey: { challenge: fromB64u(p.challenge), rpId: 'biblicall.com', userVerification: 'preferred', timeout: 120000 } });
+      const r = await acctApi('passkey.login', { challenge: p.challenge, id: cred.id,
+        clientDataJSON: toB64u(cred.response.clientDataJSON), authenticatorData: toB64u(cred.response.authenticatorData), signature: toB64u(cred.response.signature) });
+      await finishSignIn(r);
+    } catch (e) {
+      acctBusy = false; acctMsg = e && e.name === 'NotAllowedError' ? 'Sign-in was cancelled. Tap again when you’re ready.' : 'Sign-in didn’t work. Please try again.';
+      drawDrawer();
+    }
+    prefetchChallenges();
+  }
+  async function signOut() {
+    try { await acctApi('logout'); } catch (e) {}
+    acct = null; shownCode = ''; lsSet('bc_acct', null);
+    // Kept conversations stay safely in the account; remove their downloaded copies from this device.
+    convos = convos.filter((c) => !c.kept); lsSet('bc_convos', convos);
+    drawDrawer(); toast('Signed out. Your memory and kept conversations are safe in your account.');
+    prefetchChallenges();
+  }
+  function toggleKeep(c) {
+    if (!acct) { drTab = 'account'; acctMsg = 'Create a free account (or sign in) to keep conversations forever.'; drawDrawer(); return; }
+    c.kept = !c.kept;
+    lsSet('bc_convos', convos);
+    if (c.kept) { uploadKeptSoon(c); toast('Kept forever in your account'); }
+    else { acctApi('keep.del', { id: c.id }).catch(() => {}); toast('No longer kept'); }
+    drawDrawer();
+  }
+  function drawAccount() {
+    const box = el('div', 'acct');
+    const msg = () => { if (acctMsg) box.appendChild(el('p', 'acct-msg', acctMsg)); };
+    if (acct) {
+      box.appendChild(el('h3', null, acct.name ? 'Signed in as ' + acct.name : (acct.email ? 'Signed in as ' + acct.email : 'Signed in')));
+      box.appendChild(el('p', null, 'Your memory and the conversations you keep (★) are saved to your Biblicall account, on every device you sign in on.'));
+      msg();
+      if (shownCode) {
+        const c = el('div', 'acct-code'); c.appendChild(el('b', null, shownCode));
+        const cp = el('button', 'acct-link', 'Copy'); cp.type = 'button';
+        cp.addEventListener('click', async () => { try { await navigator.clipboard.writeText(shownCode); toast('Account code copied'); } catch (e) { toast('Press and hold the code to copy it'); } });
+        c.appendChild(cp); box.appendChild(c);
+        box.appendChild(el('p', 'acct-fine', 'Use this code to sign in on a computer or a phone without Face ID. Keep it private, like a password. Getting a new code replaces this one.'));
+      }
+      const code = el('button', 'acct-btn ghost', shownCode ? 'Get a new account code' : 'Get an account code for another device'); code.type = 'button';
+      code.addEventListener('click', async () => { const r = await acctApi('code.create'); if (r.code) { shownCode = r.code; acctMsg = ''; } else acctMsg = r.error || 'Please try again.'; drawDrawer(); });
+      box.appendChild(code);
+      const out = el('button', 'acct-link', 'Sign out'); out.type = 'button'; out.addEventListener('click', signOut);
+      box.appendChild(out);
+      return box;
+    }
+    prefetchChallenges();
+    box.appendChild(el('h3', null, 'Keep your memory forever'));
+    box.appendChild(el('p', null, 'Create a free Biblicall account to save your memory and the conversations you choose to keep, safely, on every device.'));
+    msg();
+    if (passkeysOk()) {
+      const name = el('input'); name.type = 'text'; name.id = 'acctName'; name.maxLength = 40; name.placeholder = 'Your first name'; name.autocomplete = 'given-name';
+      name.value = (typeof myName === 'function' && myName()) || '';
+      box.appendChild(name);
+      const create = el('button', 'acct-btn', acctBusy ? 'One moment…' : 'Create account with Face ID'); create.type = 'button'; create.disabled = acctBusy;
+      create.addEventListener('click', () => createWithPasskey(name.value.trim()));
+      box.appendChild(create);
+      const signin = el('button', 'acct-btn ghost', 'Already have an account? Sign in'); signin.type = 'button'; signin.disabled = acctBusy;
+      signin.addEventListener('click', signInWithPasskey);
+      box.appendChild(signin);
+      box.appendChild(el('p', 'acct-fine', 'Face ID or Touch ID creates a passkey, so there’s no password to remember. On iPhone it syncs with iCloud to your other Apple devices.'));
+    }
+    box.appendChild(el('h4', null, 'Other ways to sign in'));
+    if (acctStatus.email) {
+      const f = el('form', 'acct-row');
+      const em = el('input'); em.type = 'email'; em.id = 'acctEmail'; em.placeholder = 'you@email.com'; em.autocomplete = 'email';
+      const go = el('button', null, 'Email me a link'); go.type = 'submit';
+      f.appendChild(em); f.appendChild(go);
+      f.addEventListener('submit', async (e) => { e.preventDefault(); go.disabled = true; const r = await acctApi('email.start', { email: em.value }); acctMsg = r.ok ? 'Check your email for a sign-in link. It works once and expires in 20 minutes.' : (r.error || 'Please try again.'); drawDrawer(); });
+      box.appendChild(f);
+    }
+    const f2 = el('form', 'acct-row');
+    const cd = el('input'); cd.type = 'text'; cd.id = 'acctCode'; cd.placeholder = 'Account code'; cd.autocapitalize = 'characters'; cd.spellcheck = false;
+    const go2 = el('button', null, 'Sign in'); go2.type = 'submit';
+    f2.appendChild(cd); f2.appendChild(go2);
+    f2.addEventListener('submit', async (e) => { e.preventDefault(); go2.disabled = true; await finishSignIn(await acctApi('code.login', { code: cd.value })); });
+    box.appendChild(f2);
+    return box;
+  }
+  // Start-up: finish an emailed sign-in link, refresh a signed-in account, learn which sign-in options are on.
+  (async function acctStart() {
+    try { acctStatus = await acctApi('status'); } catch (e) {}
+    const m = location.search.match(/[?&]signin=([A-Za-z0-9_-]{20,64})/);
+    if (m) {
+      const u = new URL(location.href); u.searchParams.delete('signin'); history.replaceState(null, '', u.pathname + u.search);
+      await finishSignIn(await acctApi('email.finish', { signin: m[1] }));
+      openDrawer('account');
+    } else if (acct) {
+      try { applyAccount(await acctApi('me'), false); } catch (e) {}
+    }
+  })();
 
   // ---- Keep Biblicall on the home screen ----
   (function installTip() {

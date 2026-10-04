@@ -35,3 +35,16 @@ class_name = "Quota"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Quota"]
+
+# Accounts: sign-in directory and one data store per person (memory, kept conversations).
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "Directory"
+
+[[durable_objects.bindings]]
+name = "USERDATA"
+class_name = "UserData"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Directory", "UserData"]

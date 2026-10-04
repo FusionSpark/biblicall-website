@@ -1,3 +1,6 @@
+import { accountOp, checkToken, Directory, UserData } from './accounts.js';
+export { Directory, UserData };
+
 // Biblicall AI worker.
 //   POST { messages: [{role, content}], memory?: [string], mode?: "answer" | "northstar", group?: bool,
 //          attachments?: [{kind: "image"|"pdf"|"text", name, media_type?, data?, text?}] } -> { answer }
@@ -93,7 +96,7 @@ export default {
 
     // Fair use: each visitor (by IP) gets VISITOR_LIMIT calls a minute; the call server shares ROOMS_LIMIT.
     const fromRooms = request.headers.get('X-Biblicall-Source') === 'rooms';
-    const visitor = 'v:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
+    let visitor = 'v:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
     const busy = () => json({ error: 'busy', message: 'Too many questions at once. Please wait a minute and try again.' }, 429);
     if (fromRooms) {
       // Each call has its own allowance, inside an overall cap for all calls together.
@@ -106,6 +109,14 @@ export default {
 
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'Invalid JSON' }, 400); }
+
+    // Accounts: sign-in, memory and kept conversations.
+    if (body.mode === 'account') {
+      try { return json(await accountOp(env, body, { underQuota: (who, kind, amount, limit) => underQuota(env, who, kind, amount, limit) })); }
+      catch (e) { console.error('account', e && e.message); return json({ error: 'Something went wrong. Please try again.' }, 500); }
+    }
+    // Signed-in people get their own daily allowance (instead of sharing one per network).
+    if (body.token && !fromRooms) { const uid = await checkToken(env, body.token); if (uid) visitor = 'u:' + uid; }
 
     // Text to speech for the Listen button: a deep, steady baritone (Deepgram Aura-2 "Zeus" on Workers AI by default).
     if (body.mode === 'speak') {
