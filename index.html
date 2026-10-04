@@ -254,6 +254,14 @@
     opacity:.9;animation:skydrift 420s linear infinite;will-change:transform}
   @keyframes skydrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-176.47vh,0,0)}}
   @media (prefers-reduced-motion:reduce){ body::before{animation:none} }
+  /* ---- North Star button above the chat box ---- */
+  .nsrow{display:flex;justify-content:flex-start;margin:0 0 8px}
+  .nsrow[hidden]{display:none}
+  .nsbtn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px 7px 10px;border-radius:999px;border:1.5px solid var(--earth);
+    background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,47,38,.12)}
+  .nsbtn svg{width:20px;height:20px;flex:none}
+  .nsbtn:hover{background:var(--earth);color:#fff}
+  .nsbtn:disabled{opacity:.6;cursor:default}
   /* ---- Readability: larger, heavier, higher-contrast text everywhere ---- */
   body{font-size:20.5px;font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   h1,.ns h2,.callwin h2{font-weight:700;letter-spacing:-.005em}
@@ -309,6 +317,7 @@
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="Biblicall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
+      <div class="nsrow" id="nsRow" hidden><button type="button" class="nsbtn" id="nsBtn" title="Bring the North Star into this conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>North Star</button></div>
       <div class="attachrow" id="attachRow" hidden aria-live="polite"></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to Biblicall's memory">Remember</button>
@@ -589,6 +598,7 @@
       if (offerIdx === conversation.length - 1) lastRow = box;
     }
     schedulePersist();
+    updateNsRow();
     if (room && room.thinking) {
       const row = document.createElement('div');
       row.className = 'msg-row assistant';
@@ -603,6 +613,21 @@
       window.scrollTo({ top: Math.max(targetTop, 0), behavior: 'smooth' });
     }
   }
+
+  // The North Star button above the chat box: brings a North Star into the conversation for the latest answer, any time.
+  const nsRow = document.getElementById('nsRow');
+  const nsBtn = document.getElementById('nsBtn');
+  function updateNsRow() {
+    nsRow.hidden = !conversation.some((m) => m.role === 'assistant' && !m.loading);
+  }
+  nsBtn.addEventListener('click', async () => {
+    const last = [...conversation].reverse().find((m) => m.role === 'assistant' && !m.loading);
+    if (!last) { toast('Ask a question first, then tap North Star.'); return; }
+    if (last.ns === 'loading') return;
+    if (!last.q) { const i = conversation.indexOf(last); const u = conversation.slice(0, i).reverse().find((m) => m.role === 'user'); last.q = u ? u.content : last.content; }
+    nsBtn.disabled = true;
+    try { await showNorthStar(last, nsBtn); } finally { nsBtn.disabled = false; }
+  });
 
   async function showNorthStar(m, btn) {
     btn.disabled = true;
@@ -912,6 +937,7 @@
     convId = null;
     conversation = [];
     fileContext = null;
+    updateNsRow();
     threadBox.innerHTML = '';
     threadBox.classList.remove('show');
     document.body.classList.remove('chatting');
