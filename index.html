@@ -30,15 +30,15 @@
   .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
   .wrap{width:100%;max-width:680px;text-align:center}
   .logo{height:105px;width:auto;margin-bottom:22px}
-  h1{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:clamp(24px,4vw,34px);
+  h1{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:clamp(29px,4.8vw,41px);
      color:var(--earth-deep);margin:0 0 12px;line-height:1.3;text-wrap:balance}
-  .daily-label{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  .daily-label{font-size:14.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
   h1.daily{cursor:pointer}
   h1.daily:hover{color:var(--earth)}
-  .intro{font-size:16px;line-height:1.5;color:var(--muted);margin:0 auto clamp(80px,24vh,260px);max-width:56ch}
+  .intro{font-size:19px;line-height:1.5;color:var(--muted);margin:0 auto clamp(80px,24vh,260px);max-width:56ch}
   body:not(.chatting) .center{justify-content:flex-start;padding-top:clamp(40px,20vh,220px)}
   body.chatting .daily-label,body.chatting .intro{display:none}
-  .emailnote{font-size:13px;color:var(--earth);margin:8px 0 0;min-height:1em}
+  .emailnote{font-size:15.5px;color:var(--earth);margin:8px 0 0;min-height:1em}
   .composer{background:var(--card);border:1px solid var(--line);border-radius:20px;
     box-shadow:0 8px 28px rgba(74,47,38,.14);padding:8px 8px 8px 20px;
     display:flex;align-items:flex-end;gap:8px;text-align:left}
@@ -62,7 +62,7 @@
   .attachrow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px;text-align:left}
   .attachrow[hidden]{display:none}
   .fchip{display:flex;align-items:center;gap:8px;max-width:100%;background:var(--card);border:1px solid var(--line);
-    border-radius:12px;padding:5px 6px 5px 6px;font-size:13px;color:var(--ink)}
+    border-radius:12px;padding:5px 6px 5px 6px;font-size:15.5px;color:var(--ink)}
   .fchip img,.fchip .ficon{width:32px;height:32px;border-radius:7px;object-fit:cover;flex:none}
   .fchip .ficon{display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--earth);font-size:10px;font-weight:700;letter-spacing:.04em}
   .fchip .fname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
@@ -73,7 +73,7 @@
   .photos.other{justify-content:flex-start}
   .photos a{display:block}
   .photos img{display:block;max-width:min(220px,70vw);max-height:220px;border-radius:12px;border:1px solid var(--line);object-fit:cover;background:var(--card)}
-  .attnote{font-size:12px;color:var(--muted);text-align:right;margin:-2px 4px 10px;overflow-wrap:anywhere}
+  .attnote{font-size:14.5px;color:var(--muted);text-align:right;margin:-2px 4px 10px;overflow-wrap:anywhere}
   @media (max-width:400px){
     .composer{gap:4px;padding-left:14px}
     .attach,.mic{width:34px;height:34px}
@@ -90,7 +90,7 @@
   .msg-row{display:flex;margin-bottom:6px}
   .msg-row.assistant{justify-content:flex-start}
   .msg-row.user{justify-content:flex-end}
-  .msg{font-size:17px;line-height:1.32;font-weight:500;white-space:pre-wrap}
+  .msg{font-size:20.5px;line-height:1.32;font-weight:500;white-space:pre-wrap}
   .msg.assistant{color:var(--ink);max-width:100%}
   .msg.assistant.loading{color:var(--muted);font-style:italic}
   .msg.user{background:var(--card);border:1px solid var(--line);border-radius:16px;
@@ -105,12 +105,12 @@
     background:linear-gradient(180deg, rgba(var(--bg-rgb),0) 0%, var(--bg) 16px, var(--bg) 100%)}
   body.chatting .composer-dock .composer,body.chatting .composer-dock .callbar{width:100%;max-width:680px}
   body.chatting .composer-dock .emailstep{width:100%;max-width:680px;margin-top:14px}
-  body.chatting .composer-dock .emailstep p{font-size:13px;margin:0 0 8px}
+  body.chatting .composer-dock .emailstep p{font-size:15.5px;margin:0 0 8px}
   .emailstep.show{display:block}
-  .emailstep p{font-size:14px;color:var(--muted);margin:0 0 10px}
+  .emailstep p{font-size:17px;color:var(--muted);margin:0 0 10px}
   .emailrow{display:flex;gap:8px;flex-wrap:wrap}
   .emailrow input{flex:1;min-width:220px;padding:10px 2px;border:none;border-bottom:1px solid var(--line);
-    border-radius:0;background:transparent;color:var(--ink);font-size:16px;font-family:inherit;outline:none;
+    border-radius:0;background:transparent;color:var(--ink);font-size:19px;font-family:inherit;outline:none;
     -webkit-appearance:none;appearance:none;box-shadow:none;transition:border-color .15s}
   .emailrow input::placeholder{color:var(--muted)}
   .emailrow input:focus{border-bottom-color:var(--earth)}
@@ -120,81 +120,81 @@
   .emailrow button:hover{background:var(--earth-deep)}
   .ns{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
     margin:12px 0 26px;display:flex;flex-direction:column;gap:14px}
-  .ns h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:19px;color:var(--earth);
+  .ns h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:23px;color:var(--earth);
     margin:0;display:flex;align-items:center;gap:8px}
   .ns h2 svg{width:20px;height:20px;flex:none}
-  .ns .teach{margin:0;font-size:16px;line-height:1.5}
+  .ns .teach{margin:0;font-size:19px;line-height:1.5}
   .ns .verse{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:5px}
-  .ns blockquote{margin:0;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-style:normal;font-weight:600;font-size:18px;line-height:1.55;color:var(--ink)}
-  .ns .ref{font-size:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .ns blockquote{margin:0;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-style:normal;font-weight:600;font-size:21.5px;line-height:1.55;color:var(--ink)}
+  .ns .ref{font-size:17px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .ns .ref b{color:var(--earth)}
-  .ns .ok{color:#3f7a4a;font-size:12px;font-weight:600}
-  .ns .why{margin:0;font-size:14px;color:var(--muted)}
-  .ns .reflect{margin:0;border-left:3px solid var(--earth);padding-left:12px;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-size:17px}
+  .ns .ok{color:#3f7a4a;font-size:14.5px;font-weight:600}
+  .ns .why{margin:0;font-size:17px;color:var(--muted)}
+  .ns .reflect{margin:0;border-left:3px solid var(--earth);padding-left:12px;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-size:20.5px}
   .ns.loading{color:var(--muted);font-style:italic}
   .ns-offer{display:inline-flex;align-items:center;gap:6px;margin:4px 0 20px;padding:6px 12px;border:1px solid var(--line);
-    border-radius:999px;background:transparent;color:var(--earth);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+    border-radius:999px;background:transparent;color:var(--earth);font-family:inherit;font-size:15.5px;font-weight:600;cursor:pointer}
   .ns-offer:hover{background:var(--card)}
   .ns-offer:disabled{opacity:.6;cursor:default}
-  .ns-note{margin:-12px 0 20px;font-size:13px;color:var(--muted)}
+  .ns-note{margin:-12px 0 20px;font-size:15.5px;color:var(--muted)}
   .brandrow{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:22px}
   .brandrow .logo{margin-bottom:0}
   .callbar{display:flex;justify-content:center;margin:12px 0 0}
   .callbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:50%;min-width:180px;padding:5px 16px;border-radius:999px;border:1px solid var(--earth);
-    background:var(--card);color:var(--earth);font-family:inherit;font-size:14px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
+    background:var(--card);color:var(--earth);font-family:inherit;font-size:17px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
   .callbtn:hover{background:var(--earth);color:#fff}
   .callbtn svg{width:15px;height:15px}
   .dockbrand{display:none;align-items:center;justify-content:center;gap:12px;margin-bottom:10px}
   .dockbrand img{height:47px;width:auto}
   body.chatting .dockbrand{display:flex}
   .roombar{display:none;margin:0 0 16px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);
-    font-size:14px;color:var(--ink);text-align:left}
+    font-size:17px;color:var(--ink);text-align:left}
   .roombar.show{display:block}
   .roombar .live{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--earth)}
   .roombar .dot{width:8px;height:8px;border-radius:50%;background:#3f7a4a}
   .roombar .dot.off{background:#b9a58c}
   .roombar .people{color:var(--muted)}
   .roombar .top{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
-  .roombar .leave{margin-left:auto;border:none;background:none;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
+  .roombar .leave{margin-left:auto;border:none;background:none;color:var(--muted);font-family:inherit;font-size:15.5px;cursor:pointer;text-decoration:underline}
   .roombar form{display:flex;gap:8px;margin-top:10px}
-  .roombar input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit}
+  .roombar input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:19px;font-family:inherit}
   .roombar form button{padding:9px 14px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-weight:600;font-family:inherit;cursor:pointer}
-  .roombar .err{margin:8px 0 0;color:var(--earth);font-size:13px}
+  .roombar .err{margin:8px 0 0;color:var(--earth);font-size:15.5px}
   .msg-col{display:flex;flex-direction:column;max-width:80%}
   .msg-row.user.other{justify-content:flex-start}
   .msg-row.user.other .msg.user{background:#fff;max-width:100%}
   .msg-row.user .msg-col .msg.user{max-width:100%}
-  .who{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 3px 6px}
+  .who{font-size:14.5px;font-weight:600;color:var(--muted);margin:0 0 3px 6px}
   .msg-row.user.mine .who{text-align:right;margin:0 6px 3px 0}
-  .callwin label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
+  .callwin label{display:block;font-size:15.5px;font-weight:600;color:var(--muted);margin:0 0 6px}
   .callwin .namerow{margin-bottom:12px}
   .callwin .namerow input{width:100%}
   .shared-banner{display:none;margin:0 0 16px;padding:10px 14px;border:1px dashed var(--line);border-radius:12px;
-    font-size:14px;color:var(--muted);text-align:center}
+    font-size:17px;color:var(--muted);text-align:center}
   .shared-banner.show{display:block}
   dialog.callwin{border:1px solid var(--line);border-radius:20px;background:var(--card);color:var(--ink);
     padding:22px 22px 18px;width:min(420px,calc(100vw - 32px));box-shadow:0 18px 50px rgba(74,47,38,.28)}
   dialog.callwin::backdrop{background:rgba(44,33,23,.38)}
-  .callwin h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:22px;color:var(--earth-deep);margin:0 0 6px}
-  .callwin p{margin:0 0 14px;font-size:15px;line-height:1.45;color:var(--muted)}
+  .callwin h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:26.5px;color:var(--earth-deep);margin:0 0 6px}
+  .callwin p{margin:0 0 14px;font-size:18px;line-height:1.45;color:var(--muted)}
   .callwin .row{display:flex;gap:8px}
-  .callwin input{flex:1;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}
-  .callwin .primary{padding:12px 16px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-weight:600;font-family:inherit;font-size:15px;cursor:pointer}
+  .callwin input{flex:1;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:19px;font-family:inherit;background:#fff}
+  .callwin .primary{padding:12px 16px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-weight:600;font-family:inherit;font-size:18px;cursor:pointer}
   .callwin .primary:hover{background:var(--earth-deep)}
   .callwin .links{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
-  .callwin .links button{border:none;background:none;padding:0;color:var(--earth);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:underline}
-  .callwin .status{min-height:1.2em;margin:10px 0 0;font-size:14px;color:var(--earth)}
-  .callwin ul{list-style:none;margin:10px 0 0;padding:0;font-size:14px;color:var(--ink)}
+  .callwin .links button{border:none;background:none;padding:0;color:var(--earth);font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-decoration:underline}
+  .callwin .status{min-height:1.2em;margin:10px 0 0;font-size:17px;color:var(--earth)}
+  .callwin ul{list-style:none;margin:10px 0 0;padding:0;font-size:17px;color:var(--ink)}
   .callwin li{padding:4px 0;border-top:1px solid var(--line)}
   .callwin .close{position:absolute;top:10px;right:12px;border:none;background:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
-  .callwin .fine{font-size:12px;margin:12px 0 0}
+  .callwin .fine{font-size:14.5px;margin:12px 0 0}
   .remchip{flex-shrink:0;margin:0 0 9px -8px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;
     color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
   .remchip:hover{border-color:var(--earth);color:var(--earth)}
   .remchip.on{background:var(--earth);border-color:var(--earth);color:#fff}
-  .savednote{text-align:right;font-size:12px;font-weight:600;color:#3f7a4a;margin:-2px 4px 10px}
-  .memoffer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 20px;font-size:14px;color:var(--muted)}
-  .memoffer button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-family:inherit;font-size:13px;font-weight:600;color:var(--earth);cursor:pointer}
+  .savednote{text-align:right;font-size:14.5px;font-weight:600;color:#3f7a4a;margin:-2px 4px 10px}
+  .memoffer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 20px;font-size:17px;color:var(--muted)}
+  .memoffer button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-family:inherit;font-size:15.5px;font-weight:600;color:var(--earth);cursor:pointer}
   .memoffer button.yes{background:var(--earth);border-color:var(--earth);color:#fff}
   .memoffer .done{color:#3f7a4a;font-weight:600}
   .menubtn{position:fixed;top:12px;left:12px;z-index:20;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;
@@ -207,34 +207,34 @@
     box-shadow:8px 0 30px rgba(74,47,38,.18);display:flex;flex-direction:column;text-align:left}
   .drawer[hidden],.drawer-back[hidden]{display:none}
   .dr-head{display:flex;align-items:center;gap:8px;padding:14px 14px 10px}
-  .dr-new{flex:1;padding:10px 14px;border:1px solid var(--earth);border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+  .dr-new{flex:1;padding:10px 14px;border:1px solid var(--earth);border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:18px;font-weight:600;cursor:pointer;text-align:left}
   .dr-new:hover{background:var(--earth-deep)}
   .dr-close{border:none;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 8px}
   .dr-tabs{display:flex;gap:4px;padding:0 14px 8px;border-bottom:1px solid var(--line)}
-  .dr-tabs button{flex:1;padding:8px;border:none;border-radius:10px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+  .dr-tabs button{flex:1;padding:8px;border:none;border-radius:10px;background:transparent;font-family:inherit;font-size:17px;font-weight:600;color:var(--muted);cursor:pointer}
   .dr-tabs button.on{background:var(--bg);color:var(--earth-deep)}
   .dr-body{flex:1;overflow-y:auto;padding:10px 8px}
-  .dr-empty{padding:14px 10px;font-size:14px;line-height:1.5;color:var(--muted)}
+  .dr-empty{padding:14px 10px;font-size:17px;line-height:1.5;color:var(--muted)}
   .dr-item{display:flex;align-items:center;gap:6px;border-radius:10px}
   .dr-item:hover{background:var(--bg)}
   .dr-item.cur{background:var(--bg)}
   .dr-open{flex:1;min-width:0;border:none;background:none;text-align:left;padding:9px 10px;font-family:inherit;cursor:pointer;color:var(--ink)}
-  .dr-open b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dr-open small{font-size:12px;color:var(--muted)}
+  .dr-open b{display:block;font-weight:600;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dr-open small{font-size:14.5px;color:var(--muted)}
   .dr-del{border:none;background:none;color:var(--muted);font-size:20px;line-height:1;padding:6px 10px;cursor:pointer;border-radius:8px}
   .dr-del:hover{color:var(--earth-deep);background:var(--line)}
-  .mem-intro{padding:6px 10px 10px;font-size:13px;line-height:1.5;color:var(--muted)}
+  .mem-intro{padding:6px 10px 10px;font-size:15.5px;line-height:1.5;color:var(--muted)}
   .mem-add{display:flex;gap:6px;padding:0 6px 10px}
-  .mem-add input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff}
+  .mem-add input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:19px;background:#fff}
   .mem-add button{padding:9px 12px;border:none;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-weight:600;cursor:pointer}
-  .mem-text{flex:1;min-width:0;padding:9px 10px;font-size:14px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
-  .mem-clear{margin:12px 10px 4px;border:none;background:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
-  .dr-fine{margin:0;padding:10px 16px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+  .mem-text{flex:1;min-width:0;padding:9px 10px;font-size:17px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+  .mem-clear{margin:12px 10px 4px;border:none;background:none;color:var(--muted);font-family:inherit;font-size:15.5px;text-decoration:underline;cursor:pointer}
+  .dr-fine{margin:0;padding:10px 16px 16px;font-size:14.5px;color:var(--muted);border-top:1px solid var(--line)}
   .toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:50;background:var(--earth-deep);color:#fff;padding:9px 16px;border-radius:999px;
-    font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(44,33,23,.25);opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+    font-size:17px;font-weight:600;box-shadow:0 8px 24px rgba(44,33,23,.25);opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
   .toast.show{opacity:1}
   .installtip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;width:min(440px,calc(100vw - 32px));background:var(--card);
-    border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(74,47,38,.2);padding:12px 40px 12px 14px;display:flex;align-items:center;gap:12px;text-align:left;font-size:14px;line-height:1.4}
+    border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(74,47,38,.2);padding:12px 40px 12px 14px;display:flex;align-items:center;gap:12px;text-align:left;font-size:17px;line-height:1.4}
   .installtip[hidden]{display:none}
   body.chatting .installtip{display:none}
   .installtip img{width:40px;height:40px;border-radius:10px;flex:none}
@@ -244,36 +244,36 @@
   .logowrap{position:relative;display:inline-block;line-height:0}
   .logowrap .tm{position:absolute;left:100%;top:52%;margin-left:2px;font-family:'Source Sans 3',sans-serif;font-weight:600;font-size:16px;line-height:1;color:var(--earth)}
   .dockbrand .logowrap .tm{font-size:9px;margin-left:1px}
-  footer{text-align:center;padding:22px 20px;font-size:13px;color:var(--muted)}
+  footer{text-align:center;padding:22px 20px;font-size:15.5px;color:var(--muted)}
   footer a{color:var(--earth)}
   /* ---- Readability: larger, heavier, higher-contrast text everywhere ---- */
-  body{font-size:17px;font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{font-size:20.5px;font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   h1,.ns h2,.callwin h2{font-weight:700;letter-spacing:-.005em}
-  .intro{font-size:19px;font-weight:600;color:var(--ink)}
-  .msg{font-size:18px;line-height:1.55;font-weight:500}
+  .intro{font-size:23px;font-weight:600;color:var(--ink)}
+  .msg{font-size:21.5px;line-height:1.55;font-weight:500}
   .msg.assistant.loading,.ns.loading{font-style:normal}
   .composer textarea,.emailrow input{font-size:17px;font-weight:500}
-  .ns h2{font-size:21px}
-  .ns .teach{font-size:17.5px;line-height:1.55;font-weight:500}
-  .ns .ref{font-size:15.5px;font-weight:600}
-  .ns .ok{font-size:13.5px;font-weight:700}
-  .ns .why{font-size:16px;line-height:1.5;font-weight:500}
-  .ns .reflect{font-size:18px;font-weight:600;line-height:1.5}
-  .ns-offer,.ns-note,.memoffer,.memoffer button{font-size:15px}
-  .emailstep p,body.chatting .composer-dock .emailstep p{font-size:15px;font-weight:500}
-  .emailnote,.attnote,.savednote{font-size:14px;font-weight:600}
-  .who{font-size:14px;font-weight:700}
-  .fchip{font-size:14px;font-weight:600}
+  .ns h2{font-size:25px}
+  .ns .teach{font-size:21px;line-height:1.55;font-weight:500}
+  .ns .ref{font-size:18.5px;font-weight:600}
+  .ns .ok{font-size:16px;font-weight:700}
+  .ns .why{font-size:19px;line-height:1.5;font-weight:500}
+  .ns .reflect{font-size:21.5px;font-weight:600;line-height:1.5}
+  .ns-offer,.ns-note,.memoffer,.memoffer button{font-size:18px}
+  .emailstep p,body.chatting .composer-dock .emailstep p{font-size:18px;font-weight:500}
+  .emailnote,.attnote,.savednote{font-size:17px;font-weight:600}
+  .who{font-size:17px;font-weight:700}
+  .fchip{font-size:17px;font-weight:600}
   .remchip{font-size:14px;font-weight:700}
-  .roombar,.roombar .leave{font-size:15px}
-  .callwin p{font-size:16px;font-weight:500}
-  .callwin label,.callwin .links button,.callwin ul,.callwin .status{font-size:15px}
-  .callwin .fine{font-size:13.5px}
-  .dr-open b{font-size:16px}
-  .dr-open small,.dr-fine{font-size:13.5px}
-  .dr-empty,.mem-text,.mem-intro,.mem-clear,.dr-tabs button{font-size:15px}
-  .toast,.installtip{font-size:15px}
-  footer{font-size:14px;font-weight:500}
+  .roombar,.roombar .leave{font-size:18px}
+  .callwin p{font-size:19px;font-weight:500}
+  .callwin label,.callwin .links button,.callwin ul,.callwin .status{font-size:18px}
+  .callwin .fine{font-size:16px}
+  .dr-open b{font-size:19px}
+  .dr-open small,.dr-fine{font-size:16px}
+  .dr-empty,.mem-text,.mem-intro,.mem-clear,.dr-tabs button{font-size:18px}
+  .toast,.installtip{font-size:18px}
+  footer{font-size:17px;font-weight:500}
   .composer textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (max-width:400px){ .remchip{font-size:13px} .composer textarea{font-size:16px} }
 </style>
