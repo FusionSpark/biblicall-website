@@ -725,8 +725,10 @@
     if (cur.trim()) out.push(cur.trim());
     return out;
   }
+  // Default voice: a deep, steady baritone. Try others with ?voice=saturn | mars | pluto | jupiter | draco | orion
+  const VOICE = ((location.search.match(/[?&]voice=([a-z]+)/) || [])[1]) || 'zeus';
   async function fetchVoice(text) {
-    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'speak', text }) });
+    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'speak', text, voice: VOICE }) });
     if (!res.ok || !(res.headers.get('Content-Type') || '').includes('audio')) throw new Error('voice');
     return URL.createObjectURL(await res.blob());
   }
@@ -769,7 +771,7 @@
         if (!speaking || speaking.token !== token) return;
         speaking.urls[i] = url;
         get(i + 1); // fetch the next part while this one plays
-        player.src = url; player.playbackRate = 0.95;
+        player.src = url; player.playbackRate = 0.9;
         setListenBtn(btn, 'playing');
         await player.play();
         await new Promise((res) => { player.onended = res; player.onpause = () => { if (!speaking || speaking.token !== token) res(); }; });
