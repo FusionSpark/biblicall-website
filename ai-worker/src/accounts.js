@@ -257,8 +257,14 @@ export async function accountOp(env, body, helpers) {
     const email = normEmail(body.email);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: 'Please enter a valid email address.' };
     if (helpers && !(await helpers.underQuota('e:' + email, 'email', 1, 6))) return { error: 'Too many sign-in emails today. Please try again tomorrow.' };
+    // Signed in already? Then the link adds this email to the current account (backup sign-in) instead of making a new one.
+    const linkUid = body.token ? await checkToken(env, body.token) : null;
+    if (linkUid) {
+      const owner = await call(D, { op: 'map.get', key: 'email:' + email });
+      if (owner && owner !== linkUid) return { error: 'That email is already used by another Biblicall account.' };
+    }
     const tok = b64u(rand(24));
-    await call(D, { op: 'map.put', key: 'et:' + await hashHex(tok), value: { email, exp: Date.now() + 20 * 60000 } });
+    await call(D, { op: 'map.put', key: 'et:' + await hashHex(tok), value: { email, linkUid: linkUid || null, exp: Date.now() + 20 * 60000 } });
     try { await sendEmail(env, email, 'https://biblicall.com/?signin=' + tok); }
     catch (e) { console.error('email', e && e.message); return { error: "The email couldn't be sent. Please try again in a moment." }; }
     return { ok: true };
@@ -268,6 +274,11 @@ export async function accountOp(env, body, helpers) {
     const v = await call(D, { op: 'map.take', key: 'et:' + await hashHex(String(body.signin || '')) });
     if (!v || v.exp < Date.now()) return { error: 'That sign-in link has expired or was already used. Please request a new one.' };
     let uid = await call(D, { op: 'map.get', key: 'email:' + v.email });
+    if (v.linkUid && (!uid || uid === v.linkUid)) {
+      uid = v.linkUid;
+      await call(D, { op: 'map.put', key: 'email:' + v.email, value: uid });
+      await call(user(env, uid), { op: 'profile.set', patch: { email: v.email } });
+    }
     if (!uid) {
       uid = b64u(rand(16));
       await call(D, { op: 'map.put', key: 'email:' + v.email, value: uid });

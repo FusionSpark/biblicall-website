@@ -1522,6 +1522,16 @@
         c.appendChild(cp); box.appendChild(c);
         box.appendChild(el('p', 'acct-fine', 'Use this code to sign in on a computer or a phone without Face ID. Keep it private, like a password. Getting a new code replaces this one.'));
       }
+      if (acct.email) box.appendChild(el('p', 'acct-fine', 'Email sign-in: ' + acct.email));
+      else if (acctStatus.email) {
+        box.appendChild(el('h4', null, 'Add your email (backup sign-in)'));
+        const f = el('form', 'acct-row');
+        const em = el('input'); em.type = 'email'; em.id = 'acctAddEmail'; em.placeholder = 'you@email.com'; em.autocomplete = 'email';
+        const go = el('button', null, 'Send link'); go.type = 'submit';
+        f.appendChild(em); f.appendChild(go);
+        f.addEventListener('submit', async (e) => { e.preventDefault(); go.disabled = true; const r = await acctApi('email.start', { email: em.value }); acctMsg = r.ok ? 'Check your email and tap the link to add it to this account. It expires in 20 minutes.' : (r.error || 'Please try again.'); drawDrawer(); });
+        box.appendChild(f);
+      }
       const code = el('button', 'acct-btn ghost', shownCode ? 'Get a new account code' : 'Get an account code for another device'); code.type = 'button';
       code.addEventListener('click', async () => { const r = await acctApi('code.create'); if (r.code) { shownCode = r.code; acctMsg = ''; } else acctMsg = r.error || 'Please try again.'; drawDrawer(); });
       box.appendChild(code);
