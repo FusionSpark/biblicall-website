@@ -191,6 +191,34 @@ async function sendEmail(env, to, link) {
   if (!r.ok) throw new Error('email ' + r.status);
 }
 
+// Welcome email for new waitlist signups (sent once per address).
+async function sendWelcome(env, to) {
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:17px;color:#2c2117;line-height:1.6;max-width:560px">
+    <p style="font-size:22px;font-weight:700;color:#4a2f26;margin:0 0 14px">Welcome to Biblicall</p>
+    <p>Thank you for joining the Biblicall waitlist. We're so glad you're here.</p>
+    <p>Biblicall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a <b>North Star</b>: scripture quoted word for word from the King James Bible to guide and encourage you.</p>
+    <p>You can already try it at <a href="https://biblicall.com" style="color:#664336;font-weight:700">biblicall.com</a>. We'll write again when Biblicall fully launches.</p>
+    <div style="margin:22px 0;padding:14px 18px;background:#f6efe8;border-radius:12px">
+      <p style="margin:0;font-style:italic">“Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.”</p>
+      <p style="margin:6px 0 0;font-weight:700;color:#664336">Proverbs 3:5–6</p>
+    </div>
+    <p>Grace and peace,<br>The Biblicall team</p>
+    <p style="color:#6b5948;font-size:13.5px;margin-top:26px">You're receiving this because this address joined the waitlist at biblicall.com. To be removed, just reply with “remove.” <a href="https://biblicall.com/privacy.html" style="color:#6b5948">Privacy</a></p></div>`;
+  const text = 'Welcome to Biblicall\n\nThank you for joining the Biblicall waitlist. We\'re so glad you\'re here.\n\n' +
+    'Biblicall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a North Star: scripture quoted word for word from the King James Bible to guide and encourage you.\n\n' +
+    'You can already try it at https://biblicall.com. We\'ll write again when Biblicall fully launches.\n\n' +
+    '"Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." (Proverbs 3:5-6)\n\n' +
+    'Grace and peace,\nThe Biblicall team\n\nTo be removed from the waitlist, reply with "remove".';
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [to], reply_to: 'hello@biblicall.com',
+      subject: 'Welcome to Biblicall', html, text,
+      headers: { 'List-Unsubscribe': '<mailto:hello@biblicall.com?subject=remove>' } })
+  });
+  if (!r.ok) throw new Error('welcome ' + r.status);
+}
+
 // Handles POST { mode: 'account', op, token?, ... } and returns a plain object for the response.
 export async function accountOp(env, body, helpers) {
   if (!env.DIRECTORY || !env.USERDATA) return { error: 'Accounts are not set up yet' };
@@ -258,7 +286,9 @@ export async function accountOp(env, body, helpers) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: 'Please enter a valid email address.' };
     if (helpers && !(await helpers.underQuota('w:' + email, 'email', 1, 3))) return { ok: true };
     const question = String(body.question || '').slice(0, 300);
-    await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: Date.now() } });
+    const already = await call(D, { op: 'map.get', key: 'wl:' + email });
+    await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: (already && already.t) || Date.now() } });
+    if (!already && env.RESEND_API_KEY) await sendWelcome(env, email).catch((e) => console.error('welcome', e && e.message));
     if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
       const esc = (x) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       await fetch('https://api.resend.com/emails', { method: 'POST',
