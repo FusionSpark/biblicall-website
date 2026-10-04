@@ -95,6 +95,20 @@ export default {
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'Invalid JSON' }, 400); }
 
+    // Text to speech for the Listen button: a calm, warm male voice (Deepgram Aura-2 "Orion" on Workers AI).
+    if (body.mode === 'speak') {
+      const text = typeof body.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1900) : '';
+      if (!text) return json({ error: 'Nothing to read' }, 400);
+      if (!env.AI) return json({ error: 'Voice is not set up' }, 503);
+      try {
+        const audio = await env.AI.run('@cf/deepgram/aura-2-en', { text, speaker: 'orion', encoding: 'mp3' });
+        return new Response(audio, { headers: { ...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
+      } catch (err) {
+        console.error('Speak error', err && err.message);
+        return json({ error: 'Could not create the voice' }, 502);
+      }
+    }
+
     // Speech to text for the microphone button (Workers AI Whisper).
     if (body.mode === 'transcribe') {
       const audio = typeof body.audio === 'string' ? body.audio : '';

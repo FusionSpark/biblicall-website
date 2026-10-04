@@ -297,6 +297,13 @@
   html[data-sky="night"] .ns .why,html[data-sky="night"] .remchip{color:#4d5f7a}
   html[data-sky="night"] .composer textarea::placeholder{color:#5d6f8a}
   html[data-sky="night"] .callbtn,html[data-sky="night"] .ns-offer,html[data-sky="night"] .memoffer button{background:var(--card)}
+  /* ---- Listen button under each answer ---- */
+  .listen{display:inline-flex;align-items:center;gap:7px;margin:2px 0 16px;padding:6px 14px 6px 10px;border-radius:999px;
+    border:1.5px solid var(--line);background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .listen svg{width:20px;height:20px;flex:none}
+  .listen:hover{border-color:var(--earth)}
+  .listen.playing{background:var(--earth);border-color:var(--earth);color:#fff}
+  .listen.wait{opacity:.75}
   /* ---- Readability: larger, heavier, higher-contrast text everywhere ---- */
   body{font-size:20.5px;font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   h1,.ns h2,.callwin h2{font-weight:700;letter-spacing:-.005em}
@@ -613,6 +620,14 @@
         threadBox.appendChild(note);
         lastRow = note;
       }
+      if (m.role === 'assistant' && !m.loading && m.content && m.content !== 'Thinking…') {
+        const lb = document.createElement('button');
+        lb.type = 'button'; lb.className = 'listen';
+        setListenBtn(lb, speaking && speaking.msg === m ? 'playing' : 'idle');
+        lb.addEventListener('click', () => listen(m, lb));
+        threadBox.appendChild(lb);
+        lastRow = lb;
+      }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
         panel.className = 'ns' + (m.ns === 'loading' ? ' loading' : '');
@@ -684,6 +699,87 @@
     nsBtn.disabled = true;
     try { await showNorthStar(last, nsBtn); } finally { nsBtn.disabled = false; }
   });
+
+  // ---- Listen: read answers aloud in a calm, warm male voice ----
+  const SILENT = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAABgAAAykAWlpaWlpaWlpaWlpaWlpaWnt7e3t7e3t7e3t7e3t7e3t7nJycnJycnJycnJycnJycnL29vb29vb29vb29vb29vb293t7e3t7e3t7e3t7e3t7e3t7/////////////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQEUQAAAAAAAAMpso/G6AAAAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+  const SPEAKER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+  const STOP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+  let player = null, speaking = null; // speaking = { msg, chunks, i, token }
+  function speechText(m) {
+    const clean = (t) => String(t || '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*[-•*]\s+/gm, '').replace(/\[\[PASS\]\]/g, '').trim();
+    let t = clean(m.content);
+    if (m.ns && m.ns !== 'loading') {
+      t += '\n\nNorth Star. ' + clean(m.ns.teach);
+      m.ns.verses.forEach((v) => { t += '\n\n' + clean(v.text) + ' ' + v.label.replace('–', ' to ') + '.'; });
+      if (m.ns.reflect) t += '\n\n' + clean(m.ns.reflect);
+    }
+    return t;
+  }
+  function chunkText(t, max) {
+    const parts = t.match(/[^.!?\n]+[.!?]*\s*|\n+/g) || [t];
+    const out = []; let cur = '';
+    for (const p of parts) {
+      if ((cur + p).length > max && cur.trim()) { out.push(cur.trim()); cur = ''; }
+      cur += p;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+  async function fetchVoice(text) {
+    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'speak', text }) });
+    if (!res.ok || !(res.headers.get('Content-Type') || '').includes('audio')) throw new Error('voice');
+    return URL.createObjectURL(await res.blob());
+  }
+  function stopSpeaking() {
+    if (player) { try { player.pause(); } catch (e) {} }
+    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    if (speaking) { speaking.token = null; (speaking.urls || []).forEach((u) => u && URL.revokeObjectURL(u)); }
+    speaking = null;
+    document.querySelectorAll('.listen.playing,.listen.wait').forEach((b) => setListenBtn(b, 'idle'));
+  }
+  function setListenBtn(b, state) {
+    b.classList.toggle('playing', state === 'playing'); b.classList.toggle('wait', state === 'wait');
+    b.innerHTML = (state === 'playing' ? STOP_ICON + 'Stop' : SPEAKER_ICON + (state === 'wait' ? 'Getting voice…' : 'Listen'));
+    b.setAttribute('aria-label', state === 'playing' ? 'Stop reading aloud' : 'Read this answer aloud');
+  }
+  function fallbackSpeak(text, btn, token) {
+    if (!window.speechSynthesis) { toast('Reading aloud isn’t available in this browser.'); stopSpeaking(); return; }
+    const voices = speechSynthesis.getVoices();
+    const prefer = ['Aaron', 'Daniel', 'Arthur', 'Reed', 'Evan', 'Nathan', 'Tom', 'Alex', 'Google UK English Male', 'Microsoft Guy', 'Microsoft Andrew', 'Microsoft David'];
+    const v = prefer.map((n) => voices.find((x) => x.name.indexOf(n) === 0 && /^en/i.test(x.lang))).find(Boolean) || voices.find((x) => /^en/i.test(x.lang));
+    const u = new SpeechSynthesisUtterance(text);
+    if (v) u.voice = v; u.rate = 0.9; u.pitch = 0.9;
+    u.onend = u.onerror = () => { if (speaking && speaking.token === token) stopSpeaking(); };
+    setListenBtn(btn, 'playing');
+    speechSynthesis.speak(u);
+  }
+  async function listen(m, btn) {
+    if (speaking && speaking.msg === m) { stopSpeaking(); return; }
+    stopSpeaking();
+    if (!player) { player = new Audio(); player.preservesPitch = true; }
+    // Unlock audio on iPhone within this tap, before any waiting.
+    try { player.src = SILENT; player.play().catch(() => {}); } catch (e) {}
+    const token = {}; const chunks = chunkText(speechText(m), 1700);
+    speaking = { msg: m, token, urls: [] };
+    setListenBtn(btn, 'wait');
+    const get = (i) => (speaking && speaking.token === token && i < chunks.length) ? (speaking.urls[i] = speaking.urls[i] || fetchVoice(chunks[i])) : null;
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const url = await get(i);
+        if (!speaking || speaking.token !== token) return;
+        speaking.urls[i] = url;
+        get(i + 1); // fetch the next part while this one plays
+        player.src = url; player.playbackRate = 0.95;
+        setListenBtn(btn, 'playing');
+        await player.play();
+        await new Promise((res) => { player.onended = res; player.onpause = () => { if (!speaking || speaking.token !== token) res(); }; });
+        if (!speaking || speaking.token !== token) return;
+      }
+      stopSpeaking();
+    } catch (e) {
+      if (speaking && speaking.token === token) fallbackSpeak(chunks.join(' '), btn, token);
+    }
+  }
 
   async function showNorthStar(m, btn) {
     btn.disabled = true;
