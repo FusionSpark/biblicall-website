@@ -69,6 +69,10 @@
   .fchip.busy{opacity:.6}
   .fchip button{border:none;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 6px}
   .fchip button:hover{color:var(--earth)}
+  .photos{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin:-2px 0 10px}
+  .photos.other{justify-content:flex-start}
+  .photos a{display:block}
+  .photos img{display:block;max-width:min(220px,70vw);max-height:220px;border-radius:12px;border:1px solid var(--line);object-fit:cover;background:var(--card)}
   .attnote{font-size:12px;color:var(--muted);text-align:right;margin:-2px 4px 10px;overflow-wrap:anywhere}
   @media (max-width:400px){
     .composer{gap:4px;padding-left:14px}
@@ -482,6 +486,17 @@
       }
       threadBox.appendChild(row);
       lastRow = row;
+      if (m.role === 'user' && m.imgs && m.imgs.length) {
+        const box = document.createElement('div');
+        box.className = 'photos' + (mine ? '' : ' other');
+        m.imgs.forEach((src) => {
+          const a = document.createElement('a'); a.href = src; a.target = '_blank'; a.rel = 'noopener';
+          const im = document.createElement('img'); im.src = src; im.alt = 'Photo shared by ' + (mine ? 'you' : (m.name || 'a friend')); im.loading = 'lazy';
+          a.appendChild(im); box.appendChild(a);
+        });
+        threadBox.appendChild(box);
+        lastRow = box;
+      }
       if (m.role === 'user' && m.files && m.files.length) {
         const note = document.createElement('div');
         note.className = 'attnote';
@@ -567,7 +582,7 @@
     const sending = pendingFiles.slice();
     const question = q.value.trim() || (sending.length ? (sending.length > 1 ? 'Please look at these files.' : 'Please look at this file.') : '');
     if (question.length === 0) { q.focus(); return; }
-    if (sending.length && room && room.live) { toast('Files can\u2019t be shared in a live call yet.'); return; }
+    if (room && room.live && sending.some((f) => f.kind !== 'image')) { toast('Only photos can be shared in a live call. Remove the other files to send.'); return; }
     if (/^\s*forget\b/i.test(question) && !remOn) {
       q.value = ''; q.style.height = 'auto';
       openDrawer('memory');
@@ -581,7 +596,9 @@
       toast(item ? 'Saved to memory' : 'Already in memory');
     }
     if (room && room.live) {
-      if (!roomSend({ type: 'ask', content: question })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
+      const images = sending.map((f) => ({ media_type: f.media_type, data: f.data }));
+      if (!roomSend({ type: 'ask', content: q.value.trim(), images: images.length ? images : undefined })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
+      if (sending.length) { pendingFiles = []; drawAttachRow(); }
       document.body.classList.add('chatting');
       q.value = ''; q.style.height = 'auto';
       lastQuestion = question;
@@ -682,15 +699,15 @@
       r.readAsDataURL(blob);
     });
   }
-  async function shrinkImage(file) {
+  async function shrinkImage(file, max = 1568, quality = 0.85) {
     const url = URL.createObjectURL(file);
     try {
       const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-      const max = 1568, scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
       const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
-      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', quality));
       const t = document.createElement('canvas'); const ts = 64 / Math.max(c.width, c.height);
       t.width = Math.round(c.width * ts); t.height = Math.round(c.height * ts); t.getContext('2d').drawImage(c, 0, 0, t.width, t.height);
       return { data: await blobToB64(blob), thumb: t.toDataURL('image/jpeg', 0.7) };
@@ -711,9 +728,11 @@
     const ext = extOf(file.name), type = file.type || '';
     if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
       if (file.size > 25e6) throw new Error('That photo is too large. Try one under 25 MB.');
-      try { const r = await shrinkImage(file); return { kind: 'image', media_type: 'image/jpeg', data: r.data, thumb: r.thumb }; }
+      const inCall = room && room.live;
+      try { const r = inCall ? await shrinkImage(file, 1024, 0.8) : await shrinkImage(file); return { kind: 'image', media_type: 'image/jpeg', data: r.data, thumb: r.thumb }; }
       catch (e) { throw new Error("That photo couldn't be opened. Try a JPG or PNG."); }
     }
+    if (room && room.live) throw new Error('Only photos can be shared in a live call.');
     if (type === 'application/pdf' || ext === 'pdf') {
       if (file.size > 15e6) throw new Error('That PDF is too large. Try one under 15 MB.');
       return { kind: 'pdf', data: await blobToB64(file) };
@@ -752,9 +771,9 @@
   async function addFiles(list) {
     const files = Array.from(list || []);
     if (!files.length) return;
-    if (room && room.live) { toast('Files can\u2019t be shared in a live call yet.'); return; }
+    const cap = room && room.live ? 3 : MAX_FILES;
     for (const file of files) {
-      if (pendingFiles.length >= MAX_FILES) { toast('Up to ' + MAX_FILES + ' files at a time.'); break; }
+      if (pendingFiles.length >= cap) { toast('Up to ' + cap + (cap === 3 ? ' photos' : ' files') + ' at a time.'); break; }
       const entry = { id: fid(), name: file.name || 'pasted image', ready: false };
       pendingFiles.push(entry); drawAttachRow();
       try { Object.assign(entry, await readFile(file), { ready: true }); }
@@ -818,6 +837,7 @@
       if (m.name) o.name = m.name;
       if (m.saved) o.saved = true;
       if (m.files) o.files = m.files;
+      if (m.imgs) o.imgs = m.imgs;
       if (m.ns && m.ns !== 'loading') o.ns = m.ns;
       return o;
     });
@@ -1131,6 +1151,9 @@
   function roomError(text) { room && (room.err = text); drawRoomBar(); setTimeout(() => { if (room && room.err === text) { room.err = ''; drawRoomBar(); } }, 5000); }
   function mapRoomMsg(x, prevUser) {
     const out = { role: x.role === 'assistant' ? 'assistant' : 'user', content: String(x.content || ''), from: x.from, name: x.name };
+    if (Array.isArray(x.images) && x.images.length && room) {
+      out.imgs = x.images.map((r) => ROOMS_WS.replace(/^wss:/, 'https:') + room.id + '/img/' + encodeURIComponent(String(r.k)));
+    }
     if (out.role === 'assistant') {
       out.q = prevUser || ''; out.hist = [];
       if (x.ns && Array.isArray(x.ns.verses)) {

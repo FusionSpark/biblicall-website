@@ -6,11 +6,21 @@ const AI_TURNS = 20;           // messages sent to the AI as context
 const IDLE_MS = 30 * 86400000; // delete rooms after 30 idle days
 const PASS = '[[PASS]]';
 const ADDRESSED = /(^|[^a-z])@?biblicall\b/i;
+// Photos shared in a call: up to 3 per message, resized by the browser before sending.
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_B64 = 450000;
+const MAX_WS_BYTES = 1000000;
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+const pad = (n) => String(n).padStart(9, '0');
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/') return new Response('Biblicall rooms', { headers: { 'content-type': 'text/plain' } });
+    // Photos: GET /room/<id>/img/<seq>-<n> (the room id is the secret, as with the call itself).
+    const im = url.pathname.match(/^\/room\/([A-Za-z0-9_-]{12,40})\/img\/(\d{1,9})-(\d)$/);
+    if (im && req.method === 'GET') return env.ROOMS.get(env.ROOMS.idFromName(im[1])).fetch(req);
     const m = url.pathname.match(/^\/room\/([A-Za-z0-9_-]{12,40})$/);
     if (!m) return new Response('Not found', { status: 404 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 });
@@ -66,6 +76,13 @@ export class Room extends DurableObject {
   }
 
   async fetch(req) {
+    const im = new URL(req.url).pathname.match(/\/img\/(\d{1,9})-(\d)$/);
+    if (im) {
+      const photo = await this.ctx.storage.get('img:' + pad(im[1]) + ':' + im[2]);
+      if (!photo) return new Response('Not found', { status: 404 });
+      const bytes = Uint8Array.from(atob(photo.data), (c) => c.charCodeAt(0));
+      return new Response(bytes, { headers: { 'Content-Type': photo.media_type, 'Cache-Control': 'private, max-age=31536000, immutable', 'Access-Control-Allow-Origin': '*' } });
+    }
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
     const me = { id: crypto.randomUUID().slice(0, 8), name: 'Guest', last: 0 };
@@ -78,11 +95,19 @@ export class Room extends DurableObject {
     const map = await this.ctx.storage.list({ prefix: 'm:', reverse: true, limit: MAX_KEEP });
     return [...map.values()].reverse();
   }
-  async add(msg) {
+  async add(msg, photos) {
     const seq = ((await this.ctx.storage.get('seq')) || 0) + 1;
     msg.id = seq; msg.t = Date.now();
-    await this.ctx.storage.put({ seq, ['m:' + String(seq).padStart(9, '0')]: msg });
-    if (seq > MAX_KEEP) await this.ctx.storage.delete('m:' + String(seq - MAX_KEEP).padStart(9, '0'));
+    const puts = { seq, ['m:' + pad(seq)]: msg };
+    if (photos && photos.length) {
+      msg.images = photos.map((ph, i) => { puts['img:' + pad(seq) + ':' + i] = ph; return { k: seq + '-' + i, media_type: ph.media_type }; });
+    }
+    await this.ctx.storage.put(puts);
+    if (seq > MAX_KEEP) {
+      const old = pad(seq - MAX_KEEP);
+      const imgs = await this.ctx.storage.list({ prefix: 'img:' + old + ':' });
+      await this.ctx.storage.delete(['m:' + old, ...imgs.keys()]);
+    }
     await this.ctx.storage.setAlarm(Date.now() + IDLE_MS);
     this.broadcast({ type: 'msg', msg });
     return msg;
@@ -104,7 +129,7 @@ export class Room extends DurableObject {
   }
 
   async webSocketMessage(ws, data) {
-    if (typeof data !== 'string' || data.length > 30000) return;
+    if (typeof data !== 'string' || data.length > MAX_WS_BYTES) return;
     const d = parseJson(data);
     if (!d || typeof d !== 'object') return;
     const me = ws.deserializeAttachment() || {};
@@ -131,12 +156,15 @@ export class Room extends DurableObject {
     }
 
     if (d.type === 'ask') {
-      const content = clean(d.content, 2000);
+      const photos = (Array.isArray(d.images) ? d.images : []).slice(0, MAX_PHOTOS)
+        .filter((x) => x && PHOTO_TYPES.includes(x.media_type) && typeof x.data === 'string' && x.data.length <= MAX_PHOTO_B64 && B64_RE.test(x.data.slice(0, 2000)))
+        .map((x) => ({ media_type: x.media_type, data: x.data }));
+      const content = clean(d.content, 2000) || (photos.length ? (photos.length > 1 ? 'Shared ' + photos.length + ' photos' : 'Shared a photo') : '');
       if (!content) return;
       const now = Date.now();
       if (now - (me.last || 0) < 1200) { ws.send(JSON.stringify({ type: 'error', text: 'One moment, please send one message at a time.' })); return; }
       me.last = now; ws.serializeAttachment(me);
-      await this.add({ role: 'user', content, from: me.id, name: me.name });
+      await this.add({ role: 'user', content, from: me.id, name: me.name }, photos);
       const addressed = ADDRESSED.test(content);
       if (this.busy) {
         // Friends keep talking while Biblicall thinks; if someone calls on it, it answers next.
@@ -176,8 +204,18 @@ export class Room extends DurableObject {
 
       // Solo: answer and North Star in parallel. Group: only look for a North Star once Biblicall decides to speak.
       const nsEarly = !group && !isAck(question) ? this.northStar(question, ctx) : null;
+      // Photos from the latest message that had any (within the recent turns) go to the AI with the conversation.
+      const attachments = [];
+      const withPhotos = [...recent].reverse().slice(0, 6).find((m) => m.role === 'user' && m.images && m.images.length);
+      if (withPhotos) {
+        for (const ref of withPhotos.images) {
+          const [sq, n] = ref.k.split('-');
+          const ph = await this.ctx.storage.get('img:' + pad(sq) + ':' + n);
+          if (ph) attachments.push({ kind: 'image', name: 'Photo shared by ' + withPhotos.name, media_type: ph.media_type, data: ph.data });
+        }
+      }
       let answer;
-      try { answer = await this.ai(turns, { group, decide: group && !addressed }); }
+      try { answer = await this.ai(turns, { group, decide: group && !addressed, attachments: attachments.length ? attachments : undefined }); }
       catch (e) { answer = mustAnswer ? "Biblicall couldn't answer that just now. Please try again in a moment." : PASS; }
       if (!answer || answer.includes(PASS)) return; // stays quiet, keeps listening
       if (!showed) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
