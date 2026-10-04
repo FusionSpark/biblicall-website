@@ -1331,10 +1331,10 @@
       const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'transcribe', audio, media_type: type.split(';')[0] }) });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'transcribe');
+      if (!res.ok || data.error) throw new Error(data.error === 'daily_limit' ? data.message : 'transcribe');
       if (!addSpoken(data.text)) toast('Biblicall didn’t catch that. Try again a little closer to the phone.');
     } catch (e) {
-      toast('Couldn’t turn that into text. Please try again.');
+      toast(e && /today/.test(e.message) ? e.message : 'Couldn’t turn that into text. Please try again.');
     } finally {
       micBtn.disabled = false; micOff();
       if (sendAfter) { sendAfter = false; reveal(); } else q.focus();
