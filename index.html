@@ -101,11 +101,18 @@
   .emailstep{display:none;margin-top:18px;text-align:left}
   body.chatting .center{justify-content:flex-start;padding-top:28px}
   body.chatting .brandrow,body.chatting h1{display:none}
-  body.chatting .thread{padding-bottom:295px}
+  /* While chatting, the conversation scrolls in its own area that ends just above the chat box, so nothing ever
+     slides underneath the logo and chat box: they sit directly on the sky with no panel behind them. */
+  body.chatting .convo{position:fixed;top:0;left:0;right:0;bottom:var(--dock-h,290px);overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;padding:66px 20px 12px;z-index:5;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 58px,#000 calc(100% - 18px),transparent 100%);
+    mask-image:linear-gradient(180deg,transparent 0,#000 58px,#000 calc(100% - 18px),transparent 100%)}
+  body.chatting .convo > *{max-width:680px;margin-left:auto;margin-right:auto}
+  body.chatting .thread{margin-top:0}
   body.chatting .composer-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;
     display:flex;flex-direction:column;align-items:center;
     padding:18px 20px 22px;
-    background:linear-gradient(180deg, rgba(var(--bg-rgb),0) 0%, var(--bg) 16px, var(--bg) 100%)}
+    background:transparent}
   body.chatting .composer-dock .composer,body.chatting .composer-dock .callbar{width:100%;max-width:680px}
   body.chatting .composer-dock .emailstep{width:100%;max-width:680px;margin-top:14px}
   body.chatting .composer-dock .emailstep p{font-size:15.5px;margin:0 0 8px}
@@ -203,7 +210,8 @@
   .menubtn{position:fixed;top:12px;left:12px;z-index:20;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;
     color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .menubtn:hover{background:var(--card);border-color:var(--line);color:var(--earth)}
-  body.chatting .menubtn{background:rgba(var(--bg-rgb),.94);border-color:var(--line)}
+  body.chatting .menubtn{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.55);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
   .menubtn svg{width:22px;height:22px}
   .drawer-back{position:fixed;inset:0;z-index:40;background:rgba(44,33,23,.32)}
   .drawer{position:fixed;top:0;bottom:0;left:0;z-index:41;width:min(340px,88vw);background:var(--card);border-right:1px solid var(--line);
@@ -346,7 +354,7 @@
   // Sky by local time: sunrise 6-9am, day 9am-5pm, sunset 5-8pm, night 8pm-6am. Preview any with ?sky=sunrise|day|sunset|night
   (function () {
     var forced = (location.search.match(/[?&]sky=(sunrise|day|sunset|night)/) || [])[1];
-    var colors = { sunrise: '#fcd9a6', day: '#d3e9f8', sunset: '#fbd9ae', night: '#1a2850' };
+    var colors = { sunrise: '#a8c8ea', day: '#bfe0f7', sunset: '#e7a08f', night: '#070d22' }; // top of each sky, for the phone's top bar
     function pick() {
       if (forced) return forced;
       var h = new Date().getHours();
@@ -412,9 +420,11 @@
       </div>
     </div>
 
+    <div class="convo" id="convo">
     <p class="shared-banner" id="sharedBanner">A friend invited you into this Biblicall conversation. Read along, then keep it going below.</p>
     <div class="roombar" id="roomBar"></div>
     <div class="thread" id="thread"></div>
+    </div>
   </div>
 </div>
 
@@ -572,8 +582,12 @@
     return s;
   }
 
+  let scrollReq = null;          // { msg } : the message whose beginning should be brought into view
+  const msgRows = new Map();     // message -> its first row on screen
+  function scrollToStart(msg) { scrollReq = { msg }; }
   function renderThread() {
     threadBox.innerHTML = '';
+    msgRows.clear();
     let lastRow = null;
     conversation.forEach((m) => {
       const row = document.createElement('div');
@@ -599,6 +613,7 @@
       }
       threadBox.appendChild(row);
       lastRow = row;
+      msgRows.set(m, row);
       if (m.role === 'user' && m.imgs && m.imgs.length) {
         const box = document.createElement('div');
         box.className = 'photos' + (mine ? '' : ' other');
@@ -682,13 +697,36 @@
       threadBox.appendChild(row);
       lastRow = row;
     }
-    if (lastRow) {
-      const dock = document.getElementById('composerDock');
-      const dockHeight = dock ? dock.offsetHeight : 0;
-      const targetTop = lastRow.offsetTop + lastRow.offsetHeight - window.innerHeight + dockHeight + 24;
-      window.scrollTo({ top: Math.max(targetTop, 0), behavior: 'smooth' });
+    // Scroll only when something new asked for it, and bring the START of that message to the top of the
+    // screen (like opening a letter at "Dear friend,"). Later updates (North Star arriving, buttons) never move the page.
+    if (scrollReq) {
+      const el = scrollReq.msg === 'thinking' ? lastRow : msgRows.get(scrollReq.msg);
+      scrollReq = null;
+      if (el) {
+        const box = convoBox();
+        if (box) {
+          const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 62;
+          box.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: Math.max(el.getBoundingClientRect().top + window.scrollY - 76, 0), behavior: 'smooth' });
+        }
+      }
     }
   }
+  const convoEl = document.getElementById('convo');
+  function convoBox() { return document.body.classList.contains('chatting') && getComputedStyle(convoEl).position === 'fixed' ? convoEl : null; }
+  function nearBottom() {
+    const box = convoBox();
+    return box ? box.scrollHeight - box.scrollTop - box.clientHeight < 260 : window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 260;
+  }
+  // Keep the conversation area ending exactly at the top of the chat box, whatever its height.
+  (function () {
+    const dock = document.getElementById('composerDock');
+    const set = () => document.documentElement.style.setProperty('--dock-h', (document.body.classList.contains('chatting') ? dock.offsetHeight : 0) + 'px');
+    if (window.ResizeObserver) new ResizeObserver(set).observe(dock);
+    new MutationObserver(set).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('resize', set); set();
+  })();
 
   // The North Star button above the chat box: brings a North Star into the conversation for the latest answer, any time.
   const nsRow = document.getElementById('nsRow');
@@ -868,6 +906,7 @@
     conversation.forEach((m) => { delete m.memOffer; });
     conversation.push({ role: 'user', content: question, saved: wantsRemember || undefined, files: sending.length ? sending.map((f) => f.name) : undefined });
     conversation.push({ role: 'assistant', content: 'Thinking…', loading: true });
+    scrollToStart(conversation[conversation.length - 2]);
     if (sending.length) { fileContext = { files: sending.map(fileFields), turnsLeft: 6 }; pendingFiles = []; drawAttachRow(); }
     else if (fileContext && --fileContext.turnsLeft < 0) fileContext = null;
     const attachments = fileContext ? fileContext.files : undefined;
@@ -888,6 +927,7 @@
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
       conversation[turn] = { role: 'assistant', content: data.answer, q: question, hist: history };
+      scrollToStart(conversation[turn]);
       renderThread();
       const ns = await nsPromise;
       if (ns) conversation[turn].ns = ns;
@@ -902,6 +942,7 @@
           ? "You're asking faster than Biblicall can keep up. Please wait a minute, then try again."
           : "Biblicall couldn't answer that just now. Leave your email below and we'll follow up with a real answer personally."
       };
+      scrollToStart(conversation[turn]);
     }
     renderThread();
 
@@ -1119,6 +1160,8 @@
       if (o.role === 'user') prevQ = o.content; else { o.q = prevQ; o.hist = []; }
       return o;
     });
+    const lastAns = [...conversation].reverse().find((x) => x.role === 'assistant');
+    if (lastAns) scrollToStart(lastAns);
     document.body.classList.add('chatting');
     threadBox.classList.add('show');
     renderThread();
@@ -1545,6 +1588,8 @@
           room.seed = null;
           let prev = '';
           conversation = (d.msgs || []).map((x) => { const m = mapRoomMsg(x, prev); if (m.role === 'user') prev = m.content; return m; });
+          const lastAns = [...conversation].reverse().find((x) => x.role === 'assistant');
+          if (lastAns) scrollToStart(lastAns);
         }
         if (room.onReady) { room.onReady(room.id); room.onReady = null; }
         drawRoomBar(); renderThread();
@@ -1552,6 +1597,8 @@
         const prev = [...conversation].reverse().find((m) => m.role === 'user');
         const m = mapRoomMsg(d.msg, prev ? prev.content : '');
         if (m.role === 'user' && m.from === room.you && conversation.length && conversation[conversation.length - 1].pending) conversation.pop();
+        // New reply or my own message: bring its beginning into view. A friend's message only if I'm already at the end.
+        if (m.role === 'assistant' || m.from === room.you || nearBottom()) scrollToStart(m);
         conversation.push(m);
         document.body.classList.add('chatting'); threadBox.classList.add('show');
         renderThread();
