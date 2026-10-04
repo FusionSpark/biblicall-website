@@ -471,7 +471,7 @@
         if (meta) meta.setAttribute('content', p[0] === 'u' ? '#0d1226' : '#05070f');
         store('bc_photo_last', String(i));
       };
-      img.onload = function () { (img.decode ? img.decode().catch(function () {}) : Promise.resolve()).then(ok); };
+      img.onload = function () { if (img.decode) img.decode().then(ok, ok); setTimeout(ok, 250); };
       img.onerror = fail;
       setTimeout(fail, 20000);
       img.src = url(p);
