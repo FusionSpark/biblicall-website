@@ -627,8 +627,9 @@
       if (m.role === 'assistant' && !m.loading && m.content && m.content !== 'Thinking…') {
         const lb = document.createElement('button');
         lb.type = 'button'; lb.className = 'listen';
-        setListenBtn(lb, speaking && speaking.msg === m ? 'playing' : 'idle');
-        lb.addEventListener('click', () => listen(m, lb));
+        lb._msg = m;
+        setListenBtn(lb, speaking && speaking.msg === m ? speaking.state : 'idle');
+        lb.addEventListener('click', () => listen(m));
         threadBox.appendChild(lb);
         lastRow = lb;
       }
@@ -709,14 +710,14 @@
   const SPEAKER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const STOP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
   let player = null, speaking = null; // speaking = { msg, chunks, i, token }
-  function speechText(m) {
-    const clean = (t) => String(t || '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*[-•*]\s+/gm, '').replace(/\[\[PASS\]\]/g, '').trim();
-    let t = clean(m.content);
-    if (m.ns && m.ns !== 'loading') {
-      t += '\n\nNorth Star. ' + clean(m.ns.teach);
-      m.ns.verses.forEach((v) => { t += '\n\n' + clean(v.text) + ' ' + v.label.replace('–', ' to ') + '.'; });
-      if (m.ns.reflect) t += '\n\n' + clean(m.ns.reflect);
-    }
+  function cleanSpeech(t) {
+    return String(t || '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*[-•*]\s+/gm, '').replace(/\[\[PASS\]\]/g, '').trim();
+  }
+  function answerText(m) { return cleanSpeech(m.content); }
+  function northStarText(ns) {
+    let t = 'North Star. ' + cleanSpeech(ns.teach);
+    ns.verses.forEach((v) => { t += '\n\n' + cleanSpeech(v.text) + ' ' + v.label.replace('–', ' to ') + '.'; });
+    if (ns.reflect) t += '\n\n' + cleanSpeech(ns.reflect);
     return t;
   }
   function chunkText(t, max) {
@@ -731,60 +732,93 @@
   }
   // Default voice: a deep, steady baritone. Try others with ?voice=saturn | mars | pluto | jupiter | draco | orion
   const VOICE = ((location.search.match(/[?&]voice=([a-z]+)/) || [])[1]) || 'zeus';
-  async function fetchVoice(text) {
-    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'speak', text, voice: VOICE }) });
-    if (!res.ok || !(res.headers.get('Content-Type') || '').includes('audio')) throw new Error('voice');
-    return URL.createObjectURL(await res.blob());
-  }
-  function stopSpeaking() {
-    if (player) { try { player.pause(); } catch (e) {} }
-    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
-    if (speaking) { speaking.token = null; (speaking.urls || []).forEach((u) => u && URL.revokeObjectURL(u)); }
-    speaking = null;
-    document.querySelectorAll('.listen.playing,.listen.wait').forEach((b) => setListenBtn(b, 'idle'));
+  // Each piece of text is turned into audio once; listening again replays it at no extra cost.
+  const voiceCache = new Map();
+  function fetchVoice(text) {
+    const key = VOICE + '|' + text;
+    if (!voiceCache.has(key)) {
+      const p = fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'speak', text, voice: VOICE }) })
+        .then(async (res) => {
+          if (!res.ok || !(res.headers.get('Content-Type') || '').includes('audio')) throw new Error('voice');
+          return URL.createObjectURL(await res.blob());
+        });
+      p.catch(() => voiceCache.delete(key));
+      voiceCache.set(key, p);
+    }
+    return voiceCache.get(key);
   }
   function setListenBtn(b, state) {
     b.classList.toggle('playing', state === 'playing'); b.classList.toggle('wait', state === 'wait');
     b.innerHTML = (state === 'playing' ? STOP_ICON + 'Stop' : SPEAKER_ICON + (state === 'wait' ? 'Getting voice…' : 'Listen'));
     b.setAttribute('aria-label', state === 'playing' ? 'Stop reading aloud' : 'Read this answer aloud');
   }
-  function fallbackSpeak(text, btn, token) {
-    if (!window.speechSynthesis) { toast('Reading aloud isn’t available in this browser.'); stopSpeaking(); return; }
-    const voices = speechSynthesis.getVoices();
-    const prefer = ['Aaron', 'Daniel', 'Arthur', 'Reed', 'Evan', 'Nathan', 'Tom', 'Alex', 'Google UK English Male', 'Microsoft Guy', 'Microsoft Andrew', 'Microsoft David'];
-    const v = prefer.map((n) => voices.find((x) => x.name.indexOf(n) === 0 && /^en/i.test(x.lang))).find(Boolean) || voices.find((x) => /^en/i.test(x.lang));
-    const u = new SpeechSynthesisUtterance(text);
-    if (v) u.voice = v; u.rate = 0.9; u.pitch = 0.9;
-    u.onend = u.onerror = () => { if (speaking && speaking.token === token) stopSpeaking(); };
-    setListenBtn(btn, 'playing');
-    speechSynthesis.speak(u);
+  function refreshListenBtns() {
+    document.querySelectorAll('.listen').forEach((b) => setListenBtn(b, speaking && speaking.msg === b._msg ? speaking.state : 'idle'));
   }
-  async function listen(m, btn) {
+  function setSpeakState(state) { if (speaking) { speaking.state = state; refreshListenBtns(); } }
+  function stopSpeaking() {
+    if (player) { try { player.pause(); } catch (e) {} }
+    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    if (speaking) speaking.token = null;
+    speaking = null;
+    refreshListenBtns();
+  }
+  // The phone's own voice, used only if the Biblicall voice can't be reached. It reads one sentence at a time,
+  // because some phones cut off long passages part-way through.
+  function deviceVoice() {
+    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    const prefer = ['Aaron', 'Daniel', 'Arthur', 'Reed', 'Evan', 'Nathan', 'Tom', 'Alex', 'Google UK English Male', 'Microsoft Guy', 'Microsoft Andrew', 'Microsoft David'];
+    return prefer.map((n) => voices.find((x) => x.name.indexOf(n) === 0 && /^en/i.test(x.lang))).find(Boolean) || voices.find((x) => /^en/i.test(x.lang));
+  }
+  async function speakOnDevice(text, token) {
+    if (!window.speechSynthesis) throw new Error('none');
+    const v = deviceVoice();
+    for (const sentence of chunkText(text, 180)) {
+      if (!speaking || speaking.token !== token) return;
+      await new Promise((res) => {
+        const u = new SpeechSynthesisUtterance(sentence);
+        if (v) u.voice = v; u.rate = 0.9; u.pitch = 0.85;
+        u.onend = u.onerror = res;
+        speechSynthesis.speak(u);
+      });
+    }
+  }
+  async function playPart(text, token, nextText) {
+    if (speaking.device) { setSpeakState('playing'); return speakOnDevice(text, token); }
+    let url;
+    try { url = await fetchVoice(text); }
+    catch (e) { speaking.device = true; setSpeakState('playing'); return speakOnDevice(text, token); }
+    if (!speaking || speaking.token !== token) return;
+    if (nextText) fetchVoice(nextText).catch(() => {}); // get the next part ready while this one plays
+    player.src = url; player.playbackRate = 0.9;
+    setSpeakState('playing');
+    try { await player.play(); } catch (e) { speaking.device = true; return speakOnDevice(text, token); }
+    await new Promise((res) => { player.onended = res; player.onerror = res; player.onpause = () => { if (!speaking || speaking.token !== token) res(); }; });
+  }
+  async function listen(m) {
     if (speaking && speaking.msg === m) { stopSpeaking(); return; }
     stopSpeaking();
     if (!player) { player = new Audio(); player.preservesPitch = true; }
     // Unlock audio on iPhone within this tap, before any waiting.
     try { player.src = SILENT; player.play().catch(() => {}); } catch (e) {}
-    const token = {}; const chunks = chunkText(speechText(m), 1700);
-    speaking = { msg: m, token, urls: [] };
-    setListenBtn(btn, 'wait');
-    const get = (i) => (speaking && speaking.token === token && i < chunks.length) ? (speaking.urls[i] = speaking.urls[i] || fetchVoice(chunks[i])) : null;
-    try {
-      for (let i = 0; i < chunks.length; i++) {
-        const url = await get(i);
-        if (!speaking || speaking.token !== token) return;
-        speaking.urls[i] = url;
-        get(i + 1); // fetch the next part while this one plays
-        player.src = url; player.playbackRate = 0.9;
-        setListenBtn(btn, 'playing');
-        await player.play();
-        await new Promise((res) => { player.onended = res; player.onpause = () => { if (!speaking || speaking.token !== token) res(); }; });
-        if (!speaking || speaking.token !== token) return;
+    const token = {};
+    speaking = { msg: m, token, state: 'wait', device: false };
+    refreshListenBtns();
+    const queue = chunkText(answerText(m), 1700);
+    let nsRead = false;
+    while (speaking && speaking.token === token) {
+      if (!queue.length) {
+        if (nsRead) break;
+        // The answer is done: read the North Star too, waiting for it if it's still on its way.
+        for (let waited = 0; m.ns === 'loading' && waited < 30000 && speaking && speaking.token === token; waited += 400) await new Promise((r) => setTimeout(r, 400));
+        nsRead = true;
+        if (m.ns && m.ns !== 'loading') queue.push(...chunkText(northStarText(m.ns), 1700));
+        continue;
       }
-      stopSpeaking();
-    } catch (e) {
-      if (speaking && speaking.token === token) fallbackSpeak(chunks.join(' '), btn, token);
+      const text = queue.shift();
+      await playPart(text, token, queue[0]);
     }
+    if (speaking && speaking.token === token) stopSpeaking();
   }
 
   async function showNorthStar(m, btn) {
