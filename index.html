@@ -401,12 +401,11 @@
     const ctx = history && history.length ? 'Recent conversation, for context:\n"""' + recentContext(history) + '"""\n\n' : '';
     const rule = force
       ? 'The user has asked to see a North Star for this message, so always provide one.\n\n'
-      : 'FIRST decide whether a North Star belongs here. Include one ONLY when the user is: weighing an idea, plan or decision (money, work, family, leadership, technology); asking a moral, ethical or character question; or showing they need direction, encouragement or support (discouraged, anxious, grieving, stuck, overwhelmed). ' +
-        'Do NOT include one for plain factual, how-to, technical or trivia questions, casual chat, or short replies that just acknowledge something. When in doubt, skip. ' +
-        'If a North Star does not belong, reply with ONLY {"skip": true}.\n\n';
+      : 'Provide a North Star for this message. Every question, practical, technical or factual ones included, can be seen in the light of biblical wisdom, so find the connection. ' +
+        'The ONLY exception: if the message is just a greeting or a short acknowledgment (like "thanks", "ok", "got it"), reply with ONLY {"skip": true}.\n\n';
     return 'You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that.\n\n' +
       ctx + 'The user\'s latest message:\n"""' + question.slice(0, 2000) + '"""\n\n' + rule +
-      'If it does belong: in 2 to 4 sentences, teach how biblical wisdom speaks to this exact situation, warm and never preachy. ' +
+      'In 2 to 4 sentences, teach how biblical wisdom speaks to this exact situation, warm and never preachy. ' +
       'Then choose 1 or 2 King James Version passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision), each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the KJV and discarded if it does not match. Do not quote the verse text.\n\n' +
       'Then reply with ONLY this JSON and nothing else:\n{"northStar": "2-4 sentences", "verses": [{"ref": "Book C:V", "why": "one sentence on why it applies"}], "reflect": "one short question for the user to ponder"}';
   }
@@ -1137,11 +1136,17 @@
   // ---- Live call rooms (biblicall-rooms worker) ----
   var room = null;
   const roomBar = document.getElementById('roomBar');
+  function myUid() {
+    let id = '';
+    try { id = localStorage.getItem('bc_uid') || ''; } catch (e) {}
+    if (!/^[A-Za-z0-9_-]{8,32}$/.test(id)) { id = newRoomId().slice(0, 16); try { localStorage.setItem('bc_uid', id); } catch (e) {} }
+    return id;
+  }
   function myName() { try { return localStorage.getItem('bc_name') || ''; } catch (e) { return ''; } }
   function setMyName(v) {
     v = String(v || '').trim().slice(0, 40);
     try { localStorage.setItem('bc_name', v); } catch (e) {}
-    if (room) roomSend({ type: 'hello', name: v || 'Guest' });
+    if (room) roomSend({ type: 'hello', name: v || 'Guest', uid: myUid() });
   }
   function newRoomId() { const b = new Uint8Array(12); crypto.getRandomValues(b); return b64url(b); }
   function roomSend(obj) {
@@ -1184,12 +1189,12 @@
     let ws;
     try { ws = new WebSocket(ROOMS_WS + room.id); } catch (e) { return; }
     room.ws = ws;
-    ws.onopen = () => { roomSend({ type: 'hello', name: myName() || 'Guest' }); };
+    ws.onopen = () => { roomSend({ type: 'hello', name: myName() || 'Guest', uid: myUid() }); };
     ws.onmessage = async (ev) => {
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.type === 'welcome') {
         await loadBible();
-        room.you = d.you; room.live = true; room.tries = 0; room.thinking = !!d.thinking;
+        room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking;
         if (room.seed && (!d.msgs || !d.msgs.length) && room.seed.length) {
           conversation = []; // the seeded messages stream back from the room
           roomSend({ type: 'seed', msgs: room.seed });
