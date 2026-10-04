@@ -977,46 +977,132 @@
   })();
 
   // ---- Speech to text (microphone button) ----
+  // Two ways to listen: the browser's own speech recognition (desktop Chrome, Android), or recording the
+  // voice and having Biblicall's server turn it into text (iPhone/iPad, and any browser where the first fails).
   const micBtn = document.getElementById('micBtn');
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recog = null, listening = false, baseText = '';
-  function stopListening() { if (recog && listening) { try { recog.stop(); } catch (e) {} } }
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  let useRecorder = canRecord && (isIOS || !SpeechRec);
+  let recog = null, listening = false, baseText = '', heard = false;
+  const IDLE_PH = () => { try { setPlaceholder(); } catch (e) { q.placeholder = 'Ask Biblicall anything…'; } };
+  function micOn(text) { listening = true; micBtn.classList.add('listening'); micBtn.setAttribute('aria-label', 'Stop listening'); q.placeholder = text; }
+  function micOff() { listening = false; micBtn.classList.remove('listening'); micBtn.setAttribute('aria-label', 'Speak your question'); IDLE_PH(); }
+  function addSpoken(text) {
+    text = String(text || '').trim();
+    if (!text) return false;
+    q.value = (baseText ? baseText + ' ' : '') + text;
+    q.dispatchEvent(new Event('input'));
+    return true;
+  }
+
+  // Way 1: browser speech recognition
   if (SpeechRec) {
-    micBtn.hidden = false;
     recog = new SpeechRec();
     recog.lang = navigator.language || 'en-US';
     recog.interimResults = true;
     recog.continuous = false;
-    recog.onstart = () => {
-      listening = true;
-      micBtn.classList.add('listening');
-      micBtn.setAttribute('aria-label', 'Stop listening');
-      q.placeholder = 'Listening…';
-    };
+    recog.onstart = () => { heard = false; micOn('Listening… speak now'); };
     recog.onresult = (e) => {
       let spoken = '';
       for (let i = 0; i < e.results.length; i++) spoken += e.results[i][0].transcript;
-      q.value = (baseText ? baseText + ' ' : '') + spoken.trim();
-      q.dispatchEvent(new Event('input'));
+      if (addSpoken(spoken)) heard = true;
     };
     recog.onend = () => {
-      listening = false;
-      micBtn.classList.remove('listening');
-      micBtn.setAttribute('aria-label', 'Speak your question');
-      q.placeholder = 'Ask Biblicall anything…';
+      micOff();
+      if (!heard && canRecord && !useRecorder) { useRecorder = true; toast('Tap the mic again and speak. Biblicall will listen another way.'); }
       q.focus();
     };
     recog.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        q.placeholder = 'Allow microphone access to speak your question';
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'network' || e.error === 'audio-capture') {
+        if (canRecord) useRecorder = true;
+        else q.placeholder = 'Allow microphone access to speak your question';
       }
     };
+  }
+
+  // Way 2: record, then transcribe on Biblicall's server
+  let rec = null, recStream = null, recChunks = [], recTimer = null, silenceTimer = null, audioCtx = null, sendAfter = false;
+  function pickMime() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
+    for (const t of types) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (e) {} }
+    return '';
+  }
+  async function startRecording() {
+    try { recStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) { toast('Allow microphone access for biblicall.com to speak your question.'); return; }
+    const mime = pickMime();
+    try { rec = mime ? new MediaRecorder(recStream, { mimeType: mime }) : new MediaRecorder(recStream); }
+    catch (e) { recStream.getTracks().forEach((t) => t.stop()); toast('Speaking isn’t supported in this browser. Try Safari or Chrome.'); return; }
+    recChunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
+    rec.onstop = finishRecording;
+    rec.start(250);
+    micOn('Listening… tap the mic when you’re done');
+    recTimer = setTimeout(stopRecording, 60000);
+    // Stop by itself after about 2 seconds of quiet once you've started talking.
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const an = audioCtx.createAnalyser(); an.fftSize = 1024;
+      audioCtx.createMediaStreamSource(recStream).connect(an);
+      const buf = new Uint8Array(an.fftSize); let spoke = false, quietSince = 0;
+      silenceTimer = setInterval(() => {
+        an.getByteTimeDomainData(buf);
+        let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+        const now = Date.now();
+        if (peak > 10) { spoke = true; quietSince = 0; }
+        else if (spoke) { if (!quietSince) quietSince = now; else if (now - quietSince > 2000) stopRecording(); }
+      }, 150);
+    } catch (e) {}
+  }
+  function stopRecording() {
+    clearTimeout(recTimer); clearInterval(silenceTimer);
+    try { audioCtx && audioCtx.close(); } catch (e) {}
+    audioCtx = null;
+    if (rec && rec.state !== 'inactive') { try { rec.stop(); } catch (e) {} }
+  }
+  async function finishRecording() {
+    const type = (rec && rec.mimeType) || (recChunks[0] && recChunks[0].type) || 'audio/webm';
+    try { recStream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+    rec = null; recStream = null;
+    const blob = new Blob(recChunks, { type });
+    recChunks = [];
+    if (blob.size < 2000) { micOff(); if (sendAfter) { sendAfter = false; reveal(); } return; }
+    q.placeholder = 'Turning your words into text…';
+    micBtn.classList.remove('listening'); micBtn.disabled = true;
+    try {
+      const audio = await blobToB64(blob);
+      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'transcribe', audio, media_type: type.split(';')[0] }) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'transcribe');
+      if (!addSpoken(data.text)) toast('Biblicall didn’t catch that. Try again a little closer to the phone.');
+    } catch (e) {
+      toast('Couldn’t turn that into text. Please try again.');
+    } finally {
+      micBtn.disabled = false; micOff();
+      if (sendAfter) { sendAfter = false; reveal(); } else q.focus();
+    }
+  }
+  function stopListening() {
+    if (rec && rec.state !== 'inactive') { stopRecording(); return; }
+    if (recog && listening) { try { recog.stop(); } catch (e) {} }
+  }
+
+  if (SpeechRec || canRecord) {
+    micBtn.hidden = false;
     micBtn.addEventListener('click', () => {
+      if (micBtn.disabled) return;
       if (listening) { stopListening(); return; }
       baseText = q.value.trim();
-      try { recog.start(); } catch (e) {}
+      if (useRecorder) { startRecording(); return; }
+      try { recog.start(); } catch (e) { if (canRecord) { useRecorder = true; startRecording(); } }
     });
-    sendBtn.addEventListener('click', stopListening);
+    // Tapping send while still recording: finish turning speech into text first, then send.
+    sendBtn.addEventListener('click', (e) => {
+      if (rec && rec.state !== 'inactive') { e.stopImmediatePropagation(); e.preventDefault(); sendAfter = true; stopRecording(); return; }
+      stopListening();
+    }, true);
   }
 
   sendBtn.addEventListener('click', reveal);

@@ -22,3 +22,7 @@ simple = { limit = 600, period = 60 }
 name = "ROOM_LIMIT"
 namespace_id = "7103"
 simple = { limit = 40, period = 60 }
+
+# Workers AI (Whisper) turns microphone recordings into text.
+[ai]
+binding = "AI"

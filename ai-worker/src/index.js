@@ -95,6 +95,25 @@ export default {
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'Invalid JSON' }, 400); }
 
+    // Speech to text for the microphone button (Workers AI Whisper).
+    if (body.mode === 'transcribe') {
+      const audio = typeof body.audio === 'string' ? body.audio : '';
+      if (!audio || audio.length > 6_000_000 || !B64_RE.test(audio.slice(0, 2000))) return json({ error: 'Bad audio' }, 400);
+      if (!env.AI) return json({ error: 'Speech is not set up' }, 503);
+      try {
+        let out;
+        try { out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio }); }
+        catch (e) {
+          const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
+          out = await env.AI.run('@cf/openai/whisper', { audio: [...bytes] });
+        }
+        return json({ text: String((out && out.text) || '').trim() });
+      } catch (err) {
+        console.error('Transcribe error', err && err.message);
+        return json({ error: 'Could not transcribe' }, 502);
+      }
+    }
+
     let messages = [];
     if (Array.isArray(body.messages)) {
       messages = body.messages
