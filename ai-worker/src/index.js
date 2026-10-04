@@ -107,7 +107,7 @@ export default {
         return new Response(audio, { headers: { ...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
       } catch (err) {
         console.error('Speak error', err && err.message);
-        return json({ error: 'Could not create the voice' }, 502);
+        return json({ error: 'Could not create the voice', detail: String(err && err.message || '').slice(0, 200) }, 502);
       }
     }
 
@@ -126,7 +126,7 @@ export default {
         return json({ text: String((out && out.text) || '').trim() });
       } catch (err) {
         console.error('Transcribe error', err && err.message);
-        return json({ error: 'Could not transcribe' }, 502);
+        return json({ error: 'Could not transcribe', detail: String(err && err.message || '').slice(0, 200) }, 502);
       }
     }
 
