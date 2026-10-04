@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<meta name="theme-color" content="#5fa8d8">
+<meta name="theme-color" content="#d3e9f8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Biblicall">
@@ -18,9 +18,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#5fa8d8; --bg-rgb:95,168,216;
+    --bg:#d3e9f8; --bg-rgb:211,233,248;
     --earth:#664336; --earth-deep:#4a2f26; --card:#fbfdff;
-    --ink:#2c2117; --muted:#1f3d55; --line:#a8cce6;
+    --ink:#2c2117; --muted:#34506a; --line:#a8cce6;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -246,6 +246,9 @@
   .dockbrand .logowrap .tm{font-size:13px;margin-left:2px}
   footer{text-align:center;padding:22px 20px;font-size:15.5px;color:var(--muted)}
   footer a{color:var(--earth)}
+  /* ---- Sky: soft white cloud puffs over baby blue, fixed behind everything ---- */
+  body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201000%201700%22%20preserveAspectRatio%3D%22xMidYMid%20slice%22%3E%3Cdefs%3E%3Cfilter%20id%3D%22b%22%20x%3D%22-30%25%22%20y%3D%22-30%25%22%20width%3D%22160%25%22%20height%3D%22160%25%22%3E%3CfeGaussianBlur%20stdDeviation%3D%2222%22%2F%3E%3C%2Ffilter%3E%3C%2Fdefs%3E%3Cg%20fill%3D%22%23ffffff%22%20filter%3D%22url%28%23b%29%22%3E%3Cg%20opacity%3D%220.75%22%3E%3Ccircle%20cx%3D%22170%22%20cy%3D%22210%22%20r%3D%22109%22%2F%3E%3Ccircle%20cx%3D%2287%22%20cy%3D%22226%22%20r%3D%2278%22%2F%3E%3Ccircle%20cx%3D%22253%22%20cy%3D%22231%22%20r%3D%2283%22%2F%3E%3Ccircle%20cx%3D%22139%22%20cy%3D%22174%22%20r%3D%2278%22%2F%3E%3Ccircle%20cx%3D%22212%22%20cy%3D%22179%22%20r%3D%2273%22%2F%3E%3Ccircle%20cx%3D%22313%22%20cy%3D%22246%22%20r%3D%2252%22%2F%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%22246%22%20r%3D%2252%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.6%22%3E%3Ccircle%20cx%3D%22820%22%20cy%3D%22140%22%20r%3D%2292%22%2F%3E%3Ccircle%20cx%3D%22750%22%20cy%3D%22153%22%20r%3D%2266%22%2F%3E%3Ccircle%20cx%3D%22890%22%20cy%3D%22158%22%20r%3D%2270%22%2F%3E%3Ccircle%20cx%3D%22794%22%20cy%3D%22109%22%20r%3D%2266%22%2F%3E%3Ccircle%20cx%3D%22855%22%20cy%3D%22114%22%20r%3D%2262%22%2F%3E%3Ccircle%20cx%3D%22941%22%20cy%3D%22171%22%20r%3D%2244%22%2F%3E%3Ccircle%20cx%3D%22699%22%20cy%3D%22171%22%20r%3D%2244%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.5%22%3E%3Ccircle%20cx%3D%22640%22%20cy%3D%22520%22%20r%3D%22126%22%2F%3E%3Ccircle%20cx%3D%22544%22%20cy%3D%22538%22%20r%3D%2290%22%2F%3E%3Ccircle%20cx%3D%22736%22%20cy%3D%22544%22%20r%3D%2296%22%2F%3E%3Ccircle%20cx%3D%22604%22%20cy%3D%22478%22%20r%3D%2290%22%2F%3E%3Ccircle%20cx%3D%22688%22%20cy%3D%22484%22%20r%3D%2284%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22562%22%20r%3D%2260%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22562%22%20r%3D%2260%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.55%22%3E%3Ccircle%20cx%3D%22120%22%20cy%3D%22820%22%20r%3D%22101%22%2F%3E%3Ccircle%20cx%3D%2243%22%20cy%3D%22834%22%20r%3D%2272%22%2F%3E%3Ccircle%20cx%3D%22197%22%20cy%3D%22839%22%20r%3D%2277%22%2F%3E%3Ccircle%20cx%3D%2291%22%20cy%3D%22786%22%20r%3D%2272%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%22791%22%20r%3D%2267%22%2F%3E%3Ccircle%20cx%3D%22252%22%20cy%3D%22854%22%20r%3D%2248%22%2F%3E%3Ccircle%20cx%3D%22-12%22%20cy%3D%22854%22%20r%3D%2248%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.6%22%3E%3Ccircle%20cx%3D%22880%22%20cy%3D%22980%22%20r%3D%22118%22%2F%3E%3Ccircle%20cx%3D%22790%22%20cy%3D%22997%22%20r%3D%2284%22%2F%3E%3Ccircle%20cx%3D%22970%22%20cy%3D%221002%22%20r%3D%2290%22%2F%3E%3Ccircle%20cx%3D%22846%22%20cy%3D%22941%22%20r%3D%2284%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22946%22%20r%3D%2278%22%2F%3E%3Ccircle%20cx%3D%221034%22%20cy%3D%221019%22%20r%3D%2256%22%2F%3E%3Ccircle%20cx%3D%22726%22%20cy%3D%221019%22%20r%3D%2256%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.5%22%3E%3Ccircle%20cx%3D%22420%22%20cy%3D%221260%22%20r%3D%22109%22%2F%3E%3Ccircle%20cx%3D%22337%22%20cy%3D%221276%22%20r%3D%2278%22%2F%3E%3Ccircle%20cx%3D%22503%22%20cy%3D%221281%22%20r%3D%2283%22%2F%3E%3Ccircle%20cx%3D%22389%22%20cy%3D%221224%22%20r%3D%2278%22%2F%3E%3Ccircle%20cx%3D%22462%22%20cy%3D%221229%22%20r%3D%2273%22%2F%3E%3Ccircle%20cx%3D%22563%22%20cy%3D%221296%22%20r%3D%2252%22%2F%3E%3Ccircle%20cx%3D%22277%22%20cy%3D%221296%22%20r%3D%2252%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.55%22%3E%3Ccircle%20cx%3D%2290%22%20cy%3D%221480%22%20r%3D%2284%22%2F%3E%3Ccircle%20cx%3D%2226%22%20cy%3D%221492%22%20r%3D%2260%22%2F%3E%3Ccircle%20cx%3D%22154%22%20cy%3D%221496%22%20r%3D%2264%22%2F%3E%3Ccircle%20cx%3D%2266%22%20cy%3D%221452%22%20r%3D%2260%22%2F%3E%3Ccircle%20cx%3D%22122%22%20cy%3D%221456%22%20r%3D%2256%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%221508%22%20r%3D%2240%22%2F%3E%3Ccircle%20cx%3D%22-20%22%20cy%3D%221508%22%20r%3D%2240%22%2F%3E%3C%2Fg%3E%3Cg%20opacity%3D%220.5%22%3E%3Ccircle%20cx%3D%22760%22%20cy%3D%221530%22%20r%3D%2297%22%2F%3E%3Ccircle%20cx%3D%22686%22%20cy%3D%221544%22%20r%3D%2269%22%2F%3E%3Ccircle%20cx%3D%22834%22%20cy%3D%221548%22%20r%3D%2274%22%2F%3E%3Ccircle%20cx%3D%22732%22%20cy%3D%221498%22%20r%3D%2269%22%2F%3E%3Ccircle%20cx%3D%22797%22%20cy%3D%221502%22%20r%3D%2264%22%2F%3E%3Ccircle%20cx%3D%22886%22%20cy%3D%221562%22%20r%3D%2246%22%2F%3E%3Ccircle%20cx%3D%22634%22%20cy%3D%221562%22%20r%3D%2246%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/cover no-repeat}
   /* ---- Readability: larger, heavier, higher-contrast text everywhere ---- */
   body{font-size:20.5px;font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   h1,.ns h2,.callwin h2{font-weight:700;letter-spacing:-.005em}
