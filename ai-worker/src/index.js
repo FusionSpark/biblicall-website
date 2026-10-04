@@ -5,7 +5,13 @@
 // Only biblicall.com (and the biblicall-rooms call server) may use it, with a fair-use limit per visitor.
 
 const ORIGINS = ['https://biblicall.com', 'https://www.biblicall.com'];
-const MODEL = 'claude-sonnet-4-5';
+// Answers use the newer, lower-cost Sonnet; the short North Star step uses the small, fast Haiku.
+// If either is ever unavailable, the call is retried once on the previous model so answers keep flowing.
+const MODEL = 'claude-sonnet-5-5';
+const NS_MODEL = 'claude-haiku-4-5-20251001';
+const FALLBACK_MODEL = 'claude-sonnet-4-5';
+// Fair use per visitor per day (by network address until Biblicall has accounts), and per live call per day.
+const DAILY = { ask: 60, roomAsk: 400, speakChars: 20000, transcribe: 120 };
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 4000;
 // Uploaded files: at most 5 per request, about 24 MB of file data in total.
@@ -41,7 +47,7 @@ function attachmentBlocks(list) {
 }
 
 function systemPrompt(today, memory, group, decide) {
-  let s = `You are Biblicall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
+  const base = `You are Biblicall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
 
@@ -50,6 +56,7 @@ When a question touches decisions, character, relationships, work, money, or har
 When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
 
 Be direct, warm, and practical. Keep responses focused and conversational, typically under 180 words unless the question genuinely requires more depth. Behind every question is a person trying to build something: a business, a family, a life. Help them build it well.`;
+  let s = '';
   if (group) {
     s += `\n\nThis is a live group conversation between friends, and you are one of the participants. Each person's message begins with their first name. Address people by name when it helps, and keep group replies brief (usually under 120 words).`;
   }
@@ -59,7 +66,11 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   if (memory.length) {
     s += `\n\nThis person has asked Biblicall to remember the following about them. Use it only when it is relevant, and don't list it back to them:\n` + memory.map((m) => '- ' + m).join('\n');
   }
-  return s;
+  // The fixed instructions are marked for prompt caching (re-sent instructions cost up to 90% less);
+  // per-person extras (group call, memory) follow in their own block.
+  const blocks = [{ type: 'text', text: base, cache_control: { type: 'ephemeral' } }];
+  if (s.trim()) blocks.push({ type: 'text', text: s.trim() });
+  return blocks;
 }
 
 const NORTH_STAR_SYSTEM = `You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. You never answer the question itself. You follow the instructions in the user message exactly and reply with only the JSON it asks for.`;
@@ -82,6 +93,7 @@ export default {
 
     // Fair use: each visitor (by IP) gets VISITOR_LIMIT calls a minute; the call server shares ROOMS_LIMIT.
     const fromRooms = request.headers.get('X-Biblicall-Source') === 'rooms';
+    const visitor = 'v:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
     const busy = () => json({ error: 'busy', message: 'Too many questions at once. Please wait a minute and try again.' }, 429);
     if (fromRooms) {
       // Each call has its own allowance, inside an overall cap for all calls together.
@@ -99,6 +111,7 @@ export default {
     if (body.mode === 'speak') {
       const text = typeof body.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1900) : '';
       if (!text) return json({ error: 'Nothing to read' }, 400);
+      if (!(await underQuota(env, visitor, 'speak', text.length, DAILY.speakChars))) return json({ error: 'daily_limit', message: "You've reached today's listening limit. It resets tomorrow." }, 429);
       if (!env.AI) return json({ error: 'Voice is not set up' }, 503);
       try {
         const VOICES = ['zeus', 'saturn', 'mars', 'pluto', 'jupiter', 'draco', 'orion'];
@@ -115,6 +128,7 @@ export default {
     if (body.mode === 'transcribe') {
       const audio = typeof body.audio === 'string' ? body.audio : '';
       if (!audio || audio.length > 6_000_000 || !B64_RE.test(audio.slice(0, 2000))) return json({ error: 'Bad audio' }, 400);
+      if (!(await underQuota(env, visitor, 'transcribe', 1, DAILY.transcribe))) return json({ error: 'daily_limit', message: "You've reached today's speaking limit. It resets tomorrow." }, 429);
       if (!env.AI) return json({ error: 'Speech is not set up' }, 503);
       try {
         let out;
@@ -154,20 +168,36 @@ export default {
       : [];
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Chicago' });
 
+    if (!northStar) {
+      const roomId = 'r:' + String(request.headers.get('X-Biblicall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      const ok = fromRooms ? await underQuota(env, roomId, 'ask', 1, DAILY.roomAsk) : await underQuota(env, visitor, 'ask', 1, DAILY.ask);
+      if (!ok) return json({ answer: "You've reached today's limit of questions for Biblicall. It resets tomorrow, and I'll be here. In the meantime, take a quiet moment with what we've already talked about." });
+      // Cache the conversation so far, so a follow-up question re-reads it at the lower cached price.
+      const last = messages[messages.length - 1];
+      if (typeof last.content === 'string') last.content = [{ type: 'text', text: last.content }];
+      last.content[last.content.length - 1].cache_control = { type: 'ephemeral' };
+    }
+
     const payload = northStar
-      ? { model: MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
+      ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
           model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
         };
 
     try {
-      const resp = await fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', {
+      const call = (pl) => fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(pl)
       });
-      const data = await resp.json();
+      let resp = await call(payload);
+      let data = await resp.json();
+      if (!resp.ok && (resp.status === 404 || resp.status === 400) && payload.model !== FALLBACK_MODEL) {
+        console.error('Model unavailable, retrying on fallback', payload.model, resp.status, data && data.error && data.error.message);
+        resp = await call({ ...payload, model: FALLBACK_MODEL });
+        data = await resp.json();
+      }
       if (!resp.ok) {
         console.error('Anthropic error', resp.status, data && data.error && data.error.type);
         return json({ error: 'Upstream error' }, 502);
@@ -181,3 +211,27 @@ export default {
     }
   }
 };
+
+
+// ---- Fair-use counters: one tiny Durable Object per visitor (or call) per day ----
+export class Quota {
+  constructor(state) { this.state = state; }
+  async fetch(req) {
+    const { kind, amount, limit } = await req.json();
+    const used = ((await this.state.storage.get(kind)) || 0);
+    if (used + amount > limit) return Response.json({ ok: false, used });
+    await this.state.storage.put(kind, used + amount);
+    if (!(await this.state.storage.getAlarm())) await this.state.storage.setAlarm(Date.now() + 2 * 86400000);
+    return Response.json({ ok: true, used: used + amount });
+  }
+  async alarm() { await this.state.storage.deleteAll(); }
+}
+async function underQuota(env, who, kind, amount, limit) {
+  if (!env.QUOTA) return true;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const stub = env.QUOTA.get(env.QUOTA.idFromName(who + '|' + day));
+    const r = await stub.fetch('https://quota/', { method: 'POST', body: JSON.stringify({ kind, amount, limit }) });
+    return (await r.json()).ok;
+  } catch (e) { return true; } // never block people because the counter itself had a hiccup
+}

@@ -26,3 +26,12 @@ simple = { limit = 40, period = 60 }
 # Workers AI (Whisper) turns microphone recordings into text.
 [ai]
 binding = "AI"
+
+# Daily fair-use counters (one small Durable Object per visitor or call per day).
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "Quota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Quota"]
