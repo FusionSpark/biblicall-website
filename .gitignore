@@ -2,3 +2,4 @@
 .vercel
 .deploy-token
 north-star-update/
+.wrangler/
