@@ -370,6 +370,24 @@
   .dr-star{border:none;background:none;color:var(--muted);font-size:22px;line-height:1;padding:6px 8px;cursor:pointer;border-radius:8px}
   .dr-star.on{color:#c58a1d}
   .dr-star:hover{background:var(--line)}
+  /* ---- Photo skies: hand-picked photographs of God's creation (Unsplash skies + ESA/Webb & Hubble space images), slowly crossfading ---- */
+  .pbg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:transparent}
+  .pbg .pl{position:absolute;inset:-3%;background:center/cover no-repeat;opacity:0;transition:opacity 3.2s ease-in-out;will-change:opacity,transform}
+  .pbg .pl.on{opacity:1}
+  .pbg .pl.drift{animation:pdrift var(--pd,80s) ease-in-out forwards}
+  @keyframes pdrift{from{transform:scale(1.08) translate3d(var(--px,0),var(--py,0),0)}to{transform:scale(1) translate3d(0,0,0)}}
+  .pbg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,10,24,.34) 0%,rgba(6,10,24,.2) 38%,rgba(6,10,24,.3) 70%,rgba(6,10,24,.52) 100%)}
+  html.photo body.chatting .pbg::after{background:rgba(6,10,24,.42)}
+  .pcredit{position:fixed;top:10px;right:12px;z-index:6;max-width:min(62vw,420px);font-size:11.5px;line-height:1.3;font-weight:600;text-align:right;
+    color:rgba(255,255,255,.78);text-shadow:0 1px 3px rgba(0,0,0,.7);opacity:0;transition:opacity 1.5s;pointer-events:auto}
+  .pcredit.on{opacity:1}
+  .pcredit a{color:inherit;text-decoration:none}
+  .pcredit a:hover{text-decoration:underline}
+  html.photo .intro,html.photo .msg.assistant,html.photo .emailstep p,html.photo footer,html.photo .who,html.photo .daily-label,
+  html.photo .ns-note,html.photo .memoffer,html.photo .attnote,html.photo .logowrap .tm,html.photo .emailnote{text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 18px rgba(0,0,0,.35)}
+  html.photo .logo{filter:brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,.6)) !important}
+  html.photo body::before{opacity:0 !important}
+  @media (prefers-reduced-motion:reduce){ .pbg .pl.drift{animation:none} .pbg .pl{transition-duration:1.2s} }
 </style>
 </head>
 <body>
@@ -379,6 +397,7 @@
     var forced = (location.search.match(/[?&]sky=(sunrise|day|sunset|night)/) || [])[1];
     var colors = { sunrise: '#a8c8ea', day: '#bfe0f7', sunset: '#e7a08f', night: '#070d22' }; // top of each sky, for the phone's top bar
     function pick() {
+      if (document.documentElement.classList.contains('photo')) return 'night';
       if (forced) return forced;
       var h = new Date().getHours();
       return h >= 6 && h < 9 ? 'sunrise' : h >= 9 && h < 17 ? 'day' : h >= 17 && h < 20 ? 'sunset' : 'night';
@@ -387,10 +406,80 @@
       var sky = pick();
       if (document.documentElement.dataset.sky === sky) return;
       document.documentElement.dataset.sky = sky;
-      var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', colors[sky]);
+      var m = document.querySelector('meta[name="theme-color"]'); if (m && !document.documentElement.classList.contains('photo')) m.setAttribute('content', colors[sky]);
     }
     apply();
     setInterval(apply, 60000);
+  })();
+</script>
+<div class="pbg" id="pbg" aria-hidden="true"><div class="pl"></div><div class="pl"></div></div>
+<div class="pcredit" id="pcredit"></div>
+<script>
+  // Photo skies: a different hand-picked sky, sunset, aurora, Milky Way or telescope image fades in about every minute.
+  // Unsplash photos load from Unsplash's image CDN sized to the screen; space images come from ESA/Webb and ESA/Hubble (CC BY 4.0, credited).
+  // Turn off with ?photos=off. Preview one with ?photo=N.
+  (function () {
+    var P = [["u","photo-1508020963102-c6c723be5764","Diego PH","jdiegoph"],["u","photo-1496854863306-cbb8c4407988","Anton Darius","thesollers"],["u","photo-1543613949-95cd1b38a10e","zenad nabil","zedlord"],["u","photo-1519370159120-226cb8b70f88","Emerson Peters","spemble"],["u","photo-1622986527249-0a4124ccdd33","Anna Asryan","__anna"],["u","photo-1661555529626-dc6978a24cc3","Sophia Martinez","sophiaarichards"],["u","photo-1628803584084-cf6e5dbcc043","Martí Sierra","martisierraa"],["u","photo-1682906979774-78b4447c815e","Tarryn Grignet","tarrynm"],["u","photo-1730150237990-3ff7639ae98d","Kate Russell","fotosbyflora"],["u","photo-1536122491116-2b1574783c7e","Jason Leung","ninjason"],["u","photo-1595865749889-b37a43c4eba4","Avess Berge","__avess__"],["u","photo-1599209248411-5124adbb1da2","engin akyurt","enginakyurt"],["u","photo-1679930348703-f94efd6ad369","Tatiana Reusche","reusche"],["u","photo-1626019866260-d9e0bb648634","Ankur Verma","ankur1verma"],["u","photo-1522011916481-b7f27c0bf69b","Willian Justen de Vasconcellos","willianjusten"],["u","photo-1536244636800-a3f74db0f3cf","Michael & Diane Weidner","michaelbweidner"],["u","photo-1503494201477-5e04f651cfe5","Jason W","jasonwong23"],["u","photo-1493130952181-47e36589f64d","Łukasz Łada","lukaszlada"],["u","photo-1501898047706-55903296cd09","joe ting","joeting"],["u","photo-1505051508008-923feaf90180","Anton Darius","thesollers"],["u","photo-1541757617970-f33144dbec38","Quino Al","quinoal"],["u","photo-1495567720989-cebdbdd97913","Jason Mavrommatis","jasonblackeye"],["u","photo-1705308536459-37414c592fc6","Arya Farrel","arfaganendra"],["u","photo-1530675392811-1966d9218af1","Karl Fredrickson","kfred"],["u","photo-1706958491142-5fefef4c8c09","Rahmat Alizada","rahmataliizada"],["u","photo-1642822697763-ada179aaba69","Johnny Kaufman","jkaufmanphotography"],["u","photo-1635183757332-b599fa6df288","Aniruddha Gayake","annigayake"],["u","photo-1465101046530-73398c7f28ca","Jeremy Thomas","jeremythomasphoto"],["u","photo-1606247357835-d27fe83fc6a3","Tyler Clemmensen","tyler_clemmensen"],["u","photo-1548625361-58a9b86aa83b","Cosmic Timetraveler","cosmictimetraveler"],["u","photo-1476159093398-35ea18d2cdee","Your Friend Andy","yourfriendandy"],["u","photo-1595520519880-a86c48ea536c","Joshua Woroniecki","joshuaworoniecki"],["u","photo-1522124624696-7ea32eb9592c","brandon siu","brandonsiu"],["u","photo-1531366936337-7c912a4589a7","Lightscape","lightscape"],["u","photo-1483347756197-71ef80e95f73","Vincent Guth","vingtcent"],["u","photo-1517928260182-5688aead3066","v2osk","v2osk"],["u","photo-1488415032361-b7e238421f1b","Jonatan Pie","r3dmax"],["u","photo-1504858700536-882c978a3464","Jonatan Pie","r3dmax"],["u","photo-1610989432929-9769f3cf8006","Henrik Heitmann","heitmannj"],["u","photo-1503803548695-c2a7b4a5b875","Sebastien Gabriel","sgabriel"],["u","photo-1616036740257-9449ea1f6605","Sergio Mena Ferreira","sergiomenamx"],["u","photo-1561009226-7a820d647a40","Melissa Cassar","melissacssr"],["u","photo-1515497957908-4d6377430754","Zoltan Tasi","zoltantasi"],["u","photo-1414521203994-7efc0bc37d65","cindy del valle","cindydvr"],["u","photo-1526420420164-b4ae06c5f886","Paul Pastourmatzis","paulpastourmatzis"],["u","photo-1490682143684-14369e18dce8","Artem Sapegin","sapegin"],["u","photo-1500964757637-c85e8a162699","simon","simon_berger"],["u","photo-1500534623283-312aade485b7","Ivana Cajina","von_co"],["u","photo-1558883493-8b86ff880fec","Damian Markutt","wildandfree_photography"],["u","photo-1665849863678-fc03a642a9aa","Shai Pal","shaipal"],["w","potm2503a","ESA/Webb, NASA & CSA, G. Mahler"],["w","weic2218a","NASA, ESA, CSA, STScI, J. DePasquale, A. Pagan (STScI)"],["w","weic2216b","NASA, ESA, CSA, STScI; J. DePasquale, A. Koekemoer, A. Pagan (STScI)"],["w","carinanebula3","NASA, ESA, CSA, and STScI, J. DePasquale (STScI)"],["w","potm2607a","ESA/Webb, NASA & CSA, M. Reiter"],["w","potm2604a","ESA/Webb, NASA & CSA, A. Leroy"],["w","weic2518a","NASA, ESA, CSA, and STScI, A. Pagan (STScI)"],["w","weic2513a","NASA, ESA, CSA, STScI"],["w","potm2502a","ESA/Webb, NASA & CSA, A. Leroy"],["w","weic2426a","NASA, ESA, CSA, STScI"],["w","weic2423a","NASA, ESA, CSA, STScI"],["w","potm2408a","ESA/Webb, NASA & CSA, A. Scholz, K. Muzic, A. Langeveld, R. Jayawardhana"],["w","weic2417a","NASA, ESA, CSA, STScI, T. Temim (Princeton University)"],["w","weic2411a","ESA/Webb, NASA, CSA, K. Misselt, A. Abergel"],["w","weic2331a","NASA, ESA, CSA, STScI, K. Luhman, C. Alves de Oliveira"],["h","heic1509a","NASA, ESA, the Hubble Heritage Team (STScI/AURA), A. Nota (ESA/STScI)"],["h","heic2018b","ESA/Hubble & NASA, A. Riess and the SH0ES team"],["h","heic0715a","NASA, ESA and the Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration"],["h","heic1307a","NASA, ESA, and the Hubble Heritage Team (AURA/STScI)"],["h","heic0702a","NASA, ESA and the Hubble Heritage Team (STScI/AURA)-ESA/Hubble Collaboration"],["h","heic0601a","NASA, ESA, M. Robberto (STScI/ESA) and the HST Orion Treasury Project Team"],["h","heic0514a","NASA, ESA and A. Nota (ESA/STScI, STScI/AURA)"],["h","opo0006a","NASA/ESA, The Hubble Heritage Team (AURA/STScI)"],["h","heic1007a","NASA, ESA, M. Livio and the Hubble 20th Anniversary Team (STScI)"],["h","heic0602a","European Space Agency & NASA"]];
+    var q = location.search, root = document.documentElement;
+    if (/[?&]photos=off/.test(q)) return;
+    root.classList.add('photo');
+    root.dataset.sky = 'night';
+    var meta = document.querySelector('meta[name="theme-color"]');
+    var box = document.getElementById('pbg'), layers = box.querySelectorAll('.pl'), credit = document.getElementById('pcredit');
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var HOLD = reduce ? 120000 : 60000, front = 0, timer = null, busy = false;
+    function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+    function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    // A fresh shuffled order each visit, never starting with the photo the visitor saw last.
+    var order = shuffle(P.map(function (_, i) { return i; })), pos = 0;
+    var forced = (q.match(/[?&]photo=(\d+)/) || [])[1];
+    if (forced != null && P[+forced]) { order.splice(order.indexOf(+forced), 1); order.unshift(+forced); }
+    else { var last = +store('bc_photo_last'); if (order[0] === last && order.length > 1) order.push(order.shift()); }
+    function url(p) {
+      var w = Math.max(innerWidth, 320), h = Math.max(innerHeight, 480), d = Math.min(window.devicePixelRatio || 1, 2);
+      if (p[0] === 'u') {
+        var W = Math.min(2400, Math.ceil(w * d * 1.1 / 200) * 200), H = Math.min(2400, Math.ceil(h * d * 1.1 / 200) * 200);
+        return 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&crop=entropy&q=72&w=' + W + '&h=' + H;
+      }
+      var host = p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org';
+      return host + '/archives/images/' + (w * d > 1300 && w > h ? 'wallpaper4' : 'screen') + '/' + p[1] + '.jpg';
+    }
+    function creditHtml(p) {
+      if (p[0] === 'u') return 'Photo: <a href="https://unsplash.com/@' + p[3] + '?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">' + p[2] +
+        '</a> on <a href="https://unsplash.com/?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>';
+      var site = p[0] === 'w' ? 'https://esawebb.org' : 'https://esahubble.org';
+      return '<a href="' + site + '/images/' + p[1] + '/" target="_blank" rel="noopener">' + p[2] + '</a> &middot; CC BY 4.0';
+    }
+    function show(tries) {
+      if (busy) return; busy = true;
+      var i = order[pos % order.length], p = P[i]; pos++;
+      if (pos % order.length === 0) { var keepLast = order[order.length - 1]; shuffle(order); if (order[0] === keepLast) order.push(order.shift()); }
+      var img = new Image(), done = false;
+      var fail = function () { if (done) return; done = true; busy = false; if ((tries || 0) < 4) setTimeout(function () { show((tries || 0) + 1); }, 400); };
+      var ok = function () {
+        if (done) return; done = true;
+        var next = layers[1 - front], cur = layers[front];
+        next.style.backgroundImage = 'url("' + img.src + '")';
+        next.style.setProperty('--px', (Math.random() * 4 - 2).toFixed(2) + '%');
+        next.style.setProperty('--py', (Math.random() * 4 - 2).toFixed(2) + '%');
+        next.style.setProperty('--pd', (HOLD / 1000 + 25) + 's');
+        next.classList.remove('drift'); void next.offsetWidth; next.classList.add('drift');
+        next.classList.add('on'); cur.classList.remove('on');
+        front = 1 - front; busy = false;
+        credit.classList.remove('on');
+        setTimeout(function () { credit.innerHTML = creditHtml(p); credit.classList.add('on'); }, 900);
+        if (meta) meta.setAttribute('content', p[0] === 'u' ? '#0d1226' : '#05070f');
+        store('bc_photo_last', String(i));
+      };
+      img.onload = function () { (img.decode ? img.decode().catch(function () {}) : Promise.resolve()).then(ok); };
+      img.onerror = fail;
+      setTimeout(fail, 20000);
+      img.src = url(p);
+    }
+    function loop() { clearTimeout(timer); timer = setTimeout(function () { if (!document.hidden) show(); loop(); }, HOLD); }
+    show(); loop();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) loop(); });
+    window.BC_PHOTOS = { next: function () { show(); loop(); }, list: P };
   })();
 </script>
 
