@@ -335,6 +335,7 @@
   .composer textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (max-width:400px){ .remchip{font-size:13px} .composer textarea{font-size:16px} }
   @media (prefers-reduced-motion:reduce){ html::before,body::before,body::after{animation:none !important} }
+  .emailstep p.emailhint,body.chatting .composer-dock .emailstep p.emailhint{font-size:13.5px;font-weight:500;margin:8px 0 0;line-height:1.4}
 </style>
 </head>
 <body>
@@ -399,11 +400,11 @@
 
       <div class="callbar"><button type="button" class="callbtn" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Invite Friends</button></div>
       <div class="emailstep show" id="emailStep">
-        <p>Get early access when Biblicall fully launches. Leave your email below.</p>
         <form class="emailrow" id="emailForm">
           <input type="email" id="email" name="email" placeholder="you@email.com" required>
           <button type="submit">Notify Me</button>
         </form>
+        <p class="emailhint">Get early access when Biblicall fully launches. Leave your email above.</p>
         <p class="emailnote" id="emailNote" aria-live="polite"></p>
       </div>
     </div>
