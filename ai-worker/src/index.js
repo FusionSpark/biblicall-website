@@ -90,6 +90,19 @@ export default {
     };
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
+    // Music relay: incompetech.com doesn't send CORS headers, which the page needs to control music volume on iPhone.
+    // GET /m/<file>.mp3 streams that one file from incompetech's royalty-free folder, with CORS and range support.
+    const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname.startsWith('/m/')) {
+      const name = decodeURIComponent(url.pathname.slice(3));
+      if (!/^[A-Za-z0-9 ,'().\-]{1,120}\.mp3$/.test(name) || (origin && !allowed)) return new Response('Not found', { status: 404 });
+      const up = await fetch('https://incompetech.com/music/royalty-free/mp3-royaltyfree/' + encodeURIComponent(name), {
+        headers: request.headers.get('Range') ? { Range: request.headers.get('Range') } : {}, cf: { cacheEverything: true, cacheTtl: 2592000 } });
+      const h = new Headers();
+      ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified'].forEach((k) => { const v = up.headers.get(k); if (v) h.set(k, v); });
+      h.set('Access-Control-Allow-Origin', allowed ? origin : ORIGINS[0]); h.set('Vary', 'Origin'); h.set('Cache-Control', 'public, max-age=2592000');
+      return new Response(up.body, { status: up.status, headers: h });
+    }
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: cors });
     if (!allowed) return json({ error: 'Forbidden' }, 403);
