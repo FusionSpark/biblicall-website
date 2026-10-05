@@ -394,6 +394,29 @@
   .pcredit .pplace{display:block;font-size:13.5px;font-weight:700;color:#fff;letter-spacing:.01em}
   body.chatting .pcredit .pplace{display:inline;font-size:11px}
   body.chatting .pcredit .pplace::after{content:' \00b7  '}
+  /* ---- Style tab (background + music) ---- */
+  .bgset{display:flex;flex-direction:column;gap:9px;padding:8px 10px 6px}
+  .bgset h3{margin:8px 0 0;font-size:19px;font-weight:800;color:var(--earth-deep)}
+  .bg-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .bg-chip{padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:#2c2117;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
+  .bg-chip.on{background:var(--earth);border-color:var(--earth);color:#fff}
+  .bg-custom{align-items:center}
+  .bg-custom label,.bg-unit{font-size:16px;font-weight:700;color:#2c2117;flex:none}
+  .bg-custom input{max-width:90px}
+  .bg-vol{display:flex;align-items:center;gap:10px}
+  .bg-vol label{font-size:16px;font-weight:700;color:#2c2117}
+  .bg-vol input{flex:1;accent-color:var(--earth)}
+  .musicbtn{position:fixed;top:12px;left:58px;z-index:20;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;
+    color:#dfe6f6;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.8}
+  .musicbtn svg{width:22px;height:22px}
+  .musicbtn.on{opacity:1;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45)}
+  html:not(.photo):not([data-sky="night"]) .musicbtn{color:var(--earth)}
+  body.chatting .musicbtn{background:rgba(26,40,80,.9);border-color:#3a4c7c;color:#dfe6f6}
+  .pfav{border:none;background:none;color:#fff;font-size:15px;line-height:1;padding:2px 4px;margin-left:2px;cursor:pointer;vertical-align:middle;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+  .pfav.on{color:#ff9db3}
+  html.plainbg body::before,html.plainbg body::after{display:none !important}
+  html.plainbg::before{animation:none !important}
+  .dr-tabs button{font-size:16.5px !important;padding:8px 4px}
 </style>
 </head>
 <body>
@@ -415,32 +438,43 @@
       var m = document.querySelector('meta[name="theme-color"]'); if (m && !document.documentElement.classList.contains('photo')) m.setAttribute('content', colors[sky]);
     }
     apply();
+    window.BC_SKYAPPLY = apply;
     setInterval(apply, 60000);
   })();
 </script>
 <div class="pbg" id="pbg" aria-hidden="true"><div class="pl"></div><div class="pl"></div></div>
 <div class="pcredit" id="pcredit"></div>
 <script>
-  // Photo skies: a different hand-picked sky, sunset, aurora, Milky Way or telescope image fades in about every minute.
+  // Photo skies: hand-picked skies, space images and wonders of the world fade in on the visitor's chosen schedule.
   // Unsplash photos load from Unsplash's image CDN sized to the screen; space images come from ESA/Webb and ESA/Hubble (CC BY 4.0, credited).
-  // Turn off with ?photos=off. Preview one with ?photo=N (0-49 skies, 50-74 space, 75-106 wonders of the world).
+  // Each visitor picks a style, how many minutes between photos (or keeps one forever), motion, and favorites (saved on their device).
+  // URL options: ?photos=off, ?photo=N (0-49 skies, 50-74 space, 75-106 wonders of the world).
   (function () {
     var P = [["u","photo-1508020963102-c6c723be5764","Diego PH","jdiegoph"],["u","photo-1496854863306-cbb8c4407988","Anton Darius","thesollers"],["u","photo-1543613949-95cd1b38a10e","zenad nabil","zedlord"],["u","photo-1519370159120-226cb8b70f88","Emerson Peters","spemble"],["u","photo-1622986527249-0a4124ccdd33","Anna Asryan","__anna"],["u","photo-1661555529626-dc6978a24cc3","Sophia Martinez","sophiaarichards"],["u","photo-1628803584084-cf6e5dbcc043","Martí Sierra","martisierraa"],["u","photo-1682906979774-78b4447c815e","Tarryn Grignet","tarrynm"],["u","photo-1730150237990-3ff7639ae98d","Kate Russell","fotosbyflora"],["u","photo-1536122491116-2b1574783c7e","Jason Leung","ninjason"],["u","photo-1595865749889-b37a43c4eba4","Avess Berge","__avess__"],["u","photo-1599209248411-5124adbb1da2","engin akyurt","enginakyurt"],["u","photo-1679930348703-f94efd6ad369","Tatiana Reusche","reusche"],["u","photo-1626019866260-d9e0bb648634","Ankur Verma","ankur1verma"],["u","photo-1522011916481-b7f27c0bf69b","Willian Justen de Vasconcellos","willianjusten"],["u","photo-1536244636800-a3f74db0f3cf","Michael & Diane Weidner","michaelbweidner"],["u","photo-1503494201477-5e04f651cfe5","Jason W","jasonwong23"],["u","photo-1493130952181-47e36589f64d","Łukasz Łada","lukaszlada"],["u","photo-1501898047706-55903296cd09","joe ting","joeting"],["u","photo-1505051508008-923feaf90180","Anton Darius","thesollers"],["u","photo-1541757617970-f33144dbec38","Quino Al","quinoal"],["u","photo-1495567720989-cebdbdd97913","Jason Mavrommatis","jasonblackeye"],["u","photo-1705308536459-37414c592fc6","Arya Farrel","arfaganendra"],["u","photo-1530675392811-1966d9218af1","Karl Fredrickson","kfred"],["u","photo-1706958491142-5fefef4c8c09","Rahmat Alizada","rahmataliizada"],["u","photo-1642822697763-ada179aaba69","Johnny Kaufman","jkaufmanphotography"],["u","photo-1635183757332-b599fa6df288","Aniruddha Gayake","annigayake"],["u","photo-1465101046530-73398c7f28ca","Jeremy Thomas","jeremythomasphoto"],["u","photo-1606247357835-d27fe83fc6a3","Tyler Clemmensen","tyler_clemmensen"],["u","photo-1548625361-58a9b86aa83b","Cosmic Timetraveler","cosmictimetraveler"],["u","photo-1476159093398-35ea18d2cdee","Your Friend Andy","yourfriendandy"],["u","photo-1595520519880-a86c48ea536c","Joshua Woroniecki","joshuaworoniecki"],["u","photo-1522124624696-7ea32eb9592c","brandon siu","brandonsiu"],["u","photo-1531366936337-7c912a4589a7","Lightscape","lightscape"],["u","photo-1483347756197-71ef80e95f73","Vincent Guth","vingtcent"],["u","photo-1517928260182-5688aead3066","v2osk","v2osk"],["u","photo-1488415032361-b7e238421f1b","Jonatan Pie","r3dmax"],["u","photo-1504858700536-882c978a3464","Jonatan Pie","r3dmax"],["u","photo-1610989432929-9769f3cf8006","Henrik Heitmann","heitmannj"],["u","photo-1503803548695-c2a7b4a5b875","Sebastien Gabriel","sgabriel"],["u","photo-1616036740257-9449ea1f6605","Sergio Mena Ferreira","sergiomenamx"],["u","photo-1561009226-7a820d647a40","Melissa Cassar","melissacssr"],["u","photo-1515497957908-4d6377430754","Zoltan Tasi","zoltantasi"],["u","photo-1414521203994-7efc0bc37d65","cindy del valle","cindydvr"],["u","photo-1526420420164-b4ae06c5f886","Paul Pastourmatzis","paulpastourmatzis"],["u","photo-1490682143684-14369e18dce8","Artem Sapegin","sapegin"],["u","photo-1500964757637-c85e8a162699","simon","simon_berger"],["u","photo-1500534623283-312aade485b7","Ivana Cajina","von_co"],["u","photo-1558883493-8b86ff880fec","Damian Markutt","wildandfree_photography"],["u","photo-1665849863678-fc03a642a9aa","Shai Pal","shaipal"],["w","potm2503a","ESA/Webb, NASA & CSA, G. Mahler","A spiral through a cosmic lens"],["w","weic2218a","NASA, ESA, CSA, STScI, J. DePasquale, A. Pagan (STScI)","Pillars of Creation"],["w","weic2216b","NASA, ESA, CSA, STScI; J. DePasquale, A. Koekemoer, A. Pagan (STScI)","Pillars of Creation"],["w","carinanebula3","NASA, ESA, CSA, and STScI, J. DePasquale (STScI)","Carina Nebula"],["w","potm2607a","ESA/Webb, NASA & CSA, M. Reiter","A treasure chest of stars"],["w","potm2604a","ESA/Webb, NASA & CSA, A. Leroy","A beacon in swirls of dust"],["w","weic2518a","NASA, ESA, CSA, and STScI, A. Pagan (STScI)","Pismis 24"],["w","weic2513a","NASA, ESA, CSA, STScI","Cat's Paw Nebula"],["w","potm2502a","ESA/Webb, NASA & CSA, A. Leroy","A star-forming spiral galaxy"],["w","weic2426a","NASA, ESA, CSA, STScI","Galaxies IC 2163 and NGC 2207"],["w","weic2423a","NASA, ESA, CSA, STScI","Arp 107"],["w","potm2408a","ESA/Webb, NASA & CSA, A. Scholz, K. Muzic, A. Langeveld, R. Jayawardhana","Perseus"],["w","weic2417a","NASA, ESA, CSA, STScI, T. Temim (Princeton University)","Crab Nebula"],["w","weic2411a","ESA/Webb, NASA, CSA, K. Misselt, A. Abergel","Horsehead Nebula"],["w","weic2331a","NASA, ESA, CSA, STScI, K. Luhman, C. Alves de Oliveira","Star cluster IC 348"],["h","heic1509a","NASA, ESA, the Hubble Heritage Team (STScI/AURA), A. Nota (ESA/STScI)","Westerlund 2"],["h","heic2018b","ESA/Hubble & NASA, A. Riess and the SH0ES team","Galaxy NGC 2525"],["h","heic0715a","NASA, ESA and the Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration","Star cluster NGC 3603"],["h","heic1307a","NASA, ESA, and the Hubble Heritage Team (AURA/STScI)","Horsehead Nebula"],["h","heic0702a","NASA, ESA and the Hubble Heritage Team (STScI/AURA)-ESA/Hubble Collaboration","Star cluster NGC 602"],["h","heic0601a","NASA, ESA, M. Robberto (STScI/ESA) and the HST Orion Treasury Project Team","Orion Nebula"],["h","heic0514a","NASA, ESA and A. Nota (ESA/STScI, STScI/AURA)","Star cluster NGC 346"],["h","opo0006a","NASA/ESA, The Hubble Heritage Team (AURA/STScI)","Carina Nebula"],["h","heic1007a","NASA, ESA, M. Livio and the Hubble 20th Anniversary Team (STScI)","Mystic Mountain"],["h","heic0602a","European Space Agency & NASA","Pinwheel Galaxy"],["u","photo-1575527048208-6475b441e0a0","Tim Hart","timhart0421","Grand Canyon"],["u","photo-1535044243240-144dc3ae56a5","Jennifer Rogalla","vioiola","Grand Canyon"],["u","photo-1669937911016-6ad7483a2415","Gigin Krishnan","giginkrishnan","Grand Canyon"],["u","photo-1560799725-adddc4bfcdec","Willian Justen de Vasconcellos","willianjusten","Rio de Janeiro Harbor"],["u","photo-1654027277119-2e43ffe2a1b1","Mauro Lima","limamauro23","Rio de Janeiro Harbor"],["u","photo-1629185171801-ac685973a72a","Parth Savani","iparthsavani","Mount Everest"],["u","photo-1618811308896-d279d72fdf4d","Sammy Wong","vr2ysl","Victoria Falls"],["u","photo-1696652697930-6c9b0a91174c","Vince Russell","russmail","Victoria Falls"],["u","photo-1643029891412-92f9a81a8c16","Marina Lobato","mlobatopl","Ha Long Bay"],["u","photo-1573270695497-b30e5622686e","Lewis J Goetz","lgoetz","Ha Long Bay"],["u","photo-1697850085870-5f248fcb1ff2","Duc Nguyen","thewhatd","Ha Long Bay"],["u","photo-1604626676599-e21a94462216","Jaime Dantas","jaimedantas","Iguazu Falls"],["u","photo-1617721751087-ae4a46ebb980","Peter Burdon","peterburdon","Iguazu Falls"],["u","photo-1612977512598-3b8d6a498bbb","Jieun Lim","limjieun212","Jeju Island"],["u","photo-1738432323544-92af1fdc8649","Simon Spring","springsimon","Komodo Island"],["u","photo-1591296795955-92a580509b82","Thomas Bennie","thomasbennie","Table Mountain"],["u","photo-1652348909350-458f0bdd299f","Shaun Meintjes","shaunmcreatives","Table Mountain"],["u","photo-1504619679259-7db48eb87a0b","Ehmir Bautista","ehmirbautista","Palawan, Philippines"],["u","photo-1616596136440-cdff4ce1b4ad","Joshua Delica","joshwaaa22","Palawan, Philippines"],["u","photo-1723134084358-20a2dc177ff1","Ed Wingate","ed_wingate","Machu Picchu"],["u","photo-1543385426-191664295b58","Fabien Moliné","fabienmoline","Machu Picchu"],["u","photo-1666240073343-9801b7b5b949","Denisse Leon","denisseleon","Machu Picchu"],["u","photo-1662504431607-6714410af32f","Wadé","southamerica","Christ the Redeemer"],["u","photo-1608378963517-1c47051c7415","Fernando Santos","fsergiobr","Christ the Redeemer"],["u","photo-1594387295585-34ba732932c8","Gabriel Rissi","rissi","Christ the Redeemer"],["u","photo-1668333140118-84e827fe42ca","Jeremy Huang","plover37","Great Wall of China"],["u","photo-1547150492-da7ff1742941","Bruce Röttgers","bruceroettgers","Great Wall of China"],["u","photo-1576487248805-cf45f6bcc67f","Shan Elahi","sublimetaj","Taj Mahal"],["u","photo-1580204745408-9c18ddb64978","Konstantinos Kaskanis","k_kaskanis","Petra"],["u","photo-1620636607286-087f5a7b5716","Mario La Pergola","mlapergolaphoto","Chichén Itzá"],["u","photo-1688330392649-a2206bccf794","Alex S.","alexrsu","Chichén Itzá"],["u","photo-1710092811607-5569505de827","Federico Di Dio photography","didiofederico_photographer","Colosseum"]];
     var q = location.search, root = document.documentElement;
-    if (/[?&]photos=off/.test(q)) return;
-    root.classList.add('photo');
-    root.dataset.sky = 'night';
     var meta = document.querySelector('meta[name="theme-color"]');
     var box = document.getElementById('pbg'), layers = box.querySelectorAll('.pl'), credit = document.getElementById('pcredit');
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var HOLD = reduce ? 120000 : 60000, front = 0, timer = null, busy = false;
-    function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+    function lget(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+    function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+    var DEF = { style: 'all', every: reduce ? 2 : 1, motion: !reduce, pin: null, favs: [] };
+    var S = Object.assign({}, DEF, lget('bc_bg', {}));
+    if (/[?&]photos=off/.test(q)) S.style = 'animated';
+    function cat(i) { return i < 50 ? 'sky' : i < 75 ? 'space' : 'wonders'; }
+    function key(i) { return P[i][1]; }
+    function pool() {
+      var all = P.map(function (_, i) { return i; });
+      if (S.style === 'favs') { var f = all.filter(function (i) { return S.favs.indexOf(key(i)) >= 0; }); return f.length ? f : all; }
+      if (S.style === 'sky' || S.style === 'space' || S.style === 'wonders') return all.filter(function (i) { return cat(i) === S.style; });
+      return all;
+    }
     function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-    // A fresh shuffled order each visit, never starting with the photo the visitor saw last.
-    var order = shuffle(P.map(function (_, i) { return i; })), pos = 0;
-    var forced = (q.match(/[?&]photo=(\d+)/) || [])[1];
-    if (forced != null && P[+forced]) { order.splice(order.indexOf(+forced), 1); order.unshift(+forced); }
-    else { var last = +store('bc_photo_last'); if (order[0] === last && order.length > 1) order.push(order.shift()); }
+    var order = [], pos = 0, cur = -1, front = 0, timer = null, busy = false, started = false;
+    function reorder(first) {
+      order = shuffle(pool()); pos = 0;
+      if (first != null && order.indexOf(first) >= 0) { order.splice(order.indexOf(first), 1); order.unshift(first); }
+      else { var last = lget('bc_photo_last', -1); if (order[0] === last && order.length > 1) order.push(order.shift()); }
+    }
     function url(p) {
       var w = Math.max(innerWidth, 320), h = Math.max(innerHeight, 480), d = Math.min(window.devicePixelRatio || 1, 2);
       if (p[0] === 'u') {
@@ -450,54 +484,173 @@
       var host = p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org';
       return host + '/archives/images/' + (w * d > 1300 && w > h ? 'wallpaper4' : 'screen') + '/' + p[1] + '.jpg';
     }
-    function creditHtml(p) {
-      var place = p[0] === 'u' ? p[4] : p[3];
-      return (place ? '<b class="pplace">' + place + '</b>' : '') + creditBy(p);
-    }
     function creditBy(p) {
       if (p[0] === 'u') return 'Photo: <a href="https://unsplash.com/@' + p[3] + '?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">' + p[2] +
         '</a> on <a href="https://unsplash.com/?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>';
       var site = p[0] === 'w' ? 'https://esawebb.org' : 'https://esahubble.org';
       return '<a href="' + site + '/images/' + p[1] + '/" target="_blank" rel="noopener">' + p[2] + '</a> &middot; CC BY 4.0';
     }
-    function show(tries) {
+    function drawCredit() {
+      if (cur < 0) { credit.innerHTML = ''; return; }
+      var p = P[cur], place = p[0] === 'u' ? p[4] : p[3], fav = S.favs.indexOf(key(cur)) >= 0;
+      credit.innerHTML = (place ? '<b class="pplace">' + place + '</b>' : '') + creditBy(p) +
+        ' <button type="button" class="pfav' + (fav ? ' on' : '') + '" aria-label="' + (fav ? 'Remove from favorites' : 'Save to favorites') + '" title="' + (fav ? 'Saved to favorites' : 'Save to favorites') + '">' + (fav ? '♥' : '♡') + '</button>';
+      credit.querySelector('.pfav').onclick = function () { api.fav(); };
+    }
+    function holdMs() { return Math.max(0.5, +S.every || 1) * 60000; }
+    function show(i, tries) {
       if (busy) return; busy = true;
-      var i = order[pos % order.length], p = P[i]; pos++;
-      if (pos % order.length === 0) { var keepLast = order[order.length - 1]; shuffle(order); if (order[0] === keepLast) order.push(order.shift()); }
-      var img = new Image(), done = false;
-      var fail = function () { if (done) return; done = true; busy = false; if ((tries || 0) < 4) setTimeout(function () { show((tries || 0) + 1); }, 400); };
+      if (i == null) { if (pos >= order.length) reorder(); i = order[pos++]; }
+      var p = P[i], img = new Image(), done = false;
+      var fail = function () { if (done) return; done = true; busy = false; if ((tries || 0) < 4) setTimeout(function () { show(null, (tries || 0) + 1); }, 400); };
       var ok = function () {
         if (done) return; done = true;
-        var next = layers[1 - front], cur = layers[front];
+        var next = layers[1 - front], curL = layers[front];
         next.style.backgroundImage = 'url("' + img.src + '")';
         next.style.setProperty('--px', (Math.random() * 4 - 2).toFixed(2) + '%');
         next.style.setProperty('--py', (Math.random() * 4 - 2).toFixed(2) + '%');
-        next.style.setProperty('--pd', (HOLD / 1000 + 25) + 's');
-        next.classList.remove('drift'); void next.offsetWidth; next.classList.add('drift');
-        next.classList.add('on'); cur.classList.remove('on');
-        front = 1 - front; busy = false;
+        next.style.setProperty('--pd', (S.every > 0 ? Math.min(holdMs() / 1000 + 25, 600) : 120) + 's');
+        next.classList.remove('drift'); void next.offsetWidth; if (S.motion) next.classList.add('drift');
+        next.classList.add('on'); curL.classList.remove('on');
+        front = 1 - front; busy = false; cur = i;
         credit.classList.remove('on');
-        setTimeout(function () { credit.innerHTML = creditHtml(p); credit.classList.add('on'); }, 900);
+        setTimeout(function () { drawCredit(); credit.classList.add('on'); }, 900);
         if (meta) meta.setAttribute('content', p[0] === 'u' ? '#0d1226' : '#05070f');
-        store('bc_photo_last', String(i));
+        lset('bc_photo_last', i);
       };
       img.onload = function () { if (img.decode) img.decode().then(ok, ok); setTimeout(ok, 250); };
       img.onerror = fail;
       setTimeout(fail, 20000);
       img.src = url(p);
     }
-    function loop() { clearTimeout(timer); timer = setTimeout(function () { if (!document.hidden) show(); loop(); }, HOLD); }
-    show(); loop();
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) loop(); });
-    window.BC_PHOTOS = { next: function () { show(); loop(); }, list: P };
+    function schedule() {
+      clearTimeout(timer);
+      if (!started || S.every <= 0 || S.pin != null) return; // keep one photo / once per visit
+      timer = setTimeout(function () { if (!document.hidden) show(); schedule(); }, holdMs());
+    }
+    function setMode() {
+      var photo = S.style !== 'animated' && S.style !== 'plain';
+      root.classList.toggle('photo', photo);
+      root.classList.toggle('plainbg', S.style === 'plain');
+      if (window.BC_SKYAPPLY) window.BC_SKYAPPLY(); else if (photo) root.dataset.sky = 'night';
+      if (!photo) { clearTimeout(timer); credit.classList.remove('on'); layers.forEach(function (l) { l.classList.remove('on'); }); cur = -1; started = false; return false; }
+      return true;
+    }
+    function start(first) {
+      if (!setMode()) return;
+      started = true;
+      var pinIdx = S.pin != null ? P.findIndex(function (p) { return p[1] === S.pin; }) : -1;
+      if (pinIdx >= 0) { show(pinIdx); return; }
+      reorder(first); show(); schedule();
+    }
+    var api = {
+      list: P, get: function () { return JSON.parse(JSON.stringify(S)); }, current: function () { return cur; },
+      counts: function () { return { sky: 50, space: 25, wonders: P.length - 75, favs: S.favs.length }; },
+      set: function (patch) {
+        var old = S.style; Object.assign(S, patch); lset('bc_bg', S);
+        if ('style' in patch && patch.style !== old) { S.pin = null; lset('bc_bg', S); start(); return; }
+        if ('motion' in patch) layers.forEach(function (l) { l.classList.toggle('drift', !!S.motion && l.classList.contains('on')); });
+        if ('every' in patch) { if (S.every > 0) S.pin = null; lset('bc_bg', S); if (!started) start(); else schedule(); }
+      },
+      next: function () { if (!started) return; S.pin = null; lset('bc_bg', S); show(); schedule(); },
+      keep: function () { if (cur < 0) return; S.pin = key(cur); lset('bc_bg', S); schedule(); },
+      unkeep: function () { S.pin = null; lset('bc_bg', S); schedule(); },
+      fav: function () {
+        if (cur < 0) return; var k = key(cur), at = S.favs.indexOf(k);
+        if (at >= 0) S.favs.splice(at, 1); else S.favs.push(k);
+        lset('bc_bg', S); drawCredit(); if (window.BC_STYLE_REDRAW) window.BC_STYLE_REDRAW();
+      }
+    };
+    window.BC_BG = api;
+    var forced = (q.match(/[?&]photo=(\d+)/) || [])[1];
+    if (forced != null && P[+forced]) { S.pin = null; start(+forced); } else start();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) schedule(); });
+  })();
+</script>
+<script>
+  // Soft background music (off until the visitor turns it on). Public-domain Chopin recordings (Musopen, CC0) and
+  // calm pieces by Kevin MacLeod (incompetech.com, CC BY 4.0), streamed from the Internet Archive. Pauses for Listen and the microphone.
+  (function () {
+    var C = 'https://archive.org/download/musopen-chopin/', K = 'https://archive.org/download/KevinMacLeod_2019-04_Discography/Kevin%20MacLeod/';
+    function k(album, file, title) { return { src: K + encodeURIComponent(album) + '/' + encodeURIComponent('Kevin MacLeod - ' + file + '.mp3'), title: title || file.replace(/^\d+ - /, ''), by: 'Kevin MacLeod', lic: 'CC BY 4.0', link: 'https://incompetech.com', mood: 'ambient' }; }
+    function c(file, title) { return { src: C + encodeURIComponent(file + '.mp3'), title: title, by: 'Frédéric Chopin · Musopen', lic: 'Public domain', link: 'https://musopen.org', mood: 'piano' }; }
+    var T = [
+      c('Nocturne Op. 9 no. 2 in E flat major', 'Nocturne in E-flat, Op. 9 No. 2'),
+      c('NocturneOp.9No.1InBFlatMinor', 'Nocturne in B-flat minor, Op. 9 No. 1'),
+      c('NocturneOp27No2', 'Nocturne in D-flat, Op. 27 No. 2'),
+      c('Nocturne Op. 32 no. 1 in B major', 'Nocturne in B, Op. 32 No. 1'),
+      c('Nocturne Op. 55 no. 2 in E flat major', 'Nocturne in E-flat, Op. 55 No. 2'),
+      c('Nocturne Op. 62 no. 2 in E major', 'Nocturne in E, Op. 62 No. 2'),
+      c('NocturneOp.72No.1InEMinor', 'Nocturne in E minor, Op. 72 No. 1'),
+      c("Nocturne B. 49 in C sharp minor 'Lento con gran espressione' (1)", 'Nocturne in C-sharp minor (Lento con gran espressione)'),
+      c('Prelude Op. 28 no. 15', 'Prelude in D-flat, Op. 28 No. 15 (Raindrop)'),
+      c('Prelude Op. 28 no. 13', 'Prelude in F-sharp, Op. 28 No. 13'),
+      c('Prelude Op. 28 no. 17', 'Prelude in A-flat, Op. 28 No. 17'),
+      k('Calming', '02 - Bathed in the Light'), k('Calming', '05 - Clean Soul'), k('Calming', '12 - Meditation Impromptu 01'),
+      k('Calming', '13 - Meditation Impromptu 02'), k('Calming', '14 - Meditation Impromptu 03'), k('Calming', '15 - On the Passing of Time'),
+      k('Calming', '18 - Silver Blue Light'), k('Calming', '23 - Winter Reflections'), k('Calming', '01 - Autumn Day'),
+      k('Healing', '03 - Clear Waters'), k('Healing', '11 - Numinous Shine'), k('Healing', '15 - Starry'), k('Healing', '19 - Village Dawn'),
+      k('Healing', '21 - White'), k('Healing', '10 - Midsummer Sky'),
+      k('Aspiring', '03 - Eternal Hope'), k('Aspiring', '15 - Willow and the Light'),
+      k('Atlantean Twilight', '07 - Evening Fall (Piano)'), k('Atlantean Twilight', '06 - Evening Fall (Harp)'), k('Atlantean Twilight', '10 - Luminous Rain'),
+      k('Famous Classics', '03 - Cello Suite #1 in G - Prelude', 'Bach: Cello Suite No. 1, Prelude')
+    ];
+    function lget(key, d) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+    function lset(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+    var M = Object.assign({ on: false, mood: 'mix', vol: 0.35 }, lget('bc_music', {}));
+    M.on = false; // browsers require a tap to start sound, so each visit starts quiet
+    var a = new Audio(); a.preload = 'none'; a.volume = M.vol;
+    var list = [], at = 0, held = false, fade = null, failures = 0;
+    function build() { list = T.filter(function (t) { return M.mood === 'mix' || t.mood === M.mood; }); for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = list[i]; list[i] = list[j]; list[j] = x; } at = 0; }
+    function track() { return list[at % list.length]; }
+    function ramp(to, ms, done) {
+      clearInterval(fade); var from = a.volume, t0 = Date.now();
+      fade = setInterval(function () { var f = Math.min(1, (Date.now() - t0) / ms); a.volume = Math.max(0, Math.min(1, from + (to - from) * f)); if (f >= 1) { clearInterval(fade); if (done) done(); } }, 50);
+    }
+    function load() { var t = track(); a.src = t.src; ui(); }
+    function play() { a.volume = 0; var p = a.play(); if (p && p.catch) p.catch(function () {}); ramp(M.vol, 2500); }
+    a.addEventListener('ended', function () { at++; load(); play(); });
+    a.addEventListener('error', function () { if (!M.on) return; if (++failures > 4) { api.stop(); return; } at++; load(); play(); });
+    a.addEventListener('playing', function () { failures = 0; });
+    // Hold the music while Biblicall speaks (Listen) or listens (microphone), then bring it back gently.
+    function hold(on) {
+      if (!M.on) return;
+      if (on && !held) { held = true; ramp(0, 400, function () { a.pause(); }); }
+      else if (!on && held) { held = false; play(); }
+    }
+    document.addEventListener('play', function (e) { if (e.target !== a && e.target.tagName === 'AUDIO') hold(true); }, true);
+    ['pause', 'ended'].forEach(function (ev) { document.addEventListener(ev, function (e) { if (e.target !== a && e.target.tagName === 'AUDIO') setTimeout(function () { if (!document.querySelector('.listen.playing')) hold(false); }, 300); }, true); });
+    new MutationObserver(function () {
+      var busy = !!document.querySelector('.mic.listening, .listen.playing');
+      if (busy) hold(true); else if (held) hold(false);
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    var btn = null;
+    function ui() {
+      if (!btn) btn = document.getElementById('musicBtn');
+      if (btn) { btn.classList.toggle('on', M.on); btn.setAttribute('aria-pressed', M.on ? 'true' : 'false'); btn.title = M.on ? 'Pause music' : 'Play soft music'; }
+      if (window.BC_STYLE_REDRAW) window.BC_STYLE_REDRAW();
+    }
+    var api = {
+      state: function () { var t = list.length ? track() : null; return { on: M.on, mood: M.mood, vol: M.vol, track: t }; },
+      start: function () { M.on = true; held = false; if (!list.length) build(); if (!a.src) load(); play(); ui(); },
+      stop: function () { M.on = false; ramp(0, 600, function () { a.pause(); }); ui(); },
+      toggle: function () { if (M.on) api.stop(); else api.start(); },
+      next: function () { if (!list.length) build(); at++; load(); if (M.on) play(); },
+      setMood: function (m) { M.mood = m; lset('bc_music', M); build(); load(); if (M.on) play(); else ui(); },
+      setVol: function (v) { M.vol = v; lset('bc_music', M); clearInterval(fade); if (!held) a.volume = v; }
+    };
+    window.BC_MUSIC = api;
+    build();
+    document.addEventListener('DOMContentLoaded', function () { ui(); var b = document.getElementById('musicBtn'); if (b) b.addEventListener('click', api.toggle); });
   })();
 </script>
 
 <button type="button" class="menubtn" id="menuBtn" aria-label="Your conversations and memory" title="Your conversations and memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg></button>
+<button type="button" class="musicbtn" id="musicBtn" aria-label="Soft background music" aria-pressed="false" title="Play soft music"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 17.5V6.2c0-.5.4-.9.8-1l8.4-1.9c.4-.1.8.2.8.7v10.5"/><circle cx="6.6" cy="17.6" r="2.6"/><circle cx="16.6" cy="15.4" r="2.6"/><path d="M9 9.3l10-2.2" stroke="currentColor" stroke-width="1.6"/></svg></button>
 <div class="drawer-back" id="drawerBack" hidden></div>
 <aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="account">Account</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
 </aside>
@@ -1334,6 +1487,73 @@
     if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
+  // ---- Style tab: background photos and soft music ----
+  function drawStyle() {
+    const box = el('div', 'bgset');
+    const BG = window.BC_BG, MU = window.BC_MUSIC;
+    if (!BG) { box.appendChild(el('p', 'dr-empty', 'Background settings are unavailable right now.')); return box; }
+    const s = BG.get(), n = BG.counts();
+    const sec = (title) => { const h = el('h3', null, title); box.appendChild(h); };
+    const chips = (items, value, onPick) => {
+      const row = el('div', 'bg-chips');
+      items.forEach(([v, label]) => {
+        const b = el('button', 'bg-chip' + (String(v) === String(value) ? ' on' : ''), label); b.type = 'button';
+        b.addEventListener('click', () => { onPick(v); drawDrawer(); });
+        row.appendChild(b);
+      });
+      box.appendChild(row);
+    };
+    sec('Background');
+    chips([['all', 'All photos'], ['sky', 'Skies (' + n.sky + ')'], ['space', 'Space (' + n.space + ')'], ['wonders', 'Wonders of the world (' + n.wonders + ')'],
+           ['favs', '♥ My favorites (' + n.favs + ')'], ['animated', 'Animated sky'], ['plain', 'Calm, no photos']],
+      s.style, (v) => BG.set({ style: v }));
+    if (s.style === 'favs' && !n.favs) box.appendChild(el('p', 'acct-fine', 'Tap the ♡ next to any photo credit (top right) to save favorites. Until then, all photos show.'));
+    const photo = s.style !== 'animated' && s.style !== 'plain';
+    if (photo) {
+      sec('Change the photo');
+      const pinned = s.pin != null;
+      const curVal = pinned ? 'keep' : (s.every <= 0 ? 'visit' : s.every);
+      chips([[0.5, '30 sec'], [1, '1 min'], [5, '5 min'], [15, '15 min'], [30, '30 min'], [60, '1 hour'], ['visit', 'Each visit'], ['keep', 'Keep this photo']],
+        curVal, (v) => { if (v === 'keep') BG.keep(); else if (v === 'visit') { BG.unkeep(); BG.set({ every: -1 }); } else { BG.unkeep(); BG.set({ every: v }); } });
+      const row = el('form', 'acct-row bg-custom');
+      const lab = el('label', null, 'Or every'); lab.htmlFor = 'bgMins';
+      const inp = el('input'); inp.type = 'number'; inp.id = 'bgMins'; inp.min = '1'; inp.max = '1440'; inp.step = '1'; inp.inputMode = 'numeric';
+      inp.placeholder = 'minutes'; if (!pinned && s.every >= 1 && ![1, 5, 15, 30, 60].includes(+s.every)) inp.value = s.every;
+      const go = el('button', null, 'Set'); go.type = 'submit';
+      row.append(lab, inp, el('span', 'bg-unit', 'minutes'), go);
+      row.addEventListener('submit', (e) => { e.preventDefault(); const m = Math.round(+inp.value); if (m >= 1 && m <= 1440) { BG.unkeep(); BG.set({ every: m }); toast('New photo every ' + m + (m === 1 ? ' minute' : ' minutes')); drawDrawer(); } });
+      box.appendChild(row);
+      box.appendChild(el('p', 'acct-fine', pinned ? 'This photo stays until you choose another option.' : s.every <= 0 ? 'A new photo each time you open Biblicall.' : ''));
+      const acts = el('div', 'bg-chips');
+      const nx = el('button', 'bg-chip', 'Show the next photo now'); nx.type = 'button'; nx.addEventListener('click', () => { BG.next(); setTimeout(drawDrawer, 50); });
+      const mv = el('button', 'bg-chip' + (s.motion ? ' on' : ''), s.motion ? 'Gentle motion: on' : 'Gentle motion: off'); mv.type = 'button';
+      mv.addEventListener('click', () => { BG.set({ motion: !s.motion }); drawDrawer(); });
+      acts.append(nx, mv); box.appendChild(acts);
+    }
+    if (MU) {
+      const m = MU.state();
+      sec('Soft music');
+      const play = el('button', 'acct-btn' + (m.on ? ' ghost' : ''), m.on ? 'Pause music' : '♪ Play soft music'); play.type = 'button';
+      play.addEventListener('click', () => { MU.toggle(); drawDrawer(); });
+      box.appendChild(play);
+      chips([['mix', 'Mix'], ['piano', 'Peaceful piano'], ['ambient', 'Calm & uplifting']], m.mood, (v) => MU.setMood(v));
+      const vr = el('div', 'bg-vol');
+      const vl = el('label', null, 'Volume'); vl.htmlFor = 'bgVol';
+      const vol = el('input'); vol.type = 'range'; vol.id = 'bgVol'; vol.min = '0'; vol.max = '1'; vol.step = '0.05'; vol.value = m.vol;
+      vol.addEventListener('input', () => MU.setVol(+vol.value));
+      vr.append(vl, vol); box.appendChild(vr);
+      if (m.track) {
+        const now = el('p', 'acct-fine');
+        now.append((m.on ? 'Now playing: ' : 'Up next: ') + m.track.title + ' — ' + m.track.by + ' (' + m.track.lic + ') ');
+        const sk = el('button', 'acct-link', 'Skip'); sk.type = 'button'; sk.addEventListener('click', () => { MU.next(); setTimeout(drawDrawer, 50); });
+        now.appendChild(sk); box.appendChild(now);
+      }
+      box.appendChild(el('p', 'acct-fine', 'Music pauses while Biblicall speaks or listens. Public-domain Chopin recordings from Musopen, and calm pieces by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0.'));
+    }
+    box.appendChild(el('p', 'acct-fine', 'Your choices are saved on this device.'));
+    return box;
+  }
+  window.BC_STYLE_REDRAW = () => { if (!drawer.hidden && drTab === 'style') drawDrawer(); };
   function drawDrawer() {
     if (drawer.hidden) return;
     drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === drTab));
@@ -1341,6 +1561,7 @@
     const fine = document.getElementById('drFine');
     if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your Biblicall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Account tab) to keep memory and chosen conversations forever.';
     if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
+    if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
