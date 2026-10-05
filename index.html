@@ -1729,6 +1729,8 @@
     const out = String(text).replace(/\[\[(remind|goal)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
       k = k.toLowerCase();
       if (k === 'goal') { const t = rest.trim(); if (t) acts.push({ k: 'goal', text: t.slice(0, 140) }); return ''; }
+      const rel = rest.match(/^\s*\+(\d{1,4})\s*([mh])\s*\|\s*(.+)$/i);
+      if (rel) { const at = Date.now() + (+rel[1]) * (rel[2].toLowerCase() === 'h' ? 3600000 : 60000); acts.push({ k: 'remind', at, text: rel[3].trim().slice(0, 160) }); return ''; }
       const m = rest.match(/^\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\s*\|\s*(.+)$/);
       if (m) { const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); if (at > Date.now() - 60000) acts.push({ k: 'remind', at, text: m[6].trim().slice(0, 160) }); }
       return '';
