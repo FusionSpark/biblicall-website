@@ -2494,7 +2494,7 @@
     drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === drTab));
     drBody.innerHTML = '';
     const fine = document.getElementById('drFine');
-    if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your BibliCall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Account tab) to keep memory and chosen conversations forever.';
+    if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your BibliCall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Me tab) to keep memory and chosen conversations forever.';
     if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
     if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
     if (drTab === 'plan') { drBody.appendChild(drawPlan()); return; }
