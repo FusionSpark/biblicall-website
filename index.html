@@ -2512,7 +2512,7 @@
       f.append(who, amt, note, go, rem); box.appendChild(f);
       const sync = () => { payDraft = { id: who.value, amount: amt.value, note: note.value }; };
       [who, amt, note].forEach((x) => x.addEventListener('input', sync));
-      f.addEventListener('submit', (e) => { e.preventDefault(); sync(); const p = payees.find((x) => x.id === who.value); if (p) startPayment(p, amt.value, note.value.trim()); });
+      f.addEventListener('submit', (e) => { e.preventDefault(); sync(); const p = payees.find((x) => x.id === who.value); if (p) { startPayment(p, amt.value, note.value.trim()); payDraft = { id: p.id, amount: '', note: '' }; setTimeout(drawDrawer, 300); } });
       rem.addEventListener('click', () => { sync(); payRemOpen = !payRemOpen; drawDrawer(); });
       if (payRemOpen) {
         const rf = el('form', 'plan-remadd');
@@ -2526,7 +2526,7 @@
           const at = new Date(when.value).getTime(), a = +payDraft.amount;
           const text = 'Pay ' + p.name + (a > 0 ? ' ' + money(a) : '') + (payDraft.note ? ' for ' + payDraft.note : '') + ' (' + PAY_METHODS[p.method][0] + '). Tap to pay.';
           const r = await addReminder({ at, text, conv: 'y' + p.id + '_' + Math.round((a || 0) * 100), repeat: rp.value || undefined });
-          if (r) { payRemOpen = false; stat('pay_reminder'); toast('⏰ Payment reminder set for ' + whenLabel(at) + (rp.value ? ', repeating.' : '.')); drawDrawer(); }
+          if (r) { payRemOpen = false; payDraft = { id: p.id, amount: '', note: '' }; stat('pay_reminder'); toast('⏰ Payment reminder set for ' + whenLabel(at) + (rp.value ? ', repeating.' : '.')); drawDrawer(); }
         });
       }
     }
