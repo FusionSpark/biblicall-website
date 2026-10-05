@@ -463,6 +463,11 @@
   .ns-share,.ns-daily{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .ns-share svg{width:18px;height:18px}
   .ns-daily{background:transparent;color:var(--earth)}
+  .ns-notnow{background:none;border:0;padding:6px 4px;font-family:inherit;font-size:15px;color:var(--muted);text-decoration:underline;cursor:pointer}
+  .dr-daily{margin:0 12px 8px}
+  .dr-daily .dr-invite{width:100%;margin:0}
+  .dr-daily .ns-dailynote{margin:6px 2px 0}
+  .dr-daily .ns-dailyform{margin-top:8px}
   .ns-share:disabled,.ns-save:disabled{opacity:.6}
   .ns-save{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--earth);background:transparent;color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .svcard{position:relative;max-width:560px;margin:0 auto 22px;padding:22px 22px 18px;border-radius:20px;background:rgba(255,255,255,.9);color:#2c2117;text-align:center;box-shadow:0 10px 34px rgba(10,20,40,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -753,6 +758,7 @@
 <aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite friends<small>Bring a friend into this conversation, live</small></span></button>
+  <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse and short reflection each morning, by email</small></span></button></div>
   <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
@@ -1048,6 +1054,18 @@
     } catch (e) { toast('Couldn\u2019t make the image just now. Please try again.'); }
     if (btn) btn.disabled = false;
   }
+  // Offer the Daily North Star at a good moment, once per conversation: after a 👍, a share, or a second North Star.
+  // After it has been offered in 3 conversations without a sign-up, stop offering (it stays in the menu).
+  function dailyOfferFor(m) {
+    if (m.dailyOffer === 1 || m.dailyOffer === 3) return true;
+    if (m.dailyOffer || lsGet('bc_daily', '') || room) return false;
+    if (conversation.some((x) => x.dailyOffer)) return false;
+    if ((+lsGet('bc_daily_offers', 0)) >= 3) return false;
+    const nsCount = conversation.filter((x) => x.ns && x.ns !== 'loading').length;
+    if (!(m.fb === 'up' || m.shared || nsCount >= 2)) return false;
+    m.dailyOffer = 1; lsSet('bc_daily_offers', (+lsGet('bc_daily_offers', 0)) + 1);
+    return true;
+  }
   // ---- Daily North Star email sign-up (opt-in) ----
   function dailyForm(box, trigger) {
     trigger.remove();
@@ -1165,15 +1183,17 @@
           const tools = document.createElement('div'); tools.className = 'ns-tools';
           const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'ns-share';
           sh.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Share this verse';
-          sh.addEventListener('click', () => shareLink(m.ns, sh));
+          sh.addEventListener('click', () => { shareLink(m.ns, sh); if (!m.shared) { m.shared = 1; setTimeout(renderThread, 1500); } });
           const im = document.createElement('button'); im.type = 'button'; im.className = 'ns-save'; im.textContent = 'Save as image';
           im.title = 'A picture of this verse over the current photo, with a code that opens it on Biblicall';
           im.addEventListener('click', () => shareMoment(m.ns, im));
           tools.append(sh, im);
-          if (!lsGet('bc_daily', '')) {
+          if (dailyOfferFor(m)) {
             const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'ns-daily'; dl.textContent = '\u2709 Get a North Star every morning';
-            dl.addEventListener('click', () => dailyForm(tools, dl));
-            tools.appendChild(dl);
+            const nn = document.createElement('button'); nn.type = 'button'; nn.className = 'ns-notnow'; nn.textContent = 'Not now';
+            dl.addEventListener('click', () => { nn.remove(); m.dailyOffer = 3; dailyForm(tools, dl); });
+            nn.addEventListener('click', () => { m.dailyOffer = 2; dl.remove(); nn.remove(); });
+            tools.append(dl, nn);
           }
           panel.appendChild(tools);
         }
@@ -1895,7 +1915,13 @@
       }
     }
   }
-  function openDrawer(tab) { if (tab) drTab = tab; drawer.hidden = false; drawerBack.hidden = false; drawDrawer(); }
+  function drawDailyMenu() {
+    const box = document.getElementById('drDaily'), sub = lsGet('bc_daily', '');
+    if (sub) { box.innerHTML = '<p class="ns-dailynote">\u2713 You get the Daily North Star each morning.</p>'; return; }
+    const b = document.getElementById('drDailyBtn');
+    if (b && !b.dataset.wired) { b.dataset.wired = 1; b.addEventListener('click', () => dailyForm(box, b)); }
+  }
+  function openDrawer(tab) { if (tab) drTab = tab; drawer.hidden = false; drawerBack.hidden = false; drawDailyMenu(); drawDrawer(); }
   function closeDrawer() { drawer.hidden = true; drawerBack.hidden = true; }
   document.getElementById('menuBtn').addEventListener('click', () => openDrawer());
   document.getElementById('drawerClose').addEventListener('click', closeDrawer);
