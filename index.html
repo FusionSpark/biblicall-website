@@ -555,7 +555,16 @@
       if (pinIdx >= 0) { show(pinIdx); return; }
       reorder(first); show(); schedule();
     }
+    function describe() {
+      if (S.style === 'animated') return 'Background: an animated, gently moving sky that changes with the time of day (no photograph).';
+      if (S.style === 'plain') return 'Background: a calm plain color (no photograph).';
+      if (cur < 0) return '';
+      var p = P[cur], c = cat(cur);
+      if (p[0] === 'u') return 'Background photograph: ' + (p[4] ? p[4] + ' (one of the wonders of the world)' : 'a sky photograph (sunrise, daytime sky, sunset, aurora or night sky)') + ', photo by ' + p[2] + ' on Unsplash.';
+      return 'Background image: "' + p[3] + '", a real space telescope image from the ' + (p[0] === 'w' ? 'James Webb' : 'Hubble') + ' Space Telescope; credit: ' + p[2] + '.';
+    }
     var api = {
+      describe: describe,
       list: P, get: function () { return JSON.parse(JSON.stringify(S)); }, current: function () { return cur; },
       counts: function () { return { sky: 50, space: 25, wonders: P.length - 75, favs: S.favs.length }; },
       set: function (patch) {
@@ -651,7 +660,15 @@
       if (btn) { btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.title = on ? 'Pause music' : 'Play soft music'; }
       if (window.BC_STYLE_REDRAW) window.BC_STYLE_REDRAW();
     }
+    function describe() {
+      if (!on || !list.length) return '';
+      var t = list[at % list.length], who = t[1] === 0 ? 'Kevin MacLeod (incompetech.com; Creative Commons Attribution 4.0)' : t[1] === 1 ? 'a public-domain recording from Musopen' : 'the United States Air Force Band (public domain)';
+      var ins = INST.filter(function (x) { return x[0] !== 'any' && t[3].indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(', ');
+      var moods = MOODS.filter(function (x) { return x[0] !== 'any' && t[4].indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(', ');
+      return 'Music playing now: "' + t[0] + '" by ' + who + (ins ? '; instruments: ' + ins : '') + (moods ? '; mood: ' + moods : '') + '.' + (mode === 'duck' ? ' (It is playing softly under Biblicall\'s voice.)' : '');
+    }
     var api = {
+      describe: describe,
       MOODS: MOODS, INST: INST, count: count,
       state: function () { return { on: on, mood: M.mood, inst: M.inst, vol: M.vol, track: list.length ? track() : null, note: note, size: list.length, mode: mode, level: Math.round(level * 1000) / 1000, webAudio: !!gain }; },
       start: function () { on = true; mode = 'full'; voiceAudio = 0; graph(); if (!list.length) build(); if (!a.src) load(); play(); update(); ui(); },
@@ -1219,7 +1236,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience() })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -1258,6 +1275,15 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
   }
   window.toast = toast;
+  // What the person sees and hears right now (background picture and music), so Biblicall can answer "what is this song?" or "where is this photo?"
+  function ambience() {
+    try {
+      const parts = [];
+      if (window.BC_BG) parts.push(window.BC_BG.describe());
+      if (window.BC_MUSIC) parts.push(window.BC_MUSIC.describe() || 'No music is playing.');
+      return parts.filter(Boolean).join(' ');
+    } catch (e) { return ''; }
+  }
 
 
   // ---- Memory: facts the user chose to save ----
