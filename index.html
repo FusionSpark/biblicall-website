@@ -879,8 +879,10 @@
     return biblePromise;
   }
   // Church tradition (optional): shapes answers on church teaching and practice. Default: Christian, no specific tradition.
-  const TRADS = [['', 'Christian (no specific tradition)'], ['catholic', 'Catholic'], ['orthodox', 'Orthodox'], ['baptist', 'Baptist'], ['methodist', 'Methodist'], ['lutheran', 'Lutheran'],
-    ['reformed', 'Presbyterian / Reformed'], ['anglican', 'Anglican / Episcopal'], ['pentecostal', 'Pentecostal / Charismatic'], ['nondenom', 'Non-denominational']];
+  const TRADS = [['', 'Christian (no specific tradition)'], ['catholic', 'Catholic'], ['orthodox', 'Eastern Orthodox'], ['oriental', 'Coptic / Armenian / Ethiopian Orthodox'],
+    ['baptist', 'Baptist'], ['methodist', 'Methodist'], ['lutheran', 'Lutheran'], ['reformed', 'Presbyterian / Reformed'], ['anglican', 'Anglican / Episcopal'],
+    ['pentecostal', 'Pentecostal / Charismatic'], ['wesleyan', 'Wesleyan / Nazarene / Holiness'], ['cofc', 'Church of Christ'], ['adventist', 'Seventh-day Adventist'],
+    ['anabaptist', 'Mennonite / Anabaptist'], ['messianic', 'Messianic Jewish'], ['nondenom', 'Non-denominational']];
   let tradKey = (() => { try { const v = JSON.parse(localStorage.getItem('bc_trad') || '""'); return TRADS.some((t) => t[0] === v) ? v : ''; } catch (e) { return ''; } })();
   window.BC_TRAD = { list: TRADS, get: () => tradKey, set: (k) => { if (!TRADS.some((t) => t[0] === k)) return; tradKey = k; try { localStorage.setItem('bc_trad', JSON.stringify(k)); } catch (e) {} } };
   window.BC_BIBLE = { list: BIBLES, get: () => bibleKey, set: (k) => { if (!BIBLES[k] || k === bibleKey) return; bibleKey = k; try { localStorage.setItem('bc_bible', JSON.stringify(k)); } catch (e) {} BIBLE = null; biblePromise = null; loadBible(); } };
