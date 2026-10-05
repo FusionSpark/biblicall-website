@@ -668,6 +668,30 @@
       setTimeout(fail, 20000);
       img.src = url(p);
     }
+    // The person's own photo (kept only on this device, in the browser's IndexedDB).
+    function idb(mode, fn) {
+      return new Promise(function (res) {
+        try {
+          var rq = indexedDB.open('biblicall', 1);
+          rq.onupgradeneeded = function () { rq.result.createObjectStore('kv'); };
+          rq.onsuccess = function () { try { var tx = rq.result.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st); tx.oncomplete = function () { res(r && r.result); }; tx.onerror = function () { res(null); }; } catch (e) { res(null); } };
+          rq.onerror = function () { res(null); };
+        } catch (e) { res(null); }
+      });
+    }
+    var mineUrl = null;
+    function showMine() {
+      return idb('readonly', function (st) { return st.get('myphoto'); }).then(function (blob) {
+        if (!blob) { S.pin = null; lset('bc_bg', S); reorder(); show(); schedule(); return; }
+        if (mineUrl) URL.revokeObjectURL(mineUrl); mineUrl = URL.createObjectURL(blob);
+        clearTimeout(timer);
+        var next = layers[1 - front], curL = layers[front];
+        next.style.backgroundImage = 'url("' + mineUrl + '")';
+        next.classList.remove('drift'); void next.offsetWidth; if (S.motion) next.classList.add('drift');
+        next.classList.add('on'); curL.classList.remove('on'); front = 1 - front; cur = -2;
+        credit.innerHTML = '<b class="pplace">Your photo</b>'; credit.classList.add('on');
+      });
+    }
     function schedule() {
       clearTimeout(timer);
       if (!started || S.every <= 0 || S.pin != null) return; // keep one photo / once per visit
@@ -684,6 +708,7 @@
     function start(first) {
       if (!setMode()) return;
       started = true;
+      if (S.pin === 'mine') { showMine(); return; }
       var pinIdx = S.pin != null ? P.findIndex(function (p) { return p[1] === S.pin; }) : -1;
       if (pinIdx >= 0) { show(pinIdx); return; }
       reorder(first); show(); schedule();
@@ -691,6 +716,7 @@
     function describe() {
       if (S.style === 'animated') return 'Background: an animated, gently moving sky that changes with the time of day (no photograph).';
       if (S.style === 'plain') return 'Background: a calm plain color (no photograph).';
+      if (cur === -2) return 'Background: a personal photo the person chose from their own phone.';
       if (cur < 0) return '';
       var p = P[cur], c = cat(cur);
       if (p[0] === 'u') return 'Background photograph: ' + (p[4] ? p[4] + ' (one of the wonders of the world)' : 'a sky photograph (sunrise, daytime sky, sunset, aurora or night sky)') + ', photo by ' + p[2] + ' on Unsplash.';
@@ -720,6 +746,14 @@
         if (S.style === 'animated' || S.style === 'plain' || (S.style === 'favs' && S.favs.indexOf(key(i)) < 0) || (S.style !== 'all' && S.style !== 'favs' && cat(i) !== S.style)) S.style = 'all';
         lset('bc_bg', S); if (!started) start(); else { show(i); schedule(); }
       },
+      setMine: function (blob) {
+        return idb('readwrite', function (st) { return st.put(blob, 'myphoto'); }).then(function () {
+          S.pin = 'mine'; if (S.style === 'animated' || S.style === 'plain') S.style = 'all'; lset('bc_bg', S);
+          if (!started) start(); else showMine();
+        });
+      },
+      removeMine: function () { idb('readwrite', function (st) { return st.delete('myphoto'); }); if (S.pin === 'mine') { S.pin = null; lset('bc_bg', S); reorder(); show(); schedule(); } },
+      mine: function () { return S.pin === 'mine'; },
       thumb: function (i) { var p = P[i]; if (!p) return ''; if (p[0] === 'u') return 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&w=240&h=300&q=60'; return (p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org') + '/archives/images/thumb300y/' + p[1] + '.jpg'; },
       name: function (i) { var p = P[i]; if (!p) return ''; return p[0] === 'u' ? (p[4] || 'Sky') + ' \u00b7 ' + p[2] : p[3]; },
       category: function (i) { return cat(i); },
@@ -2455,7 +2489,24 @@
       const row = el('div', 'bg-chips');
       const gb = el('button', 'bg-chip' + (pzGallery ? ' on' : ''), pzGallery ? 'Close the photo library' : '\ud83d\uddbc Choose my own photo'); gb.type = 'button';
       gb.addEventListener('click', () => { pzGallery = !pzGallery; drawDrawer(); }); row.appendChild(gb);
-      if (s.pin != null) { const back = el('button', 'bg-chip', 'Back to rotating photos'); back.type = 'button'; back.addEventListener('click', () => { BG.unkeep(); BG.next(); setTimeout(drawDrawer, 50); }); row.appendChild(back); }
+      const up = el('button', 'bg-chip', '\ud83d\udcf7 Use a photo from my phone'); up.type = 'button';
+      const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true;
+      up.addEventListener('click', () => fi.click());
+      fi.addEventListener('change', async () => {
+        const f = fi.files && fi.files[0]; if (!f) return;
+        toast('Setting your photo\u2026');
+        try {
+          const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
+          const max = 2000, r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * r); c.height = Math.round(img.naturalHeight * r);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src);
+          const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+          await BG.setMine(blob); stat('own_photo'); toast('Your photo is now your background. It stays on this phone only.'); setTimeout(drawDrawer, 300);
+        } catch (e) { toast('That photo couldn\u2019t be used. Please try another.'); }
+      });
+      row.append(up, fi);
+      if (BG.mine()) { const rm = el('button', 'bg-chip', 'Remove my photo'); rm.type = 'button'; rm.addEventListener('click', () => { BG.removeMine(); toast('Back to rotating photos.'); setTimeout(drawDrawer, 80); }); row.appendChild(rm); }
+      else if (s.pin != null) { const back = el('button', 'bg-chip', 'Back to rotating photos'); back.type = 'button'; back.addEventListener('click', () => { BG.unkeep(); BG.next(); setTimeout(drawDrawer, 50); }); row.appendChild(back); }
       box.appendChild(row);
       if (pzGallery) {
         const cats = [['sky', 'Skies'], ['space', 'Space'], ['wonders', 'Wonders'], ['favs', '\u2665 Favorites']];
