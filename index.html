@@ -2492,7 +2492,15 @@
       return;
     }
     const url = payLink(p, amount, note); if (!url) return;
-    window.open(url, '_blank', 'noopener');
+    const name = PAY_METHODS[p.method][0];
+    toast('Opening ' + name + (+amount > 0 ? ' with ' + money(amount) + ' for ' + p.name : ' for ' + p.name) + '. Confirm the payment there.');
+    // Try the app itself first (most reliable on phones); if it isn't installed, open the web page.
+    const amt = (+amount > 0) ? (+amount).toFixed(2).replace(/\.00$/, '') : '';
+    const app = p.method === 'venmo' && /iP(hone|ad|od)|Android/i.test(navigator.userAgent)
+      ? 'venmo://paycharge?txn=pay&recipients=' + encodeURIComponent(p.handle.trim().replace(/^@/, '')) + (amt ? '&amount=' + amt : '') + (note ? '&note=' + encodeURIComponent(note) : '') : '';
+    const openWeb = () => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); };
+    if (app) { let left = false; const vis = () => { if (document.hidden) left = true; }; document.addEventListener('visibilitychange', vis); location.href = app; setTimeout(() => { document.removeEventListener('visibilitychange', vis); if (!left && !document.hidden) openWeb(); }, 1600); }
+    else openWeb();
   }
   function findPayee(name) { const n = String(name || '').trim().toLowerCase(); return payees.find((p) => p.name.toLowerCase() === n) || payees.find((p) => p.name.toLowerCase().split(' ')[0] === n.split(' ')[0]); }
   function drawPay() {
@@ -2536,7 +2544,7 @@
       const row = el('div', 'dr-item');
       const t = el('div', 'mem-text'); t.append(el('b', null, p.name), el('small', 'pr-since', ' · ' + PAY_METHODS[p.method][0] + ' ' + p.handle));
       const pay = el('button', 'goal-clock on', '💸'); pay.type = 'button'; pay.title = 'Pay ' + p.name; pay.setAttribute('aria-label', 'Pay ' + p.name);
-      pay.addEventListener('click', () => { payDraft = { id: p.id, amount: '', note: '' }; drawDrawer(); setTimeout(() => { const a = document.querySelector('.pay-quick input[type=number]'); if (a) a.focus(); }, 50); });
+      pay.addEventListener('click', () => { payDraft = { id: p.id, amount: '', note: '' }; startPayment(p, '', ''); });
       const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove');
       del.addEventListener('click', () => { payees = payees.filter((x) => x !== p); savePayees(); drawDrawer(); });
       row.append(t, pay, del); box.appendChild(row);
