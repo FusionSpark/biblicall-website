@@ -262,6 +262,11 @@
   .pz-piece b{font-size:15.5px}
   .pz-piece small{font-size:13px;color:#5b6b78}
   .pz-piece.on{border-color:#664336;background:#f6eee8}
+  .own-ask{flex-basis:100%;margin:6px 0 2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#2c2117}
+  .own-ask p{margin:0 0 8px;font-size:15.5px;line-height:1.4}
+  .own-ask .row{display:flex;flex-wrap:wrap;gap:8px}
+  .own-ask button{flex:1;min-width:140px;padding:8px 12px;border-radius:999px;border:1.5px solid #664336;background:#fff;color:#664336;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .own-ask .yes{background:#664336;color:#fff}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -722,8 +727,10 @@
       if (p[0] === 'u') return 'Background photograph: ' + (p[4] ? p[4] + ' (one of the wonders of the world)' : 'a sky photograph (sunrise, daytime sky, sunset, aurora or night sky)') + ', photo by ' + p[2] + ' on Unsplash.';
       return 'Background image: "' + p[3] + '", a real space telescope image from the ' + (p[0] === 'w' ? 'James Webb' : 'Hubble') + ' Space Telescope; credit: ' + p[2] + '.';
     }
-    function shareInfo(W, H) {
-      if (cur < 0) return null; var p = P[cur];
+    // Pictures made for sharing never include the person's own photo unless they choose to (opt.mine).
+    function shareInfo(W, H, opt) {
+      if (cur === -2 && opt && opt.mine && mineUrl) return { url: mineUrl, credit: '' };
+      var i = cur; if (i < 0) i = Math.floor(Math.random() * 50); var p = P[i];
       if (p[0] === 'u') return { url: 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&crop=entropy&q=80&w=' + W + '&h=' + H, credit: (p[4] ? p[4] + ' \u00b7 ' : '') + 'Photo: ' + p[2] };
       return { url: (p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org') + '/archives/images/screen/' + p[1] + '.jpg', credit: p[3] + ' \u00b7 ' + p[2] };
     }
@@ -1196,6 +1203,16 @@
     if (!qrLib) qrLib = new Promise((res, rej) => { if (window.qrcode) return res(window.qrcode); const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload = () => res(window.qrcode); s.onerror = rej; document.head.appendChild(s); setTimeout(rej, 6000); });
     return qrLib;
   }
+  // When the background is the person's own photo, ask before putting it in a picture others will see.
+  function askOwnPhoto(btn) {
+    return new Promise((res) => {
+      const box = document.createElement('div'); box.className = 'own-ask';
+      box.innerHTML = '<p>Your background is your own photo. It\u2019s private. Put it in this picture for others to see?</p><div class="row"><button type="button" class="no">Use a BibliCall photo</button><button type="button" class="yes">Include my photo</button></div>';
+      btn.insertAdjacentElement('afterend', box);
+      box.querySelector('.no').onclick = () => { box.remove(); res(false); };
+      box.querySelector('.yes').onclick = () => { box.remove(); res(true); };
+    });
+  }
   async function shareMoment(ns, btn) {
     const v = ns.verses[0]; if (!v) return;
     if (btn) { btn.disabled = true; }
@@ -1203,7 +1220,9 @@
     const link = verseLink(v);
     try {
       const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-      const info = window.BC_BG && window.BC_BG.shareInfo ? window.BC_BG.shareInfo(W, H) : null;
+      let useMine = false;
+      if (window.BC_BG && window.BC_BG.mine && window.BC_BG.mine() && btn) { useMine = await askOwnPhoto(btn); if (useMine) stat('own_photo_shared'); }
+      const info = window.BC_BG && window.BC_BG.shareInfo ? window.BC_BG.shareInfo(W, H, { mine: useMine }) : null;
       let drawn = false;
       if (info && info.url) { try { const img = await loadImg(info.url); const r = Math.max(W / img.width, H / img.height), w = img.width * r, h = img.height * r; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); drawn = true; } catch (e) {} }
       if (!drawn) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1b2a52'); g.addColorStop(0.55, '#6b4f7a'); g.addColorStop(1, '#e9a27f'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
@@ -2505,6 +2524,7 @@
         } catch (e) { toast('That photo couldn\u2019t be used. Please try another.'); }
       });
       row.append(up, fi);
+      if (BG.mine()) box.appendChild(el('p', 'acct-fine', '\ud83d\udd12 Your photo is private. It stays on this phone, is never uploaded, and is only put in a picture you share if you choose \u201cInclude my photo.\u201d'));
       if (BG.mine()) { const rm = el('button', 'bg-chip', 'Remove my photo'); rm.type = 'button'; rm.addEventListener('click', () => { BG.removeMine(); toast('Back to rotating photos.'); setTimeout(drawDrawer, 80); }); row.appendChild(rm); }
       else if (s.pin != null) { const back = el('button', 'bg-chip', 'Back to rotating photos'); back.type = 'button'; back.addEventListener('click', () => { BG.unkeep(); BG.next(); setTimeout(drawDrawer, 50); }); row.appendChild(back); }
       box.appendChild(row);
