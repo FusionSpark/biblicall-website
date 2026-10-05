@@ -703,7 +703,7 @@
     if (!INST.some(function (m) { return m[0] === M.inst; })) M.inst = 'any';
     var on = false; // browsers require a tap to start sound, so each visit starts quiet
     var RELAY = 'https://biblicall-ai.sjonlich.workers.dev/m/', IK = 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/';
-    var DUCK = 0.34; // while BibliCall's voice speaks, music keeps playing at about a third of its volume (66% lower)
+    var DUCK = 0.425; // while BibliCall's voice speaks, music keeps playing underneath at about 43% of its volume
     var a = new Audio(); a.preload = 'none'; a.crossOrigin = 'anonymous';
     var list = [], at = 0, fade = null, failures = 0, note = '', level = 0, mode = 'full', ctx = null, gain = null;
     function match(t, mood, inst) { return (mood === 'any' || t[4].indexOf(mood) >= 0) && (inst === 'any' || t[3].indexOf(inst) >= 0); }
@@ -1416,6 +1416,8 @@
   }
   // Default voice: a deep, steady baritone. Try others with ?voice=saturn | mars | pluto | jupiter | draco | orion
   const VOICE = ((location.search.match(/[?&]voice=([a-z]+)/) || [])[1]) || 'zeus';
+  // Played slightly slower with the pitch allowed to drop, so the voice sounds deeper, calmer and wiser (about 1.4 semitones lower).
+  const VOICE_RATE = 0.92;
   // Each piece of text is turned into audio once; listening again replays it at no extra cost.
   const voiceCache = new Map();
   function fetchVoice(text) {
@@ -1474,7 +1476,7 @@
     catch (e) { speaking.device = true; setSpeakState('playing'); return speakOnDevice(text, token); }
     if (!speaking || speaking.token !== token) return;
     if (nextText) fetchVoice(nextText).catch(() => {}); // get the next part ready while this one plays
-    player.src = url; player.playbackRate = 0.9;
+    player.src = url; player.playbackRate = VOICE_RATE;
     setSpeakState('playing');
     try { await player.play(); } catch (e) { speaking.device = true; return speakOnDevice(text, token); }
     await new Promise((res) => { player.onended = res; player.onerror = res; player.onpause = () => { if (!speaking || speaking.token !== token) res(); }; });
@@ -1482,7 +1484,7 @@
   async function listen(m) {
     if (speaking && speaking.msg === m) { stopSpeaking(); return; }
     stopSpeaking();
-    if (!player) { player = new Audio(); player.preservesPitch = true; }
+    if (!player) { player = new Audio(); player.preservesPitch = false; player.webkitPreservesPitch = false; player.mozPreservesPitch = false; }
     // Unlock audio on iPhone within this tap, before any waiting.
     try { player.src = SILENT; player.play().catch(() => {}); } catch (e) {}
     const token = {};
