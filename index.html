@@ -1923,8 +1923,9 @@
     } else if (isIOS && !standaloneApp()) {
       box.appendChild(el('p', 'acct-fine', 'On iPhone, reminders work once BibliCall is on your Home Screen: tap the Share button, then “Add to Home Screen”. Open BibliCall from there and turn reminders on here.'));
     } else box.appendChild(el('p', 'acct-fine', 'This browser can’t show reminders, but you can add each one to your calendar.'));
+    const iGoals = box.childNodes.length;
     const done = PLAN.goals.filter((g) => g.done).length;
-    box.appendChild(el('h4', 'bg-sub', 'This week’s goals' + (PLAN.goals.length ? ' · ' + done + ' of ' + PLAN.goals.length + ' done' : '')));
+    box.appendChild(el('h4', 'bg-sub', '✅ To do this week' + (PLAN.goals.length ? ' · ' + done + ' of ' + PLAN.goals.length + ' done' : '')));
     PLAN.goals.forEach((g, i) => {
       const row = el('div', 'dr-item plan-goal' + (g.done ? ' done' : ''));
       const cb = el('input'); cb.type = 'checkbox'; cb.checked = g.done; cb.setAttribute('aria-label', 'Done');
@@ -1938,9 +1939,11 @@
     const ga = el('button', null, 'Add'); ga.type = 'submit'; gf.append(gi, ga);
     gf.addEventListener('submit', (e) => { e.preventDefault(); if (addGoal(gi.value)) drawDrawer(); else gi.value = ''; });
     box.appendChild(gf);
+    const iGoalsEnd = box.childNodes.length;
     drawReading(box);
     drawGroups(box);
-    box.appendChild(el('h4', 'bg-sub', 'Upcoming reminders'));
+    const iRem = box.childNodes.length;
+    box.appendChild(el('h4', 'bg-sub', '📅 Calendar · coming up'));
     const up = PLAN.rems.filter((r) => r.at > Date.now());
     if (!up.length) box.appendChild(el('p', 'acct-fine', 'None yet. Tell BibliCall what you need to do and when, or add one here.'));
     up.forEach((r) => {
@@ -1957,6 +1960,7 @@
     const ra = el('button', null, 'Add'); ra.type = 'submit'; rf.append(ri, rt, ra);
     rf.addEventListener('submit', async (e) => { e.preventDefault(); if (!ri.value.trim() || !rt.value) return; const at = new Date(rt.value).getTime(); if (await addReminder({ at, text: ri.value.trim() })) { toast('Reminder set for ' + whenLabel(at) + '.'); drawDrawer(); } });
     box.appendChild(rf);
+    const iRemEnd = box.childNodes.length;
     box.appendChild(el('h4', 'bg-sub', 'Gentle check-ins'));
     box.appendChild(el('p', 'acct-fine', 'A short morning note with your week’s progress and today’s reading, an evening invitation to reflect on your day, and on Sunday evening an invitation to plan the week ahead.' + (PLAN.push ? '' : ' (Turn on reminders above to receive them.)')));
     const ck = el('div', 'bg-chips');
@@ -1974,6 +1978,8 @@
     const sun = el('div', 'bg-chips'); const sb = el('button', 'bg-chip' + (PLAN.sunday ? ' on' : ''), PLAN.sunday ? 'Sunday 6 p.m. planning: on' : 'Sunday 6 p.m. planning: off'); sb.type = 'button';
     sb.addEventListener('click', () => { PLAN.sunday = !PLAN.sunday; savePlan(); syncPlanSoon(); drawDrawer(); }); sun.appendChild(sb); box.appendChild(sun);
     box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone. When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
+    // The to-do list and calendar come first, so people can dive straight into the work.
+    const kids = [...box.childNodes]; box.prepend(...kids.slice(iGoals, iGoalsEnd), ...kids.slice(iRem, iRemEnd));
     return box;
   }
   // ---- Share my week: friends see your goals (and reminders, if you choose) and can encourage you ----
