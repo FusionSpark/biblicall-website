@@ -2291,7 +2291,7 @@
   }
   function nsBlocks(ns) {
     if (!ns || !ns.verses) return [];
-    const b = [{ h: '✦ North Star' }, { p: ns.teach }];
+    const b = [{ h: 'North Star' }, { p: ns.teach }];
     ns.verses.forEach((v) => { b.push({ q: '“' + v.text + '”', ref: v.label + ' (' + (v.tr || 'KJV') + ')' }); if (v.why) b.push({ p: v.why }); });
     if (ns.reflect) b.push({ p: ns.reflect, i: true });
     return b;
