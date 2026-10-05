@@ -249,6 +249,18 @@
   .acct-btn.ghost{background:transparent;color:var(--earth);border:1.5px solid var(--earth)}
   .reader .rbody .acct-btn{display:block;margin:16px auto 4px}
   .grp-join input{flex:1 1 100%}
+  .dr-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .dr-tabs::-webkit-scrollbar{display:none}
+  .dr-tabs button{flex:none !important;padding:8px 9px !important}
+  .pz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+  .pz-thumb{padding:0;border:3px solid transparent;border-radius:10px;overflow:hidden;aspect-ratio:4/5;background:#cfd9e3;cursor:pointer}
+  .pz-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .pz-thumb.on{border-color:#664336}
+  .pz-music{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;margin:8px 0;padding-right:2px}
+  .pz-piece{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#2c2117;font-family:inherit;cursor:pointer}
+  .pz-piece b{font-size:15.5px}
+  .pz-piece small{font-size:13px;color:#5b6b78}
+  .pz-piece.on{border-color:#664336;background:#f6eee8}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -701,6 +713,15 @@
       next: function () { if (!started) return; S.pin = null; lset('bc_bg', S); show(); schedule(); },
       keep: function () { if (cur < 0) return; S.pin = key(cur); lset('bc_bg', S); schedule(); },
       unkeep: function () { S.pin = null; lset('bc_bg', S); schedule(); },
+      // Choose one photo yourself: it stays until you pick another or go back to rotating photos.
+      pick: function (i) {
+        if (!P[i]) return; S.pin = key(i);
+        if (S.style === 'animated' || S.style === 'plain' || (S.style === 'favs' && S.favs.indexOf(key(i)) < 0) || (S.style !== 'all' && S.style !== 'favs' && cat(i) !== S.style)) S.style = 'all';
+        lset('bc_bg', S); if (!started) start(); else { show(i); schedule(); }
+      },
+      thumb: function (i) { var p = P[i]; if (!p) return ''; if (p[0] === 'u') return 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&w=240&h=300&q=60'; return (p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org') + '/archives/images/thumb300y/' + p[1] + '.jpg'; },
+      name: function (i) { var p = P[i]; if (!p) return ''; return p[0] === 'u' ? (p[4] || 'Sky') + ' \u00b7 ' + p[2] : p[3]; },
+      category: function (i) { return cat(i); },
       fav: function () {
         if (cur < 0) return; var k = key(cur), at = S.favs.indexOf(k);
         if (at >= 0) S.favs.splice(at, 1); else S.favs.push(k);
@@ -739,6 +760,7 @@
     function count(mood, inst) { return all.filter(function (t) { return match(t, mood, inst); }).length; }
     function build() {
       note = '';
+      if (M.pick) { var pk = all.filter(function (t) { return t[0] === M.pick; }); if (pk.length) { list = pk; at = 0; return; } M.pick = null; }
       list = all.filter(function (t) { return match(t, M.mood, M.inst); });
       if (!list.length) { list = all.filter(function (t) { return match(t, 'any', M.inst); }); note = 'No ' + label(MOODS, M.mood).toLowerCase() + ' pieces for that instrument yet, so playing all of its pieces.'; }
       if (!list.length) list = all.slice();
@@ -800,12 +822,16 @@
       stop: function () { on = false; ramp(0, 600, function () { if (!on) a.pause(); }); ui(); },
       toggle: function () { if (on) api.stop(); else api.start(); },
       next: function () { if (!list.length) build(); at++; load(); if (on) play(); },
-      set: function (patch) { Object.assign(M, patch); lset('bc_music', M); build(); load(); if (on) play(); },
+      set: function (patch) { Object.assign(M, patch); if ('mood' in patch || 'inst' in patch) M.pick = null; lset('bc_music', M); build(); load(); if (on) play(); },
+      // Choose one piece yourself: it plays (and repeats) until you go back to shuffle.
+      pick: function (title) { M.pick = title || null; lset('bc_music', M); build(); load(); if (on) play(); else api.start(); },
+      picked: function () { return M.pick || null; },
+      pieces: function (mood, inst) { return all.filter(function (t) { return match(t, mood || 'any', inst || 'any'); }).map(function (t) { return { title: t[0], by: SRC[t[1]].by }; }); },
       setVol: function (v) { M.vol = v; lset('bc_music', M); clearInterval(fade); if (on && mode !== 'mute') { level = target(); applyLevel(); } }
     };
     window.BC_MUSIC = api;
     build();
-    document.addEventListener('DOMContentLoaded', function () { ui(); var b = document.getElementById('musicBtn'); if (b) b.addEventListener('click', function () { api.toggle(); if (on && !lget('bc_music_tip', false)) { lset('bc_music_tip', true); if (window.toast) window.toast('Choose a mood and instrument in \u2630 \u2192 Style'); } }); });
+    document.addEventListener('DOMContentLoaded', function () { ui(); var b = document.getElementById('musicBtn'); if (b) b.addEventListener('click', function () { api.toggle(); if (on && !lget('bc_music_tip', false)) { lset('bc_music_tip', true); if (window.toast) window.toast('Choose a mood and instrument in \u2630 \u2192 Personalize'); } }); });
   })();
 </script>
 
@@ -816,7 +842,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="prayer">Prayer</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Me</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="prayer">Prayer</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Personalize</button><button type="button" data-tab="account">Me</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -2403,6 +2429,7 @@
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
   // ---- Style tab: background photos and soft music ----
+  let pzGallery = false, pzCat = 'sky', pzMusic = false;
   function drawStyle() {
     const box = el('div', 'bgset');
     const BG = window.BC_BG, MU = window.BC_MUSIC;
@@ -2422,6 +2449,32 @@
     chips([['all', 'All photos'], ['sky', 'Skies (' + n.sky + ')'], ['space', 'Space (' + n.space + ')'], ['wonders', 'Wonders of the world (' + n.wonders + ')'],
            ['favs', '♥ My favorites (' + n.favs + ')'], ['animated', 'Animated sky'], ['plain', 'Calm, no photos']],
       s.style, (v) => BG.set({ style: v }));
+    // Choose your own photo from the library
+    {
+      const row = el('div', 'bg-chips');
+      const gb = el('button', 'bg-chip' + (pzGallery ? ' on' : ''), pzGallery ? 'Close the photo library' : '\ud83d\uddbc Choose my own photo'); gb.type = 'button';
+      gb.addEventListener('click', () => { pzGallery = !pzGallery; drawDrawer(); }); row.appendChild(gb);
+      if (s.pin != null) { const back = el('button', 'bg-chip', 'Back to rotating photos'); back.type = 'button'; back.addEventListener('click', () => { BG.unkeep(); BG.next(); setTimeout(drawDrawer, 50); }); row.appendChild(back); }
+      box.appendChild(row);
+      if (pzGallery) {
+        const cats = [['sky', 'Skies'], ['space', 'Space'], ['wonders', 'Wonders'], ['favs', '\u2665 Favorites']];
+        const crow = el('div', 'bg-chips');
+        cats.forEach(([v, l]) => { const c = el('button', 'bg-chip' + (pzCat === v ? ' on' : ''), l); c.type = 'button'; c.addEventListener('click', () => { pzCat = v; drawDrawer(); }); crow.appendChild(c); });
+        box.appendChild(crow);
+        const grid = el('div', 'pz-grid'), cur = BG.current();
+        BG.list.forEach((p, i) => {
+          const inCat = pzCat === 'favs' ? s.favs.indexOf(p[1]) >= 0 : BG.category(i) === pzCat;
+          if (!inCat) return;
+          const b = el('button', 'pz-thumb' + (i === cur ? ' on' : '')); b.type = 'button'; b.title = BG.name(i); b.setAttribute('aria-label', BG.name(i));
+          const im = el('img'); im.loading = 'lazy'; im.alt = ''; im.src = BG.thumb(i); b.appendChild(im);
+          b.addEventListener('click', () => { BG.pick(i); toast('Your photo: ' + BG.name(i)); setTimeout(drawDrawer, 80); });
+          grid.appendChild(b);
+        });
+        if (!grid.children.length) box.appendChild(el('p', 'acct-fine', 'No favorites yet. Tap the \u2661 next to a photo credit to save one.'));
+        box.appendChild(grid);
+        box.appendChild(el('p', 'acct-fine', 'Every photo is free to use and credited to its photographer. The one you choose stays until you pick another.'));
+      }
+    }
     if (s.style === 'favs' && !n.favs) box.appendChild(el('p', 'acct-fine', 'Tap the ♡ next to any photo credit (top right) to save favorites. Until then, all photos show.'));
     const photo = s.style !== 'animated' && s.style !== 'plain';
     if (photo) {
@@ -2477,6 +2530,25 @@
       box.appendChild(el('h4', 'bg-sub', 'Instrument'));
       chips(MU.INST.map(([v, l]) => [v, v === 'any' ? l : l + ' (' + MU.count(m.mood, v) + ')']), m.inst, (v) => MU.set({ inst: v }));
       if (m.note) box.appendChild(el('p', 'acct-fine', m.note));
+      {
+        const picked = MU.picked(), row = el('div', 'bg-chips');
+        const lb = el('button', 'bg-chip' + (pzMusic ? ' on' : ''), pzMusic ? 'Close the music list' : '\ud83c\udfb5 Choose my own piece'); lb.type = 'button';
+        lb.addEventListener('click', () => { pzMusic = !pzMusic; drawDrawer(); }); row.appendChild(lb);
+        if (picked) { const sh = el('button', 'bg-chip', 'Back to shuffle'); sh.type = 'button'; sh.addEventListener('click', () => { MU.pick(null); toast('Back to shuffle.'); setTimeout(drawDrawer, 50); }); row.appendChild(sh); }
+        box.appendChild(row);
+        if (picked) box.appendChild(el('p', 'acct-fine', 'Playing only \u201c' + picked + '\u201d, on repeat.'));
+        if (pzMusic) {
+          const listBox = el('div', 'pz-music');
+          MU.pieces(m.mood, m.inst).forEach((t) => {
+            const r = el('button', 'pz-piece' + (picked === t.title ? ' on' : '')); r.type = 'button';
+            r.append(el('b', null, (picked === t.title ? '\u25b6 ' : '') + t.title), el('small', null, t.by));
+            r.addEventListener('click', () => { MU.pick(t.title); toast('Now playing: ' + t.title); setTimeout(drawDrawer, 80); });
+            listBox.appendChild(r);
+          });
+          box.appendChild(listBox);
+          box.appendChild(el('p', 'acct-fine', 'Showing pieces for the mood and instrument chosen above. All are royalty free.'));
+        }
+      }
       const vr = el('div', 'bg-vol');
       const vl = el('label', null, 'Volume'); vl.htmlFor = 'bgVol';
       const vol = el('input'); vol.type = 'range'; vol.id = 'bgVol'; vol.min = '0'; vol.max = '1'; vol.step = '0.05'; vol.value = m.vol;
