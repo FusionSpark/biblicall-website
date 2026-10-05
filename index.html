@@ -467,6 +467,8 @@
   .svcard .svx{position:absolute;top:6px;right:10px;background:none;border:0;font-size:24px;line-height:1;color:#7a6a60;cursor:pointer}
   .svcard .svfree{margin:8px 0 0;font-size:14px;color:#5b6b78}
   body.sharedverse .intro{margin-bottom:18px}
+  body.sharedverse .installtip{display:none !important}
+  @media (max-width:600px){.svcard{padding:18px 16px 14px}.svcard blockquote{font-size:18px}.svcard .svk{font-size:12px}body.sharedverse .intro{font-size:18px;margin-bottom:12px}}
   body.chatting .svcard{display:none}
   .ns-dailyform{display:flex;gap:8px;flex-wrap:wrap;width:100%}
   .ns-dailyform input{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
@@ -895,7 +897,7 @@
     const v = lookupVerse(ref.slice(0, 40), B, key); if (!v) return;
     const card = document.getElementById('svCard');
     card.innerHTML = '<button type="button" class="svx" aria-label="Close">&times;</button>' +
-      '<p class="svk">\u2726 A friend shared a North Star with you</p>' +
+      '<p class="svk">\u2726 A North Star, shared with you</p>' +
       '<blockquote>\u201c' + escapeHtml(v.text) + '\u201d</blockquote>' +
       '<p class="svref"><b>' + escapeHtml(v.label) + '</b><span class="svok">\u2713 Verified in the ' + v.tr + '</span></p>' +
       '<button type="button" class="svgo">Ask Biblicall what this verse means for you</button>' +
@@ -2085,7 +2087,7 @@
     const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (iosDevice) {
       text.textContent = 'Keep Biblicall on your phone: tap Share, then “Add to Home Screen.”';
-      setTimeout(() => { if (!document.body.classList.contains('chatting')) tip.hidden = false; }, 3000);
+      setTimeout(() => { if (!document.body.classList.contains('chatting') && !document.body.classList.contains('sharedverse')) tip.hidden = false; }, 3000);
     }
     let deferred = null;
     window.addEventListener('beforeinstallprompt', (e) => {
