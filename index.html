@@ -221,6 +221,24 @@
   .reader .rbody sup{font-size:12px;font-weight:700;color:#7a8ba0;margin-right:4px}
   .reader .rbody .hl{background:#fff1c9;border-radius:6px;box-shadow:0 0 0 4px #fff1c9}
   .reader .rfoot{margin:0;padding:8px 16px 12px;font-size:13.5px;color:#5b6b78;border-top:1px solid #d9e6f2}
+  .dr-invite{padding:7px 12px !important;font-size:16px !important;margin-bottom:6px !important}
+  .dr-invite small{font-size:13.5px !important}
+  .plan-share{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+  .plan-share input[type=text]{flex:1 1 100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
+  .plan-share button{padding:10px 16px;border:0;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;margin-left:auto}
+  .plan-sharerem{display:flex;align-items:center;gap:6px;font-size:15.5px;color:var(--ink)}
+  .plan-sharerem input{width:20px;height:20px;accent-color:#664336}
+  .wk-prog{margin:0 0 6px;font-size:17px;font-weight:700;color:#4a2f26}
+  .wk-bar{height:8px;border-radius:99px;background:#e6dcd3;overflow:hidden;margin:0 0 12px}
+  .wk-bar i{display:block;height:100%;background:#664336;border-radius:99px}
+  .wk-list{list-style:none;margin:0 0 10px;padding:0;text-align:left}
+  .wk-list li{display:flex;gap:10px;padding:6px 2px;font-size:17px;line-height:1.35;border-bottom:1px solid #eee5dd}
+  .wk-list li span{flex:none;width:20px;color:#664336;font-weight:700}
+  .wk-list li.done{color:#7d7069;text-decoration:line-through}
+  .wk-sub{margin:12px 0 6px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#664336;text-align:left}
+  .wk-cheers{display:flex;flex-wrap:wrap;gap:8px}
+  .wk-cheers button{flex:1;min-width:130px;padding:10px 12px;border:1.5px solid #664336;border-radius:999px;background:#fff;color:#664336;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .wk-cheers button:disabled{opacity:.75}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -785,8 +803,8 @@
 <div class="drawer-back" id="drawerBack" hidden></div>
 <aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
-  <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite friends<small>Bring a friend into this conversation, live</small></span></button>
-  <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse and short reflection each morning, by email</small></span></button></div>
+  <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
+  <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
   <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
@@ -1659,7 +1677,7 @@
   // A new week: finished goals are cleared, unfinished ones carry over. Past reminders are tidied away.
   if (PLAN.week !== weekId()) { if (PLAN.week) PLAN.goals = PLAN.goals.filter((g) => !g.done); PLAN.week = weekId(); }
   PLAN.rems = PLAN.rems.filter((r) => r.at > Date.now() - 6 * 3600000);
-  function savePlan() { lsSet('bc_plan', PLAN); }
+  function savePlan() { lsSet('bc_plan', PLAN); if (PLAN.share && typeof shareUpdateSoon === 'function') shareUpdateSoon(); }
   savePlan();
   function planApi(op, extra) {
     return fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'plan', op, did: DEVICE, ...(extra || {}) }) }).then((r) => r.json()).catch(() => ({ error: 'offline' }));
@@ -1767,6 +1785,7 @@
     ask.addEventListener('click', () => { closeDrawer(); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); });
     box.appendChild(el('p', 'acct-fine', 'BibliCall can remind you of what matters and help you stay on track with work, family and faith. Nothing is sent unless you ask for it.'));
     box.appendChild(ask);
+    drawShareWeek(box);
     box.appendChild(el('h4', 'bg-sub', 'Reminders on this phone'));
     if (PLAN.push) {
       box.appendChild(el('p', 'acct-fine', '✓ Reminders are on.'));
@@ -1826,6 +1845,74 @@
     box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone. When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
     return box;
   }
+  // ---- Share my week: friends see your goals (and reminders, if you choose) and can encourage you ----
+  var shareTimer = null;
+  function shareUpdateSoon() { if (!PLAN.share) return; clearTimeout(shareTimer); shareTimer = setTimeout(() => shareSet(false), 1500); }
+  async function shareSet(open) {
+    const s = PLAN.share || {};
+    const r = await planApi('share.set', { name: s.name, showRems: !!s.showRems, goals: PLAN.goals, rems: PLAN.rems.filter((x) => x.at > Date.now()).map((x) => ({ at: x.at, text: x.text })) });
+    if (r && r.sid) { PLAN.share = Object.assign(s, { sid: r.sid, cheers: r.cheers || 0 }); lsSet('bc_plan', PLAN); }
+    else if (open) toast('Sharing didn’t work just now. Please try again.');
+    return r && r.sid;
+  }
+  async function sendWeekLink() {
+    const s = PLAN.share; if (!s || !s.sid) return;
+    const url = 'https://biblicall.com/?week=' + s.sid, text = s.name + ' shared this week’s goals with you on BibliCall. Cheer them on!';
+    stat('share_week');
+    if (navigator.share) { try { await navigator.share({ title: s.name + '’s week', text, url }); } catch (e) {} return; }
+    try { await navigator.clipboard.writeText(text + ' ' + url); toast('Link copied. Paste it in a text or email.'); } catch (e) { prompt('Copy this link:', url); }
+  }
+  function drawShareWeek(box) {
+    box.appendChild(el('h4', 'bg-sub', 'Share my week'));
+    const s = PLAN.share;
+    if (s && s.sid) {
+      box.appendChild(el('p', 'acct-fine', '✓ Shared as “' + s.name + '”' + (s.showRems ? ', with your reminders' : ', goals only') + '. Anyone with your link sees your progress as you check things off' + (s.cheers ? ' · ' + s.cheers + ' encouragement' + (s.cheers === 1 ? '' : 's') + ' so far' : '') + '.'));
+      const row = el('div', 'bg-chips');
+      const again = el('button', 'bg-chip on', 'Send the link'); again.type = 'button'; again.addEventListener('click', sendWeekLink);
+      const rem = el('button', 'bg-chip', s.showRems ? 'Hide my reminders' : 'Include my reminders'); rem.type = 'button';
+      rem.addEventListener('click', async () => { s.showRems = !s.showRems; await shareSet(true); drawDrawer(); });
+      const stop = el('button', 'bg-chip', 'Stop sharing'); stop.type = 'button';
+      stop.addEventListener('click', async () => { await planApi('share.stop'); PLAN.share = null; lsSet('bc_plan', PLAN); toast('Your week is private again.'); drawDrawer(); });
+      row.append(again, rem, stop); box.appendChild(row);
+      return;
+    }
+    box.appendChild(el('p', 'acct-fine', 'Let a friend, co-worker or family member see your goals and cheer you on. Your reminders stay private unless you include them.'));
+    const f = el('form', 'plan-share');
+    const n = el('input'); n.type = 'text'; n.maxLength = 30; n.placeholder = 'Your first name'; n.value = (typeof myName === 'function' ? myName() : '') || ''; n.setAttribute('aria-label', 'Your first name');
+    const lab = el('label', 'plan-sharerem'); const cb = el('input'); cb.type = 'checkbox'; lab.append(cb, ' Include my reminders');
+    const go = el('button', null, 'Share my week'); go.type = 'submit';
+    f.append(n, lab, go); box.appendChild(f);
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault(); const name = n.value.trim(); if (!name) { n.focus(); toast('Add your first name so they know who it’s from.'); return; }
+      if (!PLAN.goals.length) { toast('Add a goal or two first.'); return; }
+      go.disabled = true; PLAN.share = { name, showRems: cb.checked };
+      if (await shareSet(true)) { drawDrawer(); sendWeekLink(); } else { PLAN.share = null; go.disabled = false; }
+    });
+  }
+  // A friend opened a shared week.
+  (async function sharedWeek() {
+    const sid = new URLSearchParams(location.search).get('week'); if (!sid) return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    const w = await planApi('share.view', { sid });
+    const card = document.getElementById('svCard'); if (!card) return;
+    if (!w || w.error) { card.innerHTML = '<p class="svk">✦ BibliCall</p><blockquote>' + escapeHtml((w && w.error) || 'This week couldn’t be opened.') + '</blockquote>'; card.hidden = false; return; }
+    const done = w.goals.filter((g) => g.done).length, nm = escapeHtml(w.name);
+    card.innerHTML = '<button type="button" class="svx" aria-label="Close">&times;</button>' +
+      '<p class="svk">✦ ' + nm + '’s week</p>' +
+      '<p class="wk-prog">' + done + ' of ' + w.goals.length + ' goals done</p><div class="wk-bar"><i style="width:' + (w.goals.length ? Math.round(100 * done / w.goals.length) : 0) + '%"></i></div>' +
+      '<ul class="wk-list">' + w.goals.map((g) => '<li class="' + (g.done ? 'done' : '') + '"><span>' + (g.done ? '✓' : '○') + '</span>' + escapeHtml(g.t) + '</li>').join('') + '</ul>' +
+      (w.rems.length ? '<p class="wk-sub">Coming up</p><ul class="wk-list">' + w.rems.map((r) => '<li><span>⏰</span><b>' + escapeHtml(whenLabel(r.at)) + '</b>&nbsp;' + escapeHtml(r.text) + '</li>').join('') + '</ul>' : '') +
+      '<p class="wk-sub">Encourage ' + nm + '</p><div class="wk-cheers"><button type="button" data-k="pray">🙏 Praying for you</button><button type="button" data-k="clap">👏 Keep going!</button></div>' +
+      '<button type="button" class="svgo">Plan your own week with BibliCall</button><p class="svfree">Free. No sign-up needed.</p>';
+    card.hidden = false; document.body.classList.add('sharedverse'); stat('week_open');
+    card.querySelector('.svx').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); };
+    card.querySelectorAll('.wk-cheers button').forEach((b) => b.addEventListener('click', async () => {
+      card.querySelectorAll('.wk-cheers button').forEach((x) => { x.disabled = true; });
+      await planApi('share.cheer', { sid, kind: b.dataset.k, from: (typeof myName === 'function' ? myName() : '') || '' }); stat('cheer');
+      b.textContent = b.dataset.k === 'pray' ? '✓ ' + w.name + ' will know you’re praying' : '✓ Sent. ' + w.name + ' will see it';
+    }));
+    card.querySelector('.svgo').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); };
+  })();
   // ---- Uploads: photos, PDFs, Word and text files, sent to BibliCall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -1972,7 +2059,7 @@
 
   // ---- Saved conversations ----
   let convos = lsGet('bc_convos', []);
-  if (!convos.length && !/[?&](room|c|s|signin|open|plan)=/.test(location.search)) document.body.classList.add('firstvisit');
+  if (!convos.length && !/[?&](room|c|s|signin|open|plan|week)=/.test(location.search)) document.body.classList.add('firstvisit');
   if (!Array.isArray(convos)) convos = [];
   let convId = null, persistTimer = null;
   function schedulePersist() { clearTimeout(persistTimer); persistTimer = setTimeout(persistConvo, 400); }

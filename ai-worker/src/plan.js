@@ -38,6 +38,9 @@ export class Planner {
         const r = await s.get('rem:' + did + ':' + rid); if (r) await s.delete('rem:' + did + ':' + rid);
         return Response.json({ did, rem: r || null });
       }
+      case 'share.put': await s.put('share:' + d.sid, d.share); return Response.json({ ok: true });
+      case 'share.get': return Response.json((await s.get('share:' + d.sid)) || null);
+      case 'share.del': await s.delete('share:' + d.sid); return Response.json({ ok: true });
       case 'devs': { const m = await s.list({ prefix: 'dev:', start: d.start, limit: 1000 }); return Response.json([...m.entries()].map(([k, v]) => [k.slice(4), v])); }
     }
     return Response.json({ error: 'unknown op' }, { status: 400 });
@@ -89,6 +92,39 @@ export async function planOp(env, body) {
   }
   if (op === 'rem.del') return await call(env, { op: 'rem.del', did, rid: clean(body.rid, 24) });
   if (op === 'rem.list') return { reminders: await call(env, { op: 'rem.list', did }) };
+  // Share my week: a read-only page of your goals (and, if you choose, reminders) that friends can encourage.
+  if (op === 'share.view' || op === 'share.cheer') {
+    const sid = String(body.sid || '');
+    if (!/^[A-Za-z0-9_-]{8,24}$/.test(sid)) return { error: 'This link isn\u2019t valid.' };
+    const sh = await call(env, { op: 'share.get', sid });
+    if (!sh) return { error: 'This week is no longer shared.' };
+    if (op === 'share.view') return { name: sh.name, goals: sh.goals || [], rems: sh.showRems ? (sh.rems || []).filter((r) => r.at > Date.now() - 3600000) : [], updated: sh.updated, cheers: sh.cheers || 0 };
+    const day = new Date().toISOString().slice(0, 10);
+    if (sh.cheerDay !== day) { sh.cheerDay = day; sh.cheerToday = 0; }
+    if (sh.cheerToday >= 30) return { ok: true };
+    sh.cheerToday++; sh.cheers = (sh.cheers || 0) + 1;
+    await call(env, { op: 'share.put', sid, share: sh });
+    const from = clean(body.from, 30).replace(/[<>]/g, ''), kind = body.kind === 'pray' ? 'pray' : 'clap';
+    const dev = await call(env, { op: 'dev.get', did: sh.did });
+    await push(env, sh.did, dev, { title: kind === 'pray' ? '\ud83d\ude4f Someone is praying for you' : '\ud83d\udc4f Keep going!',
+      body: (from || 'A friend') + (kind === 'pray' ? ' is praying for you this week.' : ' saw your week and is cheering you on.'), url: '/?plan=1', tag: 'cheer' });
+    return { ok: true };
+  }
+  if (op === 'share.set') {
+    const dev = (await call(env, { op: 'dev.get', did })) || {};
+    let sid = dev.shareId;
+    if (!sid) { sid = crypto.randomUUID().replace(/-/g, '').slice(0, 14); await call(env, { op: 'dev.put', did, patch: { shareId: sid } }); }
+    const old = (await call(env, { op: 'share.get', sid })) || {};
+    const rems = (Array.isArray(body.rems) ? body.rems : []).slice(0, 20).map((r) => ({ at: +r.at || 0, text: clean(r && r.text, 160) })).filter((r) => r.text && r.at);
+    await call(env, { op: 'share.put', sid, share: { did, name: clean(body.name, 30) || old.name || 'A friend', goals: cleanGoals(body.goals), rems, showRems: !!body.showRems,
+      updated: Date.now(), cheers: old.cheers || 0, cheerDay: old.cheerDay, cheerToday: old.cheerToday || 0 } });
+    return { ok: true, sid, cheers: old.cheers || 0 };
+  }
+  if (op === 'share.stop') {
+    const dev = await call(env, { op: 'dev.get', did });
+    if (dev && dev.shareId) { await call(env, { op: 'share.del', sid: dev.shareId }); await call(env, { op: 'dev.put', did, patch: { shareId: null } }); }
+    return { ok: true };
+  }
   if (op === 'test') {
     const dev = await call(env, { op: 'dev.get', did });
     const r = await push(env, did, dev, { title: 'BibliCall', body: 'Reminders are on. I’ll only tap you on the shoulder when you’ve asked me to.', url: '/' });
