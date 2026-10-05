@@ -239,6 +239,16 @@
   .wk-cheers{display:flex;flex-wrap:wrap;gap:8px}
   .wk-cheers button{flex:1;min-width:130px;padding:10px 12px;border:1.5px solid #664336;border-radius:999px;background:#fff;color:#664336;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .wk-cheers button:disabled{opacity:.75}
+  .pr-since{font-size:14px;color:var(--muted);font-weight:500}
+  .pr-acts{margin:-2px 0 10px}
+  .pr-item.answered .mem-text b{color:#2f6b3a}
+  .plan-remadd select,.read-any{flex:1 1 60%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
+  .read-any{width:100%;margin:8px 0 4px}
+  .grp{margin:6px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+  .grp-title{display:block;font-size:17.5px;color:var(--earth-deep)}
+  .acct-btn.ghost{background:transparent;color:var(--earth);border:1.5px solid var(--earth)}
+  .reader .rbody .acct-btn{display:block;margin:16px auto 4px}
+  .grp-join input{flex:1 1 100%}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -806,7 +816,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="prayer">Prayer</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Me</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -985,6 +995,10 @@
     document.getElementById('rdPrev').disabled = rd.bi === 0 && rd.ch === 1;
     document.getElementById('rdNext').disabled = rd.bi === B.books.length - 1 && rd.ch === B.text[rd.bi].length;
     document.getElementById('readerFoot').textContent = (rd.key === 'kjv' ? 'King James Version' : 'Berean Standard Bible') + ' \u00b7 public domain';
+    if (rd.plan && PLAN.read && !PLAN.read.finished && rd.bi === PLAN.read.b && rd.ch === PLAN.read.ch) {
+      const mk = document.createElement('button'); mk.type = 'button'; mk.className = 'acct-btn'; mk.textContent = '\u2713 I read ' + B.books[rd.bi] + ' ' + rd.ch;
+      mk.addEventListener('click', () => { markRead(); mk.remove(); }); body.appendChild(mk);
+    }
     const hl = body.querySelector('.hl');
     if (scroll && hl) setTimeout(() => hl.scrollIntoView({ block: 'center' }), 30); else body.scrollTop = 0;
   }
@@ -1061,6 +1075,7 @@
       ctx + 'The user\'s latest message:\n"""' + question.slice(0, 2000) + '"""\n\n' + rule +
       'In 2 to 4 sentences, teach how biblical wisdom speaks to this exact situation, warm and never preachy. ' +
       'Then choose 1 or 2 Bible passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision), each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the Bible text and discarded if it does not match. If the person seems to be in crisis or deep pain (thoughts of suicide or self-harm, abuse, grief), choose only gentle passages of comfort, hope and God\'s nearness, never verses of judgment or duty, and make the question very gentle. Do not quote the verse text.\n\n' +
+      (langKey !== 'en' && LANG_NAME_EN[langKey] ? 'Write the northStar, every why and the reflect question in ' + LANG_NAME_EN[langKey] + ' (keep each ref as an English Bible reference like "John 3:16"). ' : '') +
       'Then reply with ONLY this JSON and nothing else:\n{"northStar": "2-4 sentences", "verses": [{"ref": "Book C:V", "why": "one sentence on why it applies"}], "reflect": "one short question for the user to ponder"}';
   }
   function parseJson(text) {
@@ -1473,6 +1488,7 @@
   function deviceVoice() {
     const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
     const prefer = ['Aaron', 'Daniel', 'Arthur', 'Reed', 'Evan', 'Nathan', 'Tom', 'Alex', 'Google UK English Male', 'Microsoft Guy', 'Microsoft Andrew', 'Microsoft David'];
+    if (langKey !== 'en') return voices.find((x) => x.lang && x.lang.toLowerCase().indexOf(langKey) === 0) || null;
     return prefer.map((n) => voices.find((x) => x.name.indexOf(n) === 0 && /^en/i.test(x.lang))).find(Boolean) || voices.find((x) => /^en/i.test(x.lang));
   }
   async function speakOnDevice(text, token) {
@@ -1482,7 +1498,7 @@
       if (!speaking || speaking.token !== token) return;
       await new Promise((res) => {
         const u = new SpeechSynthesisUtterance(sentence);
-        if (v) u.voice = v; u.rate = 0.9; u.pitch = 0.85;
+        if (v) u.voice = v; if (langKey !== 'en') u.lang = langKey; u.rate = 0.9; u.pitch = 0.85;
         u.onend = u.onerror = res;
         speechSynthesis.speak(u);
       });
@@ -1507,7 +1523,7 @@
     // Unlock audio on iPhone within this tap, before any waiting.
     try { player.src = SILENT; player.play().catch(() => {}); } catch (e) {}
     const token = {};
-    speaking = { msg: m, token, state: 'wait', device: false };
+    speaking = { msg: m, token, state: 'wait', device: langKey !== 'en' };
     refreshListenBtns();
     const queue = chunkText(answerText(m), 1700);
     let nsRead = false;
@@ -1589,7 +1605,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext() })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -1686,7 +1702,7 @@
     return fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'plan', op, did: DEVICE, ...(extra || {}) }) }).then((r) => r.json()).catch(() => ({ error: 'offline' }));
   }
   let planSyncTimer = null;
-  function syncPlanSoon() { if (!PLAN.push) return; clearTimeout(planSyncTimer); planSyncTimer = setTimeout(() => planApi('sync', { tz: TZ, checkin: PLAN.checkin, sunday: PLAN.sunday, goals: PLAN.goals }), 600); }
+  function syncPlanSoon() { if (!PLAN.push) return; clearTimeout(planSyncTimer); planSyncTimer = setTimeout(() => planApi('sync', { tz: TZ, checkin: PLAN.checkin, evening: PLAN.evening || '', reading: readLabel(), sunday: PLAN.sunday, goals: PLAN.goals }), 600); }
   function whenLabel(at) {
     const d = new Date(at), now = new Date(), day = new Date(d); day.setHours(0, 0, 0, 0); const today = new Date(now); today.setHours(0, 0, 0, 0);
     const diff = Math.round((day - today) / 86400000), time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -1719,7 +1735,7 @@
       if (!k || !k.pub) throw new Error('key');
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: unb64(k.pub) });
-      const r = await planApi('sync', { sub: sub.toJSON(), tz: TZ, checkin: PLAN.checkin, sunday: PLAN.sunday, goals: PLAN.goals });
+      const r = await planApi('sync', { sub: sub.toJSON(), tz: TZ, checkin: PLAN.checkin, evening: PLAN.evening || '', reading: readLabel(), sunday: PLAN.sunday, goals: PLAN.goals });
       if (!r || !r.ok) throw new Error((r && r.error) || 'sync');
       PLAN.push = true; savePlan(); stat('push_on');
       for (const rem of PLAN.rems.filter((x) => x.at > Date.now())) await planApi('rem.add', { ...rem });
@@ -1744,13 +1760,16 @@
     const local = new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + (TZ ? ' (' + TZ + ')' : '');
     const goals = PLAN.goals.map((g) => (g.done ? '[done] ' : '') + g.t).join('; ');
     const upcoming = PLAN.rems.filter((r) => r.at > Date.now()).slice(0, 8).map((r) => whenLabel(r.at) + ': ' + r.text).join('; ');
-    return { local, goals, upcoming };
+    const prs = (typeof prayers !== 'undefined' ? prayers : []).filter((p) => !p.ans).slice(0, 8).map((p) => p.t).join('; ');
+    const reading = PLAN.read && !PLAN.read.finished && BIBLE ? BIBLE.books[PLAN.read.b] + ', next chapter ' + PLAN.read.ch + ' of ' + readTotal() : '';
+    return { local, goals, upcoming, prayers: prs, reading };
   }
   // BibliCall can suggest reminders and goals at the end of an answer; they become buttons the person taps to confirm.
   function extractActs(text) {
     const acts = [];
-    const out = String(text).replace(/\[\[(remind|goal)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
+    const out = String(text).replace(/\[\[(remind|goal|prayer)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
       k = k.toLowerCase();
+      if (k === 'prayer') { const t = rest.trim(); if (t) acts.push({ k: 'prayer', text: t.slice(0, 200) }); return ''; }
       if (k === 'goal') { const t = rest.trim(); if (t) acts.push({ k: 'goal', text: t.slice(0, 140) }); return ''; }
       const rel = rest.match(/^\s*\+(\d{1,4})\s*([mh])\s*\|\s*(.+)$/i);
       if (rel) { const at = Date.now() + (+rel[1]) * (rel[2].toLowerCase() === 'h' ? 3600000 : 60000); acts.push({ k: 'remind', at, text: rel[3].trim().slice(0, 160) }); return ''; }
@@ -1774,8 +1793,11 @@
           b.addEventListener('click', async () => { const r = await addReminder({ at: a.at, text: a.text, conv: convId || '', kind: /\?\s*$/.test(a.text) ? 'follow' : 'task' }); if (r) { a.done = true; renderThread(); if (!PLAN.push) toast('Saved in My week. Turn on reminders there to get it on your phone.'); } });
           row.appendChild(b); row.appendChild(el('span', 'act-text', a.text));
         }
+      } else if (a.k === 'prayer') {
+        if (a.done) row.appendChild(el('span', 'act-done', '\u2713 In your prayer journal: ' + a.text));
+        else { const b = el('button', 'act-btn', '\ud83d\ude4f Add to my prayer journal'); b.type = 'button'; b.addEventListener('click', async () => { await addPrayer(a.text, 7); a.done = true; renderThread(); toast('Added. BibliCall will check in with you in a week.'); }); row.appendChild(b); row.appendChild(el('span', 'act-text', a.text)); }
       } else {
-        if (a.done) row.appendChild(el('span', 'act-done', '✓ Added to My week: ' + a.text));
+        if (a.done) row.appendChild(el('span', 'act-done', '\u2713 Added to My week: ' + a.text));
         else { const b = el('button', 'act-btn', '＋ Add to my week'); b.type = 'button'; b.addEventListener('click', () => { addGoal(a.text); a.done = true; renderThread(); }); row.appendChild(b); row.appendChild(el('span', 'act-text', a.text)); }
       }
       box.appendChild(row);
@@ -1788,6 +1810,9 @@
     ask.addEventListener('click', () => { closeDrawer(); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); });
     box.appendChild(el('p', 'acct-fine', 'BibliCall can remind you of what matters and help you stay on track with work, family and faith. Nothing is sent unless you ask for it.'));
     box.appendChild(ask);
+    const refl = el('button', 'acct-btn ghost', '\ud83c\udf19 Reflect on my day'); refl.type = 'button';
+    refl.addEventListener('click', () => { closeDrawer(); q.value = 'Guide me through a short evening reflection on my day.'; sendBtn.click(); });
+    box.appendChild(refl);
     drawShareWeek(box);
     box.appendChild(el('h4', 'bg-sub', 'Reminders on this phone'));
     if (PLAN.push) {
@@ -1818,6 +1843,8 @@
     const ga = el('button', null, 'Add'); ga.type = 'submit'; gf.append(gi, ga);
     gf.addEventListener('submit', (e) => { e.preventDefault(); if (addGoal(gi.value)) drawDrawer(); else gi.value = ''; });
     box.appendChild(gf);
+    drawReading(box);
+    drawGroups(box);
     box.appendChild(el('h4', 'bg-sub', 'Upcoming reminders'));
     const up = PLAN.rems.filter((r) => r.at > Date.now());
     if (!up.length) box.appendChild(el('p', 'acct-fine', 'None yet. Tell BibliCall what you need to do and when, or add one here.'));
@@ -1836,13 +1863,19 @@
     rf.addEventListener('submit', async (e) => { e.preventDefault(); if (!ri.value.trim() || !rt.value) return; const at = new Date(rt.value).getTime(); if (await addReminder({ at, text: ri.value.trim() })) { toast('Reminder set for ' + whenLabel(at) + '.'); drawDrawer(); } });
     box.appendChild(rf);
     box.appendChild(el('h4', 'bg-sub', 'Gentle check-ins'));
-    box.appendChild(el('p', 'acct-fine', 'A short morning note with your week’s progress, and an invitation on Sunday evening to plan the week ahead.' + (PLAN.push ? '' : ' (Turn on reminders above to receive them.)')));
+    box.appendChild(el('p', 'acct-fine', 'A short morning note with your week’s progress and today’s reading, an evening invitation to reflect on your day, and on Sunday evening an invitation to plan the week ahead.' + (PLAN.push ? '' : ' (Turn on reminders above to receive them.)')));
     const ck = el('div', 'bg-chips');
     [['', 'Morning: off'], ['06:30', '6:30'], ['07:00', '7:00'], ['07:30', '7:30'], ['08:00', '8:00'], ['09:00', '9:00']].forEach(([v, l]) => {
       const b = el('button', 'bg-chip' + (PLAN.checkin === v ? ' on' : ''), l); b.type = 'button';
       b.addEventListener('click', () => { PLAN.checkin = v; savePlan(); syncPlanSoon(); drawDrawer(); }); ck.appendChild(b);
     });
     box.appendChild(ck);
+    const ev = el('div', 'bg-chips');
+    [['', 'Evening: off'], ['20:00', '8:00 pm'], ['20:30', '8:30'], ['21:00', '9:00'], ['21:30', '9:30']].forEach(([v, l]) => {
+      const b = el('button', 'bg-chip' + ((PLAN.evening || '') === v ? ' on' : ''), l); b.type = 'button';
+      b.addEventListener('click', () => { PLAN.evening = v; savePlan(); syncPlanSoon(); drawDrawer(); }); ev.appendChild(b);
+    });
+    box.appendChild(ev);
     const sun = el('div', 'bg-chips'); const sb = el('button', 'bg-chip' + (PLAN.sunday ? ' on' : ''), PLAN.sunday ? 'Sunday 6 p.m. planning: on' : 'Sunday 6 p.m. planning: off'); sb.type = 'button';
     sb.addEventListener('click', () => { PLAN.sunday = !PLAN.sunday; savePlan(); syncPlanSoon(); drawDrawer(); }); sun.appendChild(sb); box.appendChild(sun);
     box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone. When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
@@ -1916,6 +1949,218 @@
     }));
     card.querySelector('.svgo').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); };
   })();
+  // ---- Language: BibliCall answers (and greets) in the language each person chooses ----
+  const LANG_LIST = [['en', 'English'], ['es', 'Español'], ['pt', 'Português'], ['fr', 'Français'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pl', 'Polski'], ['uk', 'Українська'], ['ru', 'Русский'],
+    ['zh', '中文'], ['ko', '한국어'], ['ja', '日本語'], ['tl', 'Tagalog'], ['vi', 'Tiếng Việt'], ['id', 'Bahasa Indonesia'], ['hi', 'हिन्दी'], ['sw', 'Kiswahili'], ['ar', 'العربية']];
+  const UI_TEXT = {
+    es: ['Pregunta lo que quieras. Encuentra tu Estrella del Norte.', 'Pregunta lo que quieras…'], pt: ['Pergunte qualquer coisa. Encontre sua Estrela do Norte.', 'Pergunte qualquer coisa…'],
+    fr: ['Demandez ce que vous voulez. Trouvez votre étoile du Nord.', 'Demandez ce que vous voulez…'], de: ['Frag, was du willst. Finde deinen Nordstern.', 'Frag, was du willst…'],
+    it: ['Chiedi qualsiasi cosa. Trova la tua Stella Polare.', 'Chiedi qualsiasi cosa…'], pl: ['Zapytaj o cokolwiek. Odnajdź swoją Gwiazdę Polarną.', 'Zapytaj o cokolwiek…'],
+    uk: ['Запитуй будь-що. Знайди свою Полярну зорю.', 'Запитуй будь-що…'], ru: ['Спрашивайте о чём угодно. Найдите свою Полярную звезду.', 'Спросите о чём угодно…'],
+    zh: ['有问必答。找到你的北极星。', '问任何问题…'], ko: ['무엇이든 물어보세요. 당신의 북극성을 찾으세요.', '무엇이든 물어보세요…'], ja: ['何でも聞いてください。あなたの北極星を見つけましょう。', '何でも聞いてください…'],
+    tl: ['Itanong ang kahit ano. Hanapin ang iyong North Star.', 'Itanong ang kahit ano…'], vi: ['Hỏi bất cứ điều gì. Tìm Sao Bắc Đẩu của bạn.', 'Hỏi bất cứ điều gì…'],
+    id: ['Tanyakan apa saja. Temukan Bintang Utara Anda.', 'Tanyakan apa saja…'], hi: ['कुछ भी पूछें। अपना ध्रुव तारा खोजें।', 'कुछ भी पूछें…'],
+    sw: ['Uliza chochote. Pata Nyota yako ya Kaskazini.', 'Uliza chochote…'], ar: ['اسأل أي شيء. اعثر على نجمك الشمالي.', 'اسأل أي شيء…']
+  };
+  const LANG_NAME_EN = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', pl: 'Polish', uk: 'Ukrainian', ru: 'Russian', zh: 'Chinese (Simplified)', ko: 'Korean', ja: 'Japanese', tl: 'Tagalog', vi: 'Vietnamese', id: 'Indonesian', hi: 'Hindi', sw: 'Swahili', ar: 'Arabic' };
+  let langKey = (() => {
+    const v = lsGet('bc_lang', ''); if (LANG_LIST.some((l) => l[0] === v)) return v;
+    const nav = String(navigator.language || 'en').slice(0, 2).toLowerCase(); return LANG_LIST.some((l) => l[0] === nav) ? nav : 'en';
+  })();
+  function applyLang() {
+    const t = UI_TEXT[langKey], intro = document.querySelector('.intro');
+    if (intro) intro.textContent = t ? t[0] : 'Ask anything. Find your North Star.';
+    document.documentElement.lang = langKey; document.documentElement.dir = langKey === 'ar' ? 'rtl' : 'ltr';
+    try { setPlaceholder(); } catch (e) {}
+  }
+  window.BC_LANG = { list: LANG_LIST, get: () => langKey, set: (k) => { if (!LANG_LIST.some((l) => l[0] === k)) return; langKey = k; lsSet('bc_lang', k); applyLang(); } };
+  // ---- Reading plan: a book of the Bible, a chapter a day ----
+  const READ_SUGGEST = ['John', 'Mark', 'Psalms', 'Proverbs', 'Acts', 'Romans', 'Genesis', 'James', 'Philippians', 'Ephesians'];
+  function readLabel() { if (!PLAN.read || !BIBLE) return ''; const b = BIBLE.books[PLAN.read.b]; return b ? b + ' ' + PLAN.read.ch : ''; }
+  function readTotal() { return PLAN.read && BIBLE && BIBLE.text[PLAN.read.b] ? BIBLE.text[PLAN.read.b].length : 0; }
+  async function openChapterAt(bi, ch) {
+    const B = await getBible(bibleKey); if (!B || !B.text[bi] || !B.text[bi][ch - 1]) return;
+    rd = { B, key: bibleKey, bi, ch, hl: null, plan: true }; drawChapter(false); readerWin.showModal(); stat('read_chapter');
+  }
+  function markRead() {
+    const total = readTotal(); PLAN.read.last = Date.now(); stat('read_plan');
+    if (PLAN.read.ch >= total) { PLAN.read.finished = Date.now(); toast('You finished ' + BIBLE.books[PLAN.read.b] + '! Well done, good and faithful servant.'); }
+    else { PLAN.read.ch++; toast('✓ Read. Tomorrow: ' + readLabel() + '.'); }
+    savePlan(); syncPlanSoon(); if (!drawer.hidden && drTab === 'plan') drawDrawer();
+  }
+  function drawReading(box) {
+    box.appendChild(el('h4', 'bg-sub', 'Bible reading plan'));
+    if (!BIBLE) { box.appendChild(el('p', 'acct-fine', 'Loading…')); loadBible().then(() => { if (!drawer.hidden && drTab === 'plan') drawDrawer(); }); return; }
+    if (PLAN.read && !PLAN.read.finished) {
+      const total = readTotal(), b = BIBLE.books[PLAN.read.b], doneCh = PLAN.read.ch - 1;
+      const readToday = PLAN.read.last && new Date(PLAN.read.last).toDateString() === new Date().toDateString();
+      box.appendChild(el('p', 'acct-fine', b + ': ' + doneCh + ' of ' + total + ' chapters read' + (readToday ? ' · ✓ today’s chapter is done' : '') + '.'));
+      const bar = el('div', 'wk-bar'); const fill = el('i'); fill.style.width = Math.round(100 * doneCh / total) + '%'; bar.appendChild(fill); box.appendChild(bar);
+      const go = el('button', 'acct-btn', '📖 Read ' + readLabel()); go.type = 'button'; go.addEventListener('click', () => openChapterAt(PLAN.read.b, PLAN.read.ch)); box.appendChild(go);
+      const row = el('div', 'bg-chips'); const stop = el('button', 'bg-chip', 'Choose another book'); stop.type = 'button';
+      stop.addEventListener('click', () => { PLAN.read = null; savePlan(); syncPlanSoon(); drawDrawer(); }); row.appendChild(stop); box.appendChild(row);
+      return;
+    }
+    if (PLAN.read && PLAN.read.finished) box.appendChild(el('p', 'acct-fine', '✓ You finished ' + BIBLE.books[PLAN.read.b] + '. Choose your next book:'));
+    else box.appendChild(el('p', 'acct-fine', 'Read through a book of the Bible, one chapter a day. Your morning check-in will remind you of today’s chapter.'));
+    const chips = el('div', 'bg-chips');
+    READ_SUGGEST.forEach((name) => {
+      const bi = bookIndex(name, BIBLE); if (bi < 0) return;
+      const c = el('button', 'bg-chip', name + ' · ' + BIBLE.text[bi].length); c.type = 'button';
+      c.addEventListener('click', () => { PLAN.read = { b: bi, ch: 1, start: Date.now() }; savePlan(); syncPlanSoon(); toast('Your plan: ' + name + ', a chapter a day.'); drawDrawer(); });
+      chips.appendChild(c);
+    });
+    box.appendChild(chips);
+    const sel = el('select', 'read-any'); sel.setAttribute('aria-label', 'Any book of the Bible');
+    const o0 = el('option', null, 'Or choose any book…'); o0.value = ''; sel.appendChild(o0);
+    BIBLE.books.forEach((b, i) => { const o = el('option', null, b); o.value = i; sel.appendChild(o); });
+    sel.addEventListener('change', () => { if (sel.value === '') return; PLAN.read = { b: +sel.value, ch: 1, start: Date.now() }; savePlan(); syncPlanSoon(); drawDrawer(); });
+    box.appendChild(sel);
+  }
+  // ---- Family & small groups: one shared week everyone in the group can see, add to and check off ----
+  if (!Array.isArray(PLAN.groups)) PLAN.groups = [];
+  const groupCache = {};
+  async function loadGroup(gid) { const r = await planApi('grp.view', { gid, name: myName() }); if (r && r.group) groupCache[gid] = r.group; else if (r && r.error) groupCache[gid] = { error: r.error }; return groupCache[gid]; }
+  async function groupOp(op, gid, extra) {
+    const r = await planApi(op, { gid, name: myName(), ...(extra || {}) });
+    if (r && r.group) groupCache[gid] = r.group; else if (r && r.error) toast(r.error);
+    if (!drawer.hidden && drTab === 'plan') drawDrawer(); return r;
+  }
+  function groupLink(g) { return 'https://biblicall.com/?group=' + g.gid; }
+  async function inviteToGroup(g) {
+    const url = groupLink(g), text = 'Join “' + g.title + '” on BibliCall: our shared goals for this week.'; stat('group_invite');
+    if (navigator.share) { try { await navigator.share({ title: g.title, text, url }); } catch (e) {} return; }
+    try { await navigator.clipboard.writeText(text + ' ' + url); toast('Link copied. Paste it in a text or email.'); } catch (e) { prompt('Copy this link:', url); }
+  }
+  function drawGroups(box) {
+    box.appendChild(el('h4', 'bg-sub', 'Family & groups'));
+    PLAN.groups.forEach((g) => {
+      const v = groupCache[g.gid];
+      const card = el('div', 'grp');
+      card.appendChild(el('b', 'grp-title', g.title));
+      if (!v) { card.appendChild(el('p', 'acct-fine', 'Loading…')); loadGroup(g.gid).then(() => { if (!drawer.hidden && drTab === 'plan') drawDrawer(); }); box.appendChild(card); return; }
+      if (v.error) { card.appendChild(el('p', 'acct-fine', v.error)); }
+      else {
+        const d = v.goals.filter((x) => x.done).length;
+        card.appendChild(el('p', 'acct-fine', v.members.join(', ') + ' · ' + d + ' of ' + v.goals.length + ' done'));
+        v.goals.forEach((x) => {
+          const row = el('div', 'dr-item plan-goal' + (x.done ? ' done' : ''));
+          const cb = el('input'); cb.type = 'checkbox'; cb.checked = x.done; cb.setAttribute('aria-label', 'Done');
+          cb.addEventListener('change', () => { groupOp('grp.toggle', g.gid, { id: x.id }); if (cb.checked) toast('Well done! The group will see it.'); });
+          const lab = el('div', 'mem-text'); lab.append(x.t, el('small', 'pr-since', ' · ' + (x.done && x.doneBy ? '✓ ' + x.doneBy : x.by)));
+          const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove');
+          del.addEventListener('click', () => groupOp('grp.del', g.gid, { id: x.id }));
+          row.append(cb, lab, del); card.appendChild(row);
+        });
+        const f = el('form', 'mem-add'); const i = el('input'); i.type = 'text'; i.maxLength = 140; i.placeholder = 'Add a shared goal'; const a = el('button', null, 'Add'); a.type = 'submit'; f.append(i, a);
+        f.addEventListener('submit', (e) => { e.preventDefault(); if (i.value.trim()) groupOp('grp.add', g.gid, { t: i.value.trim() }); });
+        card.appendChild(f);
+      }
+      const row = el('div', 'bg-chips');
+      const inv = el('button', 'bg-chip on', 'Invite someone'); inv.type = 'button'; inv.addEventListener('click', () => inviteToGroup(g));
+      const lv = el('button', 'bg-chip', 'Leave'); lv.type = 'button';
+      lv.addEventListener('click', async () => { await planApi('grp.leave', { gid: g.gid }); PLAN.groups = PLAN.groups.filter((x) => x.gid !== g.gid); savePlan(); drawDrawer(); });
+      row.append(inv, lv); card.appendChild(row);
+      box.appendChild(card);
+    });
+    box.appendChild(el('p', 'acct-fine', 'Make a shared week for your family, team or Bible study group. Everyone can add goals and check them off together.'));
+    const f = el('form', 'plan-share');
+    const t = el('input'); t.type = 'text'; t.maxLength = 60; t.placeholder = 'Name it, e.g. Our family week'; t.setAttribute('aria-label', 'Group name');
+    const n = el('input'); n.type = 'text'; n.maxLength = 30; n.placeholder = 'Your first name'; n.value = myName(); n.setAttribute('aria-label', 'Your first name');
+    const go = el('button', null, 'Start a shared week'); go.type = 'submit'; f.append(t, n, go); box.appendChild(f);
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault(); if (!t.value.trim() || !n.value.trim()) { toast('Add a name for the group and your first name.'); return; }
+      setMyName(n.value.trim()); go.disabled = true;
+      const r = await planApi('grp.create', { title: t.value.trim(), name: n.value.trim() });
+      if (r && r.gid) { const g = { gid: r.gid, title: r.group.title }; groupCache[r.gid] = r.group; PLAN.groups.push(g); savePlan(); stat('group_create'); drawDrawer(); inviteToGroup(g); }
+      else { go.disabled = false; toast((r && r.error) || 'That didn’t work. Please try again.'); }
+    });
+  }
+  // Someone opened a group invitation.
+  (async function groupInvite() {
+    const gid = new URLSearchParams(location.search).get('group'); if (!gid) return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    const card = document.getElementById('svCard'); if (!card) return;
+    if (PLAN.groups.some((g) => g.gid === gid)) { setTimeout(() => openDrawer('plan'), 400); return; }
+    const r = await planApi('grp.view', { gid });
+    if (!r || !r.group) { card.innerHTML = '<p class="svk">✦ BibliCall</p><blockquote>' + escapeHtml((r && r.error) || 'This invitation couldn’t be opened.') + '</blockquote>'; card.hidden = false; return; }
+    const v = r.group;
+    card.innerHTML = '<button type="button" class="svx" aria-label="Close">&times;</button><p class="svk">✦ You’re invited</p>' +
+      '<p class="wk-prog">' + escapeHtml(v.title) + '</p><p class="svref">' + escapeHtml(v.members.join(', ')) + '</p>' +
+      (v.goals.length ? '<ul class="wk-list">' + v.goals.map((g) => '<li class="' + (g.done ? 'done' : '') + '"><span>' + (g.done ? '✓' : '○') + '</span>' + escapeHtml(g.t) + '</li>').join('') + '</ul>' : '') +
+      '<form class="plan-share grp-join"><input type="text" maxlength="30" placeholder="Your first name" aria-label="Your first name"><button type="submit">Join this week</button></form><p class="svfree">Free. No sign-up needed.</p>';
+    card.hidden = false; document.body.classList.add('sharedverse'); stat('group_open');
+    const inp = card.querySelector('input'); inp.value = myName();
+    card.querySelector('.svx').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); };
+    card.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault(); const nm = inp.value.trim(); if (!nm) { inp.focus(); return; } setMyName(nm);
+      const j = await planApi('grp.join', { gid, name: nm });
+      if (j && j.group) { groupCache[gid] = j.group; PLAN.groups.push({ gid, title: j.group.title }); savePlan(); stat('group_join'); card.hidden = true; document.body.classList.remove('sharedverse'); toast('You joined ' + j.group.title + '.'); openDrawer('plan'); }
+      else toast((j && j.error) || 'That didn’t work. Please try again.');
+    });
+  })();
+  // ---- Prayer journal: what you're carrying to God, gentle check-ins, and a record of answered prayers ----
+  let prayers = lsGet('bc_prayers', []); if (!Array.isArray(prayers)) prayers = [];
+  function savePrayers() { lsSet('bc_prayers', prayers); }
+  async function addPrayer(t, days) {
+    t = String(t || '').trim().slice(0, 200); if (!t) return null;
+    if (prayers.some((p) => !p.ans && p.t.toLowerCase() === t.toLowerCase())) return null;
+    const p = { id: Math.random().toString(36).slice(2, 10), t, at: Date.now(), ans: null, note: '' };
+    prayers.unshift(p); savePrayers(); stat('prayer_add');
+    if (days > 0) {
+      const when = new Date(Date.now() + days * 86400000); when.setHours(9, 0, 0, 0);
+      const r = await addReminder({ at: when.getTime(), text: 'You’ve been praying for ' + (t.length > 70 ? t.slice(0, 70) + '…' : t) + '. How is it going? Tap to update your prayer journal.', conv: 'p_' + p.id, kind: 'follow' });
+      if (r) { p.fu = r.rid; savePrayers(); }
+    }
+    return p;
+  }
+  function prayerDone(p) { if (p.fu) { removeReminder(p.fu); p.fu = null; } }
+  function sinceLabel(ms) { const d = Math.floor((Date.now() - ms) / 86400000); return d < 1 ? 'today' : d === 1 ? 'yesterday' : d < 14 ? d + ' days' : new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric', year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
+  let prayerOpen = null; // id of a prayer showing its "how was it answered?" box
+  function drawPrayer() {
+    const box = el('div', 'plan prayer');
+    box.appendChild(el('p', 'acct-fine', 'Write down what you’re carrying to God. BibliCall will gently check in, and every answered prayer becomes part of your record of His faithfulness.'));
+    const f = el('form', 'plan-remadd'); const ti = el('input'); ti.type = 'text'; ti.maxLength = 200; ti.placeholder = 'I’m praying for…'; ti.setAttribute('aria-label', 'Prayer');
+    const sel = el('select'); sel.setAttribute('aria-label', 'Check in with me');
+    [['7', 'Check in after 1 week'], ['14', 'After 2 weeks'], ['30', 'After 1 month'], ['0', 'No check-in']].forEach(([v, l]) => { const o = el('option', null, l); o.value = v; sel.appendChild(o); });
+    const add = el('button', null, 'Add'); add.type = 'submit'; f.append(ti, sel, add); box.appendChild(f);
+    f.addEventListener('submit', async (e) => { e.preventDefault(); if (await addPrayer(ti.value, +sel.value)) { toast('Added to your prayer journal.'); drawDrawer(); } });
+    const open = prayers.filter((p) => !p.ans), done = prayers.filter((p) => p.ans);
+    box.appendChild(el('h4', 'bg-sub', 'Praying for' + (open.length ? ' · ' + open.length : '')));
+    if (!open.length) box.appendChild(el('p', 'acct-fine', 'Nothing here yet. You can also tell BibliCall what’s on your heart and tap “Add to my prayer journal.”'));
+    open.forEach((p) => {
+      const row = el('div', 'dr-item pr-item');
+      const t = el('div', 'mem-text'); t.append(p.t, el('small', 'pr-since', ' · since ' + sinceLabel(p.at)));
+      const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove');
+      del.addEventListener('click', () => { prayerDone(p); prayers = prayers.filter((x) => x !== p); savePrayers(); drawDrawer(); });
+      row.append(t, del); box.appendChild(row);
+      const acts = el('div', 'bg-chips pr-acts');
+      const pray = el('button', 'bg-chip', '🙏 Pray now'); pray.type = 'button';
+      pray.addEventListener('click', () => { closeDrawer(); q.value = 'Please pray with me for this: ' + p.t; sendBtn.click(); });
+      const ans = el('button', 'bg-chip on', '🙌 Answered'); ans.type = 'button';
+      ans.addEventListener('click', () => { prayerOpen = prayerOpen === p.id ? null : p.id; drawDrawer(); });
+      acts.append(pray, ans); box.appendChild(acts);
+      if (prayerOpen === p.id) {
+        const af = el('form', 'mem-add'); const ai = el('input'); ai.type = 'text'; ai.maxLength = 300; ai.placeholder = 'How did God answer? (optional)';
+        const ab = el('button', null, 'Save'); ab.type = 'submit'; af.append(ai, ab); box.appendChild(af); setTimeout(() => ai.focus(), 30);
+        af.addEventListener('submit', (e) => { e.preventDefault(); p.ans = Date.now(); p.note = ai.value.trim().slice(0, 300); prayerDone(p); prayerOpen = null; savePrayers(); stat('prayer_answered'); toast('Praise God! Added to your answered prayers.'); drawDrawer(); });
+      }
+    });
+    if (done.length) {
+      box.appendChild(el('h4', 'bg-sub', 'Answered prayers · ' + done.length));
+      box.appendChild(el('p', 'acct-fine', '“Hitherto hath the LORD helped us.” 1 Samuel 7:12'));
+      done.forEach((p) => {
+        const row = el('div', 'dr-item pr-item answered');
+        const t = el('div', 'mem-text'); t.append(el('b', null, '🙌 ' + p.t)); t.appendChild(el('small', 'pr-since', ' · answered ' + sinceLabel(p.ans)));
+        if (p.note) { t.appendChild(document.createElement('br')); t.append(p.note); }
+        const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove');
+        del.addEventListener('click', () => { prayers = prayers.filter((x) => x !== p); savePrayers(); drawDrawer(); });
+        row.append(t, del); box.appendChild(row);
+      });
+    }
+    box.appendChild(el('p', 'acct-fine', 'Your prayer journal is saved only on this phone. If reminders are on, only the check-in note and its time go to the BibliCall server, and it is deleted once sent.'));
+    return box;
+  }
   // ---- Uploads: photos, PDFs, Word and text files, sent to BibliCall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -2048,7 +2293,7 @@
     const inGroup = typeof room !== 'undefined' && room && room.people && room.people.length > 1;
     q.placeholder = remOn ? (narrow.matches ? 'Type it here\u2026' : 'What should BibliCall remember?')
       : inGroup ? (narrow.matches ? 'Say \u201cBibliCall\u201d to ask\u2026' : 'Message the call\u2026 say \u201cBibliCall\u201d to ask')
-      : (narrow.matches ? 'Ask anything\u2026' : 'Ask BibliCall anything\u2026');
+      : (UI_TEXT[langKey] ? UI_TEXT[langKey][1] : (narrow.matches ? 'Ask anything\u2026' : 'Ask BibliCall anything\u2026'));
   }
   function setRem(on) {
     remOn = on;
@@ -2056,13 +2301,13 @@
     remChip.setAttribute('aria-pressed', on ? 'true' : 'false');
     setPlaceholder();
   }
-  setPlaceholder();
+  setPlaceholder(); applyLang();
   if (narrow.addEventListener) narrow.addEventListener('change', setPlaceholder);
   remChip.addEventListener('click', () => { setRem(!remOn); q.focus(); });
 
   // ---- Saved conversations ----
   let convos = lsGet('bc_convos', []);
-  if (!convos.length && !/[?&](room|c|s|signin|open|plan|week)=/.test(location.search)) document.body.classList.add('firstvisit');
+  if (!convos.length && !/[?&](room|c|s|signin|open|plan|week|reflect|group)=/.test(location.search)) document.body.classList.add('firstvisit');
   if (!Array.isArray(convos)) convos = [];
   let convId = null, persistTimer = null;
   function schedulePersist() { clearTimeout(persistTimer); persistTimer = setTimeout(persistConvo, 400); }
@@ -2202,6 +2447,14 @@
       chips(Object.entries(B.list).map(([k, v]) => [k, v.name]), B.get(), (v) => { B.set(v); toast('North Star verses will use the ' + B.list[v].short + '.'); });
       box.appendChild(el('p', 'acct-fine', 'Both translations are public domain. Every North Star verse is checked word for word against the one you choose.'));
     }
+    if (window.BC_LANG) {
+      const LG = window.BC_LANG; sec('Language');
+      const sl = el('select', 'read-any'); sl.setAttribute('aria-label', 'Language');
+      LG.list.forEach(([k, n]) => { const o = el('option', null, n); o.value = k; if (k === LG.get()) o.selected = true; sl.appendChild(o); });
+      sl.addEventListener('change', () => { LG.set(sl.value); toast(sl.value === 'en' ? 'BibliCall will answer in English.' : 'BibliCall will answer in ' + sl.options[sl.selectedIndex].text + '.'); });
+      box.appendChild(sl);
+      box.appendChild(el('p', 'acct-fine', 'BibliCall answers in your language. North Star verses are always shown word for word from the English Bible you chose, so they can be verified.'));
+    }
     if (window.BC_TRAD) {
       const TR = window.BC_TRAD;
       sec('Your tradition');
@@ -2245,6 +2498,7 @@
     if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
     if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
     if (drTab === 'plan') { drBody.appendChild(drawPlan()); return; }
+    if (drTab === 'prayer') { drBody.appendChild(drawPrayer()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
@@ -2304,10 +2558,12 @@
   // Opened from a reminder notification: go to that conversation, or to My week.
   (function fromNotification() {
     const sp = new URLSearchParams(location.search), open = sp.get('open'), plan = sp.get('plan');
+    if (sp.get('reflect')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => { q.value = 'Guide me through a short evening reflection on my day.'; sendBtn.click(); }, 600); return; }
     if (!open && !plan) return;
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
     setTimeout(() => {
-      if (open && convos.some((c) => c.id === open)) openConvo(open);
+      if (open && /^p_/.test(open)) openDrawer('prayer');
+      else if (open && convos.some((c) => c.id === open)) openConvo(open);
       else if (plan === 'week') { q.value = 'Help me plan my week. I\u2019d like a few goals for work, family and faith.'; q.focus(); }
       else openDrawer('plan');
     }, 400);
@@ -2559,7 +2815,7 @@
   // Way 1: browser speech recognition
   if (SpeechRec) {
     recog = new SpeechRec();
-    recog.lang = navigator.language || 'en-US';
+    recog.lang = langKey !== 'en' ? langKey : (navigator.language || 'en-US');
     recog.interimResults = true;
     recog.continuous = false;
     recog.onstart = () => { heard = false; micOn('Listening… speak now'); };

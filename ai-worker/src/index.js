@@ -52,7 +52,8 @@ function attachmentBlocks(list) {
 }
 
 const TRADITIONS = { catholic: 'Catholic', orthodox: 'Eastern Orthodox', baptist: 'Baptist', methodist: 'Methodist', lutheran: 'Lutheran', reformed: 'Presbyterian / Reformed', anglican: 'Anglican / Episcopal', pentecostal: 'Pentecostal / Charismatic', nondenom: 'non-denominational evangelical', oriental: 'Oriental Orthodox (Coptic, Armenian, Ethiopian, Syriac)', wesleyan: 'Wesleyan / Holiness (such as the Church of the Nazarene)', cofc: 'Churches of Christ', adventist: 'Seventh-day Adventist', anabaptist: 'Mennonite / Anabaptist', messianic: 'Messianic Jewish' };
-function systemPrompt(today, memory, group, decide, ambience, tradition, plan) {
+const LANGS = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', zh: 'Chinese (Simplified)', ko: 'Korean', tl: 'Tagalog', vi: 'Vietnamese', hi: 'Hindi', sw: 'Swahili', ru: 'Russian', uk: 'Ukrainian', pl: 'Polish', ar: 'Arabic', ja: 'Japanese', id: 'Indonesian' };
+function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
@@ -71,6 +72,9 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   if (decide) {
     s += `\n\nBefore replying, decide whether you should speak at all. Speak only if the latest message is addressed to you, asks a question meant for you, or the friends are weighing something where a short, wise thought from you would clearly help. If the friends are simply talking to each other (greetings, plans, replies to one another, small talk), do not interrupt: reply with exactly [[PASS]] and nothing else.`;
   }
+  if (Object.prototype.hasOwnProperty.call(LANGS, lang)) {
+    s += `\n\nThis person chose ${LANGS[lang]} as their language. Always reply in ${LANGS[lang]}, unless they write to you in another language. Keep any [[...]] lines exactly in the format given, with their text in ${LANGS[lang]}.`;
+  }
   if (Object.prototype.hasOwnProperty.call(TRADITIONS, tradition)) {
     s += `\n\nThis person has told BibliCall their church tradition is ${TRADITIONS[tradition]}. When a question touches church teaching or practice (for example baptism, communion, salvation, Mary and the saints, confession, prayer practices, worship, church authority, the sacraments), answer faithfully from the ${TRADITIONS[tradition]} perspective and its teaching, as a knowledgeable and warm member of that tradition would; where Christians genuinely differ, you may briefly and respectfully note that others see it differently. Never disparage any other tradition. On every other subject, answer exactly as you otherwise would.`;
   }
@@ -85,7 +89,11 @@ or, for a time from now ("in 20 minutes", "in 2 hours"): [[remind|+20m|short rem
 [[goal|short goal for this week]]
 Anything they want to be reminded of, or that has a time, is ALWAYS a remind line, never a goal. Goal lines are only for things they hope to do over the week (like "walk three times"). The app turns these lines into buttons they tap to confirm, so say something like "Tap Remind me below" and never claim it is already set, and never mention the brackets. At most 3 such lines, and only when they would truly help.
 When they are facing a hard moment with a known date (an interview, a surgery, a difficult conversation), you may gently offer to check in afterward; only if they say yes, add a remind line whose text is a warm one-line check-in question, like "How did the interview go? I'm here if you want to talk."
-If they ask to plan their week, help them choose a few goals across work, family and faith, then offer them as goal lines.`;
+If they ask to plan their week, help them choose a few goals across work, family and faith, then offer them as goal lines.
+Prayer journal: when they ask you to pray for someone or something, or share a concern they are carrying to God (an illness, a decision, a loved one), you may offer to add it to their prayer journal with a line [[prayer|short prayer request, e.g. Sarah's surgery on Friday]]. At most one per reply.
+Evening reflection: if they ask to reflect on their day, guide a short, gentle reflection: ask one question at a time (what went well, where they saw God at work, anything to let go of or be thankful for), listen warmly, and close with a brief prayer of thanks after two or three exchanges.`;
+    if (plan.prayers) s += `\nOn their prayer list: ${plan.prayers}`;
+    if (plan.reading) s += `\nTheir Bible reading plan: ${plan.reading}`;
     if (plan.goals) s += `\nTheir goals this week: ${plan.goals}`;
     if (plan.upcoming) s += `\nTheir upcoming reminders: ${plan.upcoming}`;
     if (plan.goals || plan.upcoming) s += `\nWhen it fits naturally, encourage them and help them stay on track with these, kindly and never nagging; don't list them unless asked.`;
@@ -242,7 +250,7 @@ export default {
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan)), messages,
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || '')), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
         };
 
@@ -278,7 +286,7 @@ export default {
 function cleanPlan(p) {
   if (!p || typeof p !== 'object') return null;
   const c = (x, n) => String(x || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, n);
-  return { local: c(p.local, 80) || 'unknown', goals: c(p.goals, 900), upcoming: c(p.upcoming, 900) };
+  return { local: c(p.local, 80) || 'unknown', goals: c(p.goals, 900), upcoming: c(p.upcoming, 900), prayers: c(p.prayers, 700), reading: c(p.reading, 120) };
 }
 
 export class Quota {

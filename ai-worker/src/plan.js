@@ -41,6 +41,8 @@ export class Planner {
       case 'share.put': await s.put('share:' + d.sid, d.share); return Response.json({ ok: true });
       case 'share.get': return Response.json((await s.get('share:' + d.sid)) || null);
       case 'share.del': await s.delete('share:' + d.sid); return Response.json({ ok: true });
+      case 'grp.get': return Response.json((await s.get('grp:' + d.gid)) || null);
+      case 'grp.put': await s.put('grp:' + d.gid, d.grp); return Response.json({ ok: true });
       case 'devs': { const m = await s.list({ prefix: 'dev:', start: d.start, limit: 1000 }); return Response.json([...m.entries()].map(([k, v]) => [k.slice(4), v])); }
     }
     return Response.json({ error: 'unknown op' }, { status: 400 });
@@ -50,6 +52,8 @@ export class Planner {
 const P = (env) => env.PLANNER.get(env.PLANNER.idFromName('main'));
 async function call(env, body) { const r = await P(env).fetch('https://planner/', { method: 'POST', body: JSON.stringify(body) }); return r.json(); }
 
+function weekOf(ms) { const d = new Date(ms - 6 * 3600000); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
+function view(grp, did) { return { title: grp.title, goals: grp.goals, members: Object.values(grp.members).map((m) => m.name), member: !!grp.members[did] }; }
 function validSub(sub) {
   return sub && typeof sub.endpoint === 'string' && PUSH_HOSTS.test(sub.endpoint) && sub.endpoint.length < 1000 &&
     sub.keys && typeof sub.keys.p256dh === 'string' && typeof sub.keys.auth === 'string' && sub.keys.p256dh.length < 200 && sub.keys.auth.length < 60;
@@ -78,6 +82,8 @@ export async function planOp(env, body) {
     if ('sub' in body) { if (body.sub && !validSub(body.sub)) return { error: 'That notification service isn’t supported.' }; patch.sub = body.sub || null; }
     if (body.tz && validTz(body.tz)) patch.tz = String(body.tz);
     if ('checkin' in body) patch.checkin = /^([01]\d|2[0-3]):[0-5]\d$/.test(body.checkin) ? body.checkin : '';
+    if ('evening' in body) patch.evening = /^([01]\d|2[0-3]):[0-5]\d$/.test(body.evening) ? body.evening : '';
+    if ('reading' in body) patch.reading = clean(body.reading, 60);
     if ('sunday' in body) patch.sunday = !!body.sunday;
     if ('goals' in body) patch.goals = cleanGoals(body.goals);
     const dev = await call(env, { op: 'dev.put', did, patch });
@@ -125,6 +131,50 @@ export async function planOp(env, body) {
     if (dev && dev.shareId) { await call(env, { op: 'share.del', sid: dev.shareId }); await call(env, { op: 'dev.put', did, patch: { shareId: null } }); }
     return { ok: true };
   }
+  // Family & small groups: one shared week that every member can see, add to and check off.
+  if (op.startsWith('grp.')) {
+    const gid = String(body.gid || ''), me = clean(body.name, 30) || 'Someone';
+    const week = weekOf(Date.now());
+    if (op === 'grp.create') {
+      const id = crypto.randomUUID().replace(/-/g, '').slice(0, 14);
+      const grp = { title: clean(body.title, 60) || (me + '\u2019s family'), week, goals: [], members: { [did]: { name: me, joined: Date.now() } }, created: Date.now() };
+      await call(env, { op: 'grp.put', gid: id, grp });
+      return { ok: true, gid: id, group: view(grp, did) };
+    }
+    if (!/^[A-Za-z0-9_-]{8,24}$/.test(gid)) return { error: 'This group link isn\u2019t valid.' };
+    const grp = await call(env, { op: 'grp.get', gid });
+    if (!grp) return { error: 'This group no longer exists.' };
+    if (grp.week !== week) { grp.goals = grp.goals.filter((g) => !g.done); grp.week = week; }
+    const member = !!grp.members[did];
+    if (op === 'grp.view') return { group: view(grp, did) };
+    if (op === 'grp.join') {
+      if (Object.keys(grp.members).length >= 30 && !member) return { error: 'This group is full.' };
+      grp.members[did] = { name: me, joined: (grp.members[did] && grp.members[did].joined) || Date.now() };
+      await call(env, { op: 'grp.put', gid, grp }); return { ok: true, group: view(grp, did) };
+    }
+    if (!member) return { error: 'Join this group first.' };
+    const by = grp.members[did].name;
+    if (op === 'grp.leave') { delete grp.members[did]; await call(env, { op: 'grp.put', gid, grp }); return { ok: true }; }
+    if (op === 'grp.add') {
+      const t = clean(body.t, 140); if (!t) return { error: 'Type a goal first.' };
+      if (grp.goals.length >= 20) return { error: 'That\u2019s plenty for one week.' };
+      grp.goals.push({ id: crypto.randomUUID().slice(0, 8), t, by, done: false });
+    }
+    const g = grp.goals.find((x) => x.id === body.id);
+    if (op === 'grp.toggle' && g) {
+      g.done = !g.done; g.doneBy = g.done ? by : null;
+      if (g.done) { // let the others know, gently
+        for (const [odid] of Object.entries(grp.members)) {
+          if (odid === did) continue;
+          const od = await call(env, { op: 'dev.get', did: odid });
+          if (od && od.sub) await push(env, odid, od, { title: grp.title, body: by + ' finished \u201c' + g.t + '\u201d. \ud83d\udc4f', url: '/?plan=1', tag: 'grp-' + gid });
+        }
+      }
+    }
+    if (op === 'grp.del' && g) grp.goals = grp.goals.filter((x) => x !== g);
+    await call(env, { op: 'grp.put', gid, grp });
+    return { ok: true, group: view(grp, did) };
+  }
   if (op === 'test') {
     const dev = await call(env, { op: 'dev.get', did });
     const r = await push(env, did, dev, { title: 'BibliCall', body: 'Reminders are on. I’ll only tap you on the shoulder when you’ve asked me to.', url: '/' });
@@ -164,11 +214,19 @@ export async function runPlanner(env) {
       if (dev.checkin && dev.lastCheckin !== t.date) {
         const [h, m] = dev.checkin.split(':').map(Number), at = h * 60 + m;
         if (t.mins >= at && t.mins < at + 20) {
-          const body = goals.length
+          let body = goals.length
             ? (open.length ? 'This week: ' + (goals.length - open.length) + ' of ' + goals.length + ' goals done. Next up: ' + open[0].t + '.' : 'Every goal for this week is done. Well done, faithful one.')
             : 'A new day. What matters most today? Tap to plan it with BibliCall.';
+          if (dev.reading) body += ' Today\u2019s reading: ' + dev.reading + '.';
           await push(env, did, dev, { title: 'Good morning', body, url: '/?plan=1', tag: 'checkin' });
           await call(env, { op: 'dev.put', did, patch: { lastCheckin: t.date } }); checkins++;
+        }
+      }
+      if (dev.evening && dev.lastEvening !== t.date) {
+        const [h, m] = dev.evening.split(':').map(Number), at = h * 60 + m;
+        if (t.mins >= at && t.mins < at + 20) {
+          await push(env, did, dev, { title: 'A quiet moment', body: 'What went well today? Where did you see God at work? Tap to reflect with BibliCall.', url: '/?reflect=1', tag: 'evening' });
+          await call(env, { op: 'dev.put', did, patch: { lastEvening: t.date } }); checkins++;
         }
       }
       if (dev.sunday && t.wd === 'Sun' && dev.lastSunday !== t.date && t.mins >= 18 * 60 && t.mins < 18 * 60 + 20) {
