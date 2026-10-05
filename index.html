@@ -1799,7 +1799,8 @@
   // A new week: finished goals are cleared, unfinished ones carry over. Past reminders are tidied away.
   if (PLAN.week !== weekId()) { if (PLAN.week) PLAN.goals = PLAN.goals.filter((g) => !g.done); PLAN.week = weekId(); }
   PLAN.rems = PLAN.rems.filter((r) => r.at > Date.now() - 6 * 3600000);
-  function savePlan() { lsSet('bc_plan', PLAN); if (PLAN.share && typeof shareUpdateSoon === 'function') shareUpdateSoon(); }
+  var syncReady = false;
+  function savePlan() { lsSet('bc_plan', PLAN); if (PLAN.share && typeof shareUpdateSoon === 'function') shareUpdateSoon(); markDirty('plan'); }
   savePlan();
   function planApi(op, extra) {
     return fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'plan', op, did: DEVICE, ...(extra || {}) }) }).then((r) => r.json()).catch(() => ({ error: 'offline' }));
@@ -2033,7 +2034,7 @@
     box.appendChild(ev);
     const sun = el('div', 'bg-chips'); const sb = el('button', 'bg-chip' + (PLAN.sunday ? ' on' : ''), PLAN.sunday ? 'Sunday 6 p.m. planning: on' : 'Sunday 6 p.m. planning: off'); sb.type = 'button';
     sb.addEventListener('click', () => { PLAN.sunday = !PLAN.sunday; savePlan(); syncPlanSoon(); drawDrawer(); }); sun.appendChild(sb); box.appendChild(sun);
-    box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone. When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
+    box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone (and in your account if you sign in, so they appear on all your devices). When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
     // The to-do list and calendar come first, so people can dive straight into the work.
     const kids = [...box.childNodes]; box.prepend(...kids.slice(iGoals, iGoalsEnd), ...kids.slice(iRem, iRemEnd));
     return box;
@@ -2263,7 +2264,7 @@
   })();
   // ---- Prayer journal: what you're carrying to God, gentle check-ins, and a record of answered prayers ----
   let prayers = lsGet('bc_prayers', []); if (!Array.isArray(prayers)) prayers = [];
-  function savePrayers() { lsSet('bc_prayers', prayers); }
+  function savePrayers() { lsSet('bc_prayers', prayers); markDirty('prayers'); }
   async function addPrayer(t, days) {
     t = String(t || '').trim().slice(0, 200); if (!t) return null;
     if (prayers.some((p) => !p.ans && p.t.toLowerCase() === t.toLowerCase())) return null;
@@ -2474,7 +2475,7 @@
   // BibliCall never sees an account, a password or any money. The list of people stays on this phone.
   const PAY_METHODS = { venmo: ['Venmo', '@username'], paypal: ['PayPal', 'PayPal.Me name'], cashapp: ['Cash App', '$cashtag'], zelle: ['Zelle', 'Phone or email'] };
   let payees = lsGet('bc_payees', []); if (!Array.isArray(payees)) payees = [];
-  function savePayees() { lsSet('bc_payees', payees); }
+  function savePayees() { lsSet('bc_payees', payees); markDirty('payees'); }
   let payDraft = { id: '', amount: '', note: '' };
   const money = (a) => '$' + (+a).toLocaleString('en-US', { minimumFractionDigits: (+a) % 1 ? 2 : 0, maximumFractionDigits: 2 });
   function payLink(p, amount, note) {
@@ -2963,7 +2964,7 @@
     drBody.innerHTML = '';
     const fine = document.getElementById('drFine');
     if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your BibliCall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Me tab) to keep memory and chosen conversations forever.';
-    if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
+    if (drTab === 'account') { drBody.appendChild(drawAccount()); drBody.appendChild(drawSync()); return; }
     if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
     if (drTab === 'plan') { drBody.appendChild(drawPlan()); return; }
     if (drTab === 'prayer') { drBody.appendChild(drawPrayer()); return; }
@@ -3087,6 +3088,70 @@
     clearTimeout(keepTimers[c.id]);
     keepTimers[c.id] = setTimeout(() => acctApi('keep.put', { convo: { id: c.id, title: c.title, t: c.t, room: c.room || null, msgs: c.msgs } }).catch(() => {}), 1200);
   }
+  // ---- Sync across my devices (signed in): the week always; prayer journal and payment list only if the person turns them on ----
+  syncReady = true;
+  function syncOn(key) { if (!acct || !acct.token) return false; if (key === 'plan') return true; return !!(lsGet('bc_sync_opts', {})[key]); }
+  function syncValue(key) {
+    if (key === 'plan') return { goals: PLAN.goals, rems: PLAN.rems.filter((r) => r.at > Date.now() - 6 * 3600000), read: PLAN.read || null, groups: PLAN.groups || [] };
+    if (key === 'prayers') return prayers;
+    return payees;
+  }
+  const syncTimers = {};
+  function markDirty(key) {
+    if (!syncReady) return;
+    const t = lsGet('bc_sync_t', {}); t[key] = Date.now(); lsSet('bc_sync_t', t);
+    if (!syncOn(key)) return;
+    clearTimeout(syncTimers[key]); syncTimers[key] = setTimeout(() => acctApi('state.put', { key, value: syncValue(key), t: t[key] }).catch(() => {}), 1200);
+  }
+  function syncApply(key, v) {
+    if (key === 'plan' && v) { PLAN.goals = v.goals || []; PLAN.rems = v.rems || []; PLAN.read = v.read || null; PLAN.groups = v.groups || []; lsSet('bc_plan', PLAN); }
+    else if (key === 'prayers' && Array.isArray(v)) { prayers = v; lsSet('bc_prayers', prayers); }
+    else if (key === 'payees' && Array.isArray(v)) { payees = v; lsSet('bc_payees', payees); }
+  }
+  let syncing = false;
+  async function syncPull() {
+    if (!acct || !acct.token || syncing) return; syncing = true;
+    try {
+      const r = await acctApi('state.get'); const st = (r && r.state) || {}, lt = lsGet('bc_sync_t', {});
+      let changed = false;
+      for (const key of ['plan', 'prayers', 'payees']) {
+        if (!syncOn(key)) continue;
+        const s = st[key], local = syncValue(key), lt0 = lt[key] || 0;
+        const hasLocal = key === 'plan' ? (local.goals.length || local.rems.length || local.read || local.groups.length) : local.length;
+        if (s && (s.t || 0) > lt0) {
+          // Never lose a list this device made before syncing existed: merge it in.
+          if (!lt0 && hasLocal) {
+            if (key === 'plan') { const v = s.v || {}; const seen = new Set((v.goals || []).map((g) => g.t.toLowerCase())); v.goals = (v.goals || []).concat(local.goals.filter((g) => !seen.has(g.t.toLowerCase()))); const rs = new Set((v.rems || []).map((x) => x.rid)); v.rems = (v.rems || []).concat(local.rems.filter((x) => !rs.has(x.rid))); syncApply(key, v); }
+            else { const ids = new Set((s.v || []).map((x) => x.id)); syncApply(key, (s.v || []).concat(local.filter((x) => !ids.has(x.id)))); }
+            lt[key] = Date.now(); lsSet('bc_sync_t', lt); acctApi('state.put', { key, value: syncValue(key), t: lt[key] }).catch(() => {});
+          } else { syncApply(key, s.v); lt[key] = s.t; lsSet('bc_sync_t', lt); }
+          changed = true;
+        } else if (hasLocal && (!s || lt0 > (s.t || 0))) {
+          const t = lt0 || Date.now(); lt[key] = t; lsSet('bc_sync_t', lt);
+          await acctApi('state.put', { key, value: local, t });
+        }
+      }
+      if (changed && !drawer.hidden) drawDrawer();
+    } catch (e) {} finally { syncing = false; }
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPull(); });
+  function drawSync() {
+    const box = el('div', 'plan');
+    box.appendChild(el('h4', 'bg-sub', '🔄 Sync across my devices'));
+    if (!acct || !acct.token) { box.appendChild(el('p', 'acct-fine', 'Sign in above on each of your devices (iPhone, iPad, computer) to see the same to-do list, calendar and reading plan everywhere.')); return box; }
+    box.appendChild(el('p', 'acct-fine', '✓ Your to-do list, calendar reminders, reading plan and group weeks sync to every device where you sign in.'));
+    const o = lsGet('bc_sync_opts', {}), row = el('div', 'bg-chips');
+    [['prayers', 'Prayer journal'], ['payees', 'People I pay']].forEach(([k, l]) => {
+      const b = el('button', 'bg-chip' + (o[k] ? ' on' : ''), (o[k] ? '✓ ' : '') + 'Also sync my ' + l.toLowerCase()); b.type = 'button';
+      b.addEventListener('click', () => { o[k] = !o[k]; lsSet('bc_sync_opts', o); if (o[k]) { syncPull(); toast(l + ' will sync to your other devices.'); } else toast(l + ' stays on this device only.'); drawDrawer(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    box.appendChild(el('p', 'acct-fine', 'These two stay on this device unless you turn them on. Turn them on here on each device.'));
+    const now = el('button', 'bg-chip', 'Sync now'); now.type = 'button'; now.addEventListener('click', async () => { await syncPull(); toast('Synced.'); drawDrawer(); });
+    box.appendChild(now);
+    return box;
+  }
   function applyAccount(me, isNewSignIn) {
     if (!me || me.error) return;
     if (me.profile) { acct.name = me.profile.name || acct.name || ''; acct.email = me.profile.email || ''; }
@@ -3110,7 +3175,8 @@
     acct = { token: r.token, name: (r.profile && r.profile.name) || '', email: (r.profile && r.profile.email) || '' };
     acctMsg = ''; acctBusy = false;
     applyAccount(r, true);
-    toast('Signed in. Your memory and kept conversations are saved to your account.');
+    toast('Signed in. Your memory, kept conversations and to-do list are saved to your account.');
+    syncPull();
   }
   async function createWithPasskey(name) {
     if (!pre.reg) { acctMsg = 'One moment, getting ready… tap again.'; drawDrawer(); prefetchChallenges(); return; }
@@ -3235,6 +3301,7 @@
       openDrawer('account');
     } else if (acct) {
       try { applyAccount(await acctApi('me'), false); } catch (e) {}
+      syncPull();
     }
   })();
 

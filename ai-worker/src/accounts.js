@@ -131,6 +131,8 @@ export class UserData {
         return Response.json({ profile, memory: (await s.get('memory')) || [], kept: list });
       }
       case 'memory.set': await s.put('memory', d.memory); return Response.json({ ok: true });
+      case 'state.get': { const m = await s.list({ prefix: 'st:' }); const o = {}; for (const [k, v] of m) o[k.slice(3)] = v; return Response.json(o); }
+      case 'state.put': await s.put('st:' + d.key, { v: d.value, t: d.t }); return Response.json({ ok: true });
       case 'keep.put': {
         const existing = await s.get('k:' + d.convo.id);
         if (!existing) { const n = (await s.list({ prefix: 'k:' })).size; if (n >= MAX_KEPT) return Response.json({ error: 'too_many' }); }
@@ -370,6 +372,13 @@ export async function accountOp(env, body, helpers) {
   if (op === 'logout') { await call(U, { op: 'session.del', hash: await hashHex(String(body.token).split('.')[1]) }); return { ok: true }; }
   if (op === 'name.set') return { profile: await call(U, { op: 'profile.set', patch: { name: String(body.name || '').trim().slice(0, 40) } }) };
   if (op === 'memory.set') { await call(U, { op: 'memory.set', memory: cleanMemory(body.memory) }); return { ok: true }; }
+  // Sync across the person's own devices: their week (to-do list, reminders, reading plan, groups) and, if they choose, prayer journal and payment list.
+  if (op === 'state.get') return { state: await call(U, { op: 'state.get' }) };
+  if (op === 'state.put') {
+    const key = String(body.key || ''); if (!['plan', 'prayers', 'payees'].includes(key)) return { error: 'bad key' };
+    const json = JSON.stringify(body.value ?? null); if (json.length > 200000) return { error: 'too large' };
+    await call(U, { op: 'state.put', key, value: JSON.parse(json), t: Math.min(+body.t || Date.now(), Date.now() + 60000) }); return { ok: true };
+  }
   if (op === 'keep.put') { const c = cleanConvo(body.convo); if (!c) return { error: 'That conversation is too long to keep.' }; return await call(U, { op: 'keep.put', convo: c }); }
   if (op === 'keep.get') return { convo: await call(U, { op: 'keep.get', id: String(body.id || '') }) };
   if (op === 'keep.del') return await call(U, { op: 'keep.del', id: String(body.id || '') });
