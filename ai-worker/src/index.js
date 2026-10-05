@@ -100,6 +100,7 @@ export default {
         headers: request.headers.get('Range') ? { Range: request.headers.get('Range') } : {}, cf: { cacheEverything: true, cacheTtl: 2592000 } });
       const h = new Headers();
       ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified'].forEach((k) => { const v = up.headers.get(k); if (v) h.set(k, v); });
+      h.set('Content-Type', 'audio/mpeg');
       h.set('Access-Control-Allow-Origin', allowed ? origin : ORIGINS[0]); h.set('Vary', 'Origin'); h.set('Cache-Control', 'public, max-age=2592000');
       return new Response(up.body, { status: up.status, headers: h });
     }

@@ -653,7 +653,7 @@
     }
     var api = {
       MOODS: MOODS, INST: INST, count: count,
-      state: function () { return { on: on, mood: M.mood, inst: M.inst, vol: M.vol, track: list.length ? track() : null, note: note, size: list.length }; },
+      state: function () { return { on: on, mood: M.mood, inst: M.inst, vol: M.vol, track: list.length ? track() : null, note: note, size: list.length, mode: mode, level: Math.round(level * 1000) / 1000, webAudio: !!gain }; },
       start: function () { on = true; mode = 'full'; voiceAudio = 0; graph(); if (!list.length) build(); if (!a.src) load(); play(); update(); ui(); },
       stop: function () { on = false; ramp(0, 600, function () { if (!on) a.pause(); }); ui(); },
       toggle: function () { if (on) api.stop(); else api.start(); },
