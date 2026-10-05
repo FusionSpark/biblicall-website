@@ -163,7 +163,16 @@
   .ns-note{margin:-12px 0 20px;font-size:15.5px;color:var(--muted)}
   .brandrow{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:22px}
   .brandrow .logo{margin-bottom:0}
-  .callbar{display:flex;justify-content:center;margin:12px 0 0}
+  .callbar{display:none;justify-content:center;margin:12px 0 0}
+  body.inroom .callbar{display:flex}
+  .dr-invite{display:flex;align-items:center;gap:8px;width:calc(100% - 24px);margin:4px 12px 8px;padding:10px 14px;border:1.5px solid var(--earth);border-radius:12px;background:transparent;color:var(--earth);font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;text-align:left}
+  .dr-invite svg{width:18px;height:18px;flex:none}
+  .dr-invite small{display:block;font-weight:500;font-size:14px;color:var(--muted)}
+  .invoffer{margin:4px 0 22px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink)}
+  .invoffer p{margin:0 0 10px;font-size:17px;line-height:1.45}
+  .invoffer .row{display:flex;flex-wrap:wrap;gap:8px}
+  .invoffer button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:600;color:var(--earth);cursor:pointer}
+  .invoffer button.yes{background:var(--earth);border-color:var(--earth);color:#fff}
   .callbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:50%;min-width:180px;padding:5px 16px;border-radius:999px;border:1px solid var(--earth);
     background:var(--card);color:var(--earth);font-family:inherit;font-size:17px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
   .callbtn:hover{background:var(--earth);color:#fff}
@@ -743,6 +752,7 @@
 <div class="drawer-back" id="drawerBack" hidden></div>
 <aside class="drawer" id="drawer" aria-label="Your conversations and memory" hidden>
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
+  <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite friends<small>Bring a friend into this conversation, live</small></span></button>
   <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask Biblicall a question.</p>
@@ -918,6 +928,9 @@
     'you great good nice cool awesome perfect got it gotcha understood understand makes sense sounds fine will do done noted ' +
     'right true agreed exactly amen hallelujah praise god wow lol haha hmm oh ah i see so much very really much appreciated appreciate ' +
     'that this helps helpful helped love it me too same will try bye goodbye later night morning hi hello hey').split(' '));
+  // Moments when talking it through with a friend could help: loneliness, wanting someone to talk to, praying or studying together.
+  const WANTS_COMPANY = /\b(talk(ing)?|speak(ing)?|vent(ing)?) (to|with) (someone|somebody|anyone|anybody|a friend|my friends?|people|a person|someone who)|\b(lonely|loneliness|so alone|all alone|feel(ing)? (so )?alone|isolated|no one to talk|nobody to talk|no one to turn|have no one|no friends|no one understands|nobody understands|no one cares|nobody cares|no one listens|nobody listens)\b|\bwish (i|someone|somebody) (could|had|would|was|were)\b.*\b(talk|someone|somebody|friend|here|with me|listen)|\b(need|want) (someone|somebody|a friend)\b|\bpray (with|together)|\b(study|read)(ing)? (the bible |scripture |this )?(together|with (my|a) )|\bbible study\b|\b(share|show|send) (this|it) (with|to) (my |a )?(friends?|wife|husband|spouse|mom|mother|dad|father|son|daughter|kids|children|family|sister|brother|group|pastor)/i;
+  function wantsCompany(text) { return WANTS_COMPANY.test(String(text)); }
   function isAck(text) {
     const t = String(text).toLowerCase().replace(/[^a-z\s']/g, ' ').replace(/'/g, '').trim();
     if (!t) return true; // only emoji / punctuation
@@ -1199,6 +1212,15 @@
       threadBox.appendChild(box);
       if (offerIdx === conversation.length - 1) lastRow = box;
     }
+    const invIdx = room ? -1 : conversation.findIndex((m) => m.invOffer === 1);
+    if (invIdx >= 0 && invIdx === conversation.length - 1) {
+      const m = conversation[invIdx], box = document.createElement('div');
+      box.className = 'invoffer';
+      box.innerHTML = '<p>Some things are better talked through together. Want to bring a friend into this conversation? They\u2019ll get a link and can join you here, live.</p><div class="row"><button type="button" class="yes">Invite a friend</button><button type="button" class="no">Not now</button></div>';
+      box.querySelector('.yes').addEventListener('click', () => { m.invOffer = 2; stat('invite_yes'); openInvite(); renderThread(); });
+      box.querySelector('.no').addEventListener('click', () => { m.invOffer = 2; renderThread(); });
+      threadBox.appendChild(box); lastRow = box;
+    }
     schedulePersist();
     updateNsRow();
     if (room && room.thinking) {
@@ -1443,6 +1465,7 @@
       const ns = await nsPromise;
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       else if (!ack) conversation[turn].nsOffer = true;
+      if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
       if (!wantsRemember && !ack && personalFact(question) && !conversation.some((m) => m.memOffer) && !memory.some((x) => x.text === memText(question))) {
         conversation[turn].memOffer = memText(question);
       }
@@ -2287,13 +2310,15 @@
   const callName = document.getElementById('callName');
   callName.value = myName();
   callName.addEventListener('change', () => setMyName(callName.value));
-  document.querySelectorAll('[data-call]').forEach((b) => b.addEventListener('click', () => {
+  function openInvite() {
     stat('call');
+    if (!drawer.hidden) closeDrawer();
     callStatus.textContent = '';
     callName.value = myName();
     callWin.showModal();
     setTimeout(() => callPhone.focus(), 50);
-  }));
+  }
+  document.querySelectorAll('[data-call]').forEach((b) => b.addEventListener('click', openInvite));
   document.getElementById('callClose').addEventListener('click', () => callWin.close());
   callWin.addEventListener('click', (e) => { if (e.target === callWin) callWin.close(); });
 
@@ -2380,6 +2405,7 @@
     return out;
   }
   function drawRoomBar() {
+    document.body.classList.toggle('inroom', !!room);
     if (!room) { roomBar.classList.remove('show'); roomBar.innerHTML = ''; return; }
     roomBar.classList.add('show');
     const others = (room.people || []).filter((p) => p.id !== room.you).map((p) => p.name);
