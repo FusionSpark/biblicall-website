@@ -398,6 +398,8 @@
   .bgset{display:flex;flex-direction:column;gap:9px;padding:8px 10px 6px}
   .bgset h3{margin:8px 0 0;font-size:19px;font-weight:800;color:var(--earth-deep)}
   .bg-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .bgset .acct-fine{margin:0;font-size:14.5px;line-height:1.45;color:var(--muted)}
+  .bgset .acct-link{font-size:14.5px;padding:0 4px}
   .bg-chip{padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:#2c2117;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
   .bg-chip.on{background:var(--earth);border-color:var(--earth);color:#fff}
   .bg-custom{align-items:center}
@@ -1524,7 +1526,8 @@
       row.append(lab, inp, el('span', 'bg-unit', 'minutes'), go);
       row.addEventListener('submit', (e) => { e.preventDefault(); const m = Math.round(+inp.value); if (m >= 1 && m <= 1440) { BG.unkeep(); BG.set({ every: m }); toast('New photo every ' + m + (m === 1 ? ' minute' : ' minutes')); drawDrawer(); } });
       box.appendChild(row);
-      box.appendChild(el('p', 'acct-fine', pinned ? 'This photo stays until you choose another option.' : s.every <= 0 ? 'A new photo each time you open Biblicall.' : ''));
+      const note = pinned ? 'This photo stays until you choose another option.' : s.every <= 0 ? 'A new photo each time you open Biblicall.' : '';
+      if (note) box.appendChild(el('p', 'acct-fine', note));
       const acts = el('div', 'bg-chips');
       const nx = el('button', 'bg-chip', 'Show the next photo now'); nx.type = 'button'; nx.addEventListener('click', () => { BG.next(); setTimeout(drawDrawer, 50); });
       const mv = el('button', 'bg-chip' + (s.motion ? ' on' : ''), s.motion ? 'Gentle motion: on' : 'Gentle motion: off'); mv.type = 'button';
