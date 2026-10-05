@@ -285,6 +285,8 @@
   .pay-quick select,.pay .plan-remadd select{flex:1 1 100%}
   .pay-quick input[type=number]{flex:1 1 30%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
   .pay-quick input[type=text]{flex:1 1 60%}
+  .apps-steps{margin:4px 0 8px;padding-left:22px;font-size:15.5px;line-height:1.45;color:var(--ink)}
+  .apps .grp .bg-chip{margin-top:6px}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -902,7 +904,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="apps"><span class="ti" aria-hidden="true">🔗</span>Sync apps</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -1800,7 +1802,7 @@
   if (PLAN.week !== weekId()) { if (PLAN.week) PLAN.goals = PLAN.goals.filter((g) => !g.done); PLAN.week = weekId(); }
   PLAN.rems = PLAN.rems.filter((r) => r.at > Date.now() - 6 * 3600000);
   var syncReady = false;
-  function savePlan() { lsSet('bc_plan', PLAN); if (PLAN.share && typeof shareUpdateSoon === 'function') shareUpdateSoon(); markDirty('plan'); }
+  function savePlan() { lsSet('bc_plan', PLAN); if (PLAN.share && typeof shareUpdateSoon === 'function') shareUpdateSoon(); markDirty('plan'); if (syncReady) mondaySoon(); }
   savePlan();
   function planApi(op, extra) {
     return fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'plan', op, did: DEVICE, ...(extra || {}) }) }).then((r) => r.json()).catch(() => ({ error: 'offline' }));
@@ -2467,8 +2469,7 @@
     box.appendChild(el('h4', 'bg-sub', 'Your BibliCall folder'));
     box.appendChild(el('p', 'acct-fine', isIOS ? 'On iPhone: when the share sheet opens, tap “Save to Files” (or Google Drive, Dropbox or OneDrive). The first time, make a folder named “BibliCall” and choose it. Your phone remembers it next time.'
       : 'When you save, choose Google Drive, Dropbox, OneDrive or your phone’s storage. The first time, make a folder named “BibliCall” and keep everything there.'));
-    box.appendChild(el('h4', 'bg-sub', 'Coming soon'));
-    box.appendChild(el('p', 'acct-fine', 'Connect Google Drive, Dropbox or OneDrive once, and every Save goes straight into a “BibliCall” folder in your account. BibliCall will only ever see that one folder.'));
+    box.appendChild(el('p', 'acct-fine', 'One-tap saving to Google Drive, Dropbox and OneDrive is coming to \ud83d\udd17 Sync apps.'));
     return box;
   }
   // ---- Payments: BibliCall prepares the payment; the person approves it in Venmo, PayPal, Cash App or their bank ----
@@ -2566,6 +2567,116 @@
     return box;
   }
   let payRemOpen = false;
+  // ---- Sync apps: monday.com (the person's own account and personal token, kept only on this device) ----
+  let MON = lsGet('bc_monday', null);
+  function saveMon() { lsSet('bc_monday', MON); }
+  async function monday(query, variables) {
+    const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'monday', token: MON && MON.token, query, variables: variables || {} }) }).then((x) => x.json()).catch(() => ({ errors: [{ message: 'offline' }] }));
+    if (r.errors || r.error_message || r.error_code) throw new Error((r.errors && r.errors[0] && r.errors[0].message) || r.error_message || 'monday.com error');
+    return r.data;
+  }
+  const BOARDS_Q = 'query { me { name } boards(limit: 100, order_by: used_at, state: active) { id name type columns { id type title } } }';
+  let monBoards = null, monBusy = false, monMsg = '';
+  function pickCols(b) { const cols = (b && b.columns) || []; const d = cols.find((c) => c.type === 'date'), s = cols.find((c) => c.type === 'status'); return { dateCol: d ? d.id : '', statusCol: s ? s.id : '' }; }
+  async function monConnect(token) {
+    MON = { token: token.trim() }; monBusy = true; monMsg = ''; drawDrawer();
+    try {
+      const d = await monday(BOARDS_Q);
+      monBoards = (d.boards || []).filter((b) => b.type !== 'sub_items_board' && !/^Subitems of/i.test(b.name));
+      MON.name = (d.me && d.me.name) || ''; saveMon(); stat('monday_connect'); toast('Connected to monday.com' + (MON.name ? ' as ' + MON.name : '') + '.');
+    } catch (e) { MON = null; saveMon(); monMsg = 'That token didn’t work (' + e.message + '). Copy it again from monday.com and paste it here.'; }
+    monBusy = false; drawDrawer();
+  }
+  async function monCreateBoard() {
+    monBusy = true; drawDrawer();
+    try {
+      const d = await monday('mutation ($n: String!) { create_board(board_name: $n, board_kind: private) { id name } }', { n: 'BibliCall To-Do' });
+      const id = d.create_board.id;
+      await monday('mutation ($b: ID!) { d: create_column(board_id: $b, title: "Due", column_type: date) { id } s: create_column(board_id: $b, title: "Status", column_type: status) { id } }', { b: id });
+      const b = await monday('query ($b: [ID!]) { boards(ids: $b) { id name columns { id type title } } }', { b: [id] });
+      const bd = b.boards[0]; Object.assign(MON, { board: bd.id, boardName: bd.name }, pickCols(bd)); saveMon(); monBoards = null;
+      toast('Made a “BibliCall To-Do” board in monday.com.'); await monSync(true);
+    } catch (e) { toast('Couldn’t make the board: ' + e.message); }
+    monBusy = false; drawDrawer();
+  }
+  const monDate = (ms, withTime) => { const d = new Date(ms); const o = { date: d.toISOString().slice(0, 10) }; if (withTime) o.time = d.toISOString().slice(11, 19); return o; };
+  let monTimer = null, monRunning = false;
+  function mondaySoon() { if (!MON || !MON.board || MON.auto === false) return; clearTimeout(monTimer); monTimer = setTimeout(() => monSync(false), 2500); }
+  async function monSync(loud) {
+    if (!MON || !MON.board || monRunning) return; monRunning = true;
+    let made = 0, updated = 0;
+    try {
+      const status = (done) => MON.statusCol ? { [MON.statusCol]: { label: done ? 'Done' : 'Working on it' } } : {};
+      const goalRems = new Set(PLAN.goals.map((g) => g.rem).filter(Boolean));
+      for (const g of PLAN.goals) {
+        const rem = g.rem ? PLAN.rems.find((r) => r.rid === g.rem) : null;
+        if (!g.mid) {
+          const cv = Object.assign({}, status(g.done), rem && MON.dateCol ? { [MON.dateCol]: monDate(rem.at, true) } : {});
+          const d = await monday('mutation ($b: ID!, $n: String!, $c: JSON) { create_item(board_id: $b, item_name: $n, column_values: $c) { id } }', { b: MON.board, n: g.t.slice(0, 250), c: JSON.stringify(cv) });
+          g.mid = d.create_item.id; g.mdone = g.done; made++;
+        } else if (g.mdone !== g.done && MON.statusCol) {
+          await monday('mutation ($b: ID!, $i: ID!, $c: JSON!) { change_multiple_column_values(board_id: $b, item_id: $i, column_values: $c) { id } }', { b: MON.board, i: g.mid, c: JSON.stringify(status(g.done)) });
+          g.mdone = g.done; updated++;
+        }
+      }
+      for (const r of PLAN.rems) {
+        if (r.mid || goalRems.has(r.rid) || r.at < Date.now()) continue;
+        const cv = Object.assign({}, status(false), MON.dateCol ? { [MON.dateCol]: monDate(r.at, true) } : {});
+        const d = await monday('mutation ($b: ID!, $n: String!, $c: JSON) { create_item(board_id: $b, item_name: $n, column_values: $c) { id } }', { b: MON.board, n: r.text.replace(/\s*Tap to pay\.$/, '').slice(0, 250), c: JSON.stringify(cv) });
+        r.mid = d.create_item.id; made++;
+      }
+      lsSet('bc_plan', PLAN); markDirty('plan');
+      MON.last = Date.now(); saveMon();
+      if (made || updated) stat('monday_sync');
+      if (loud) toast(made || updated ? 'Sent to monday.com: ' + made + ' new' + (updated ? ', ' + updated + ' updated' : '') + '.' : 'monday.com is up to date.');
+    } catch (e) { if (loud) toast('monday.com sync stopped: ' + e.message); }
+    monRunning = false; if (!drawer.hidden && drTab === 'apps') drawDrawer();
+  }
+  function drawApps() {
+    const box = el('div', 'plan apps');
+    box.appendChild(el('p', 'acct-fine', 'Connect the apps you already use, so your BibliCall to-do list and calendar show up where you work.'));
+    const card = el('div', 'grp');
+    card.appendChild(el('b', 'grp-title', 'monday.com'));
+    if (!MON || !MON.name) {
+      card.appendChild(el('p', 'acct-fine', 'Send your BibliCall to-do list and calendar reminders to a monday.com board. Checking a task off here marks it Done there.'));
+      const ol = el('ol', 'apps-steps');
+      ['In monday.com, tap your profile picture, then “Developers.”', 'Open “My access tokens” (API token), tap “Show,” then “Copy.”', 'Paste it below and tap Connect.'].forEach((s) => ol.appendChild(el('li', null, s)));
+      card.appendChild(ol);
+      const f = el('form', 'mem-add'); const i = el('input'); i.type = 'password'; i.placeholder = 'Paste your monday.com token'; i.autocomplete = 'off'; i.setAttribute('aria-label', 'monday.com token');
+      const b = el('button', null, monBusy ? '…' : 'Connect'); b.type = 'submit'; b.disabled = monBusy; f.append(i, b); card.appendChild(f);
+      f.addEventListener('submit', (e) => { e.preventDefault(); if (i.value.trim().length > 20) monConnect(i.value); else toast('Paste the whole token from monday.com.'); });
+      if (monMsg) card.appendChild(el('p', 'acct-fine', monMsg));
+      card.appendChild(el('p', 'acct-fine', '🔒 Your token stays on this device. BibliCall uses it only to send your tasks to monday.com and never stores it on its server.'));
+    } else {
+      card.appendChild(el('p', 'acct-fine', '✓ Connected' + (MON.name ? ' as ' + MON.name : '') + (MON.boardName ? ' · board: ' + MON.boardName : '')));
+      if (!MON.board) {
+        card.appendChild(el('p', 'acct-fine', 'Which board should your BibliCall tasks go to?'));
+        if (!monBoards) { card.appendChild(el('p', 'acct-fine', 'Loading your boards…')); monday(BOARDS_Q).then((d) => { monBoards = (d.boards || []).filter((b) => b.type !== 'sub_items_board' && !/^Subitems of/i.test(b.name)); drawDrawer(); }).catch((e) => { monMsg = e.message; }); }
+        else {
+          const nb = el('button', 'acct-btn', '＋ Make a new “BibliCall To-Do” board'); nb.type = 'button'; nb.disabled = monBusy; nb.addEventListener('click', monCreateBoard); card.appendChild(nb);
+          const sel = el('select', 'read-any'); const o0 = el('option', null, 'Or use one of my boards…'); o0.value = ''; sel.appendChild(o0);
+          monBoards.forEach((b) => { const o = el('option', null, b.name); o.value = b.id; sel.appendChild(o); });
+          sel.addEventListener('change', () => { const bd = monBoards.find((b) => String(b.id) === sel.value); if (!bd) return; Object.assign(MON, { board: bd.id, boardName: bd.name }, pickCols(bd)); saveMon(); toast('Tasks will go to “' + bd.name + '.”'); monSync(true); });
+          card.appendChild(sel);
+        }
+      } else {
+        const row = el('div', 'bg-chips');
+        const s = el('button', 'bg-chip on', monRunning ? 'Syncing…' : 'Sync now'); s.type = 'button'; s.addEventListener('click', () => monSync(true));
+        const au = el('button', 'bg-chip' + (MON.auto !== false ? ' on' : ''), MON.auto !== false ? '✓ Sync automatically' : 'Sync automatically: off'); au.type = 'button';
+        au.addEventListener('click', () => { MON.auto = MON.auto === false; saveMon(); drawDrawer(); });
+        const ch = el('button', 'bg-chip', 'Change board'); ch.type = 'button'; ch.addEventListener('click', () => { MON.board = ''; MON.boardName = ''; saveMon(); drawDrawer(); });
+        row.append(s, au, ch); card.appendChild(row);
+        card.appendChild(el('p', 'acct-fine', (MON.last ? 'Last synced ' + new Date(MON.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '. ' : '') + 'New tasks and reminders go to monday.com; checking a task off here marks it Done there.' + (MON.statusCol ? '' : ' (This board has no Status column, so tasks won’t be marked Done.)')));
+      }
+      const dc = el('button', 'bg-chip', 'Disconnect monday.com'); dc.type = 'button';
+      dc.addEventListener('click', () => { MON = null; monBoards = null; saveMon(); toast('Disconnected. Your token was removed from this device.'); drawDrawer(); });
+      card.appendChild(dc);
+    }
+    box.appendChild(card);
+    box.appendChild(el('h4', 'bg-sub', 'Coming soon'));
+    box.appendChild(el('p', 'acct-fine', 'Google Drive, Dropbox and OneDrive: one tap saves straight into a “BibliCall” folder in your own account. Google Calendar and Outlook: your BibliCall reminders on your calendar automatically.'));
+    return box;
+  }
   // ---- Uploads: photos, PDFs, Word and text files, sent to BibliCall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -2970,6 +3081,7 @@
     if (drTab === 'prayer') { drBody.appendChild(drawPrayer()); return; }
     if (drTab === 'files') { drBody.appendChild(drawFiles()); return; }
     if (drTab === 'pay') { drBody.appendChild(drawPay()); return; }
+    if (drTab === 'apps') { drBody.appendChild(drawApps()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {

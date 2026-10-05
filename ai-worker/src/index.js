@@ -166,6 +166,16 @@ export default {
 
     // Accounts: sign-in, memory and kept conversations.
     if (body.mode === 'daily-preview') return json(await preview(env));
+    // Sync apps: pass a person's own monday.com request through (their personal token is used only for this one request and never stored or logged).
+    if (body.mode === 'monday') {
+      const token = typeof body.token === 'string' ? body.token.trim() : '', query = typeof body.query === 'string' ? body.query : '';
+      if (!token || token.length > 2000 || !query || query.length > 6000) return json({ error: 'bad request' }, 400);
+      try {
+        const r = await fetch('https://api.monday.com/v2', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token, 'API-Version': '2024-10' }, body: JSON.stringify({ query, variables: body.variables || {} }) });
+        const data = await r.json().catch(() => ({ errors: [{ message: 'monday.com did not answer' }] }));
+        return json(data, r.ok ? 200 : 200);
+      } catch (e) { return json({ errors: [{ message: 'Could not reach monday.com' }] }); }
+    }
     if (body.mode === 'plan') {
       try { return json(await planOp(env, body)); }
       catch (e) { console.error('plan', e && e.message); return json({ error: 'Something went wrong. Please try again.' }, 500); }
