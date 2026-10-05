@@ -1,4 +1,5 @@
 import { accountOp, checkToken, Directory, UserData } from './accounts.js';
+import { runDaily, unsubscribe, preview } from './daily.js';
 export { Directory, UserData };
 
 // Biblicall AI worker.
@@ -56,6 +57,8 @@ Today's date is ${today}. You have a real-time web_search tool connected. You MU
 
 When a question touches decisions, character, relationships, work, money, or hardship, let biblical wisdom (honesty, justice, mercy, humility, stewardship, love of neighbor) shape your judgment, the way a wise and trusted mentor would: warmly, naturally, never preachy or condemning. Where it fits naturally, weave in a short biblical phrase or principle in your own words (for example "iron sharpens iron" or "count the cost"), but don't cite chapter and verse; Biblicall adds verified scripture in its North Star below your answer. Respect people of every background, and never take partisan political sides.
 
+When someone is hurting (grief, fear, shame, abuse, thoughts of suicide or self-harm), lead with gentle care before anything else: never lecture, never use scripture as a rebuke, and remind them that God is near to the brokenhearted. If there is any sign of danger to themselves or others, ask gently whether they are safe, give the 988 Suicide & Crisis Lifeline (call or text 988 in the US) or local emergency help, and encourage them to reach a trusted person or pastor. Never suggest that faith requires someone to stay where they are being abused.
+
 When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
 
 Be direct, warm, and practical. Keep responses focused and conversational, typically under 180 words unless the question genuinely requires more depth. Behind every question is a person trying to build something: a business, a family, a life. Help them build it well.`;
@@ -82,6 +85,7 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
 const NORTH_STAR_SYSTEM = `You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. You never answer the question itself. You follow the instructions in the user message exactly and reply with only the JSON it asks for.`;
 
 export default {
+  async scheduled(event, env, ctx) { ctx.waitUntil(runDaily(env).then((r) => console.log('daily', JSON.stringify(r)))); },
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const allowed = ORIGINS.includes(origin);
@@ -96,6 +100,8 @@ export default {
     // Music relay: incompetech.com doesn't send CORS headers, which the page needs to control music volume on iPhone.
     // GET /m/<file>.mp3 streams that one file from incompetech's royalty-free folder, with CORS and range support.
     const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/u') return unsubscribe(env, url);
+    if (request.method === 'POST' && url.pathname === '/u') { await unsubscribe(env, url); return new Response('ok'); } // one-click unsubscribe from mail apps
     if (request.method === 'GET' && url.pathname.startsWith('/m/')) {
       const name = decodeURIComponent(url.pathname.slice(3));
       if (!/^[A-Za-z0-9 ,'().\-]{1,120}\.mp3$/.test(name) || (origin && !allowed)) return new Response('Not found', { status: 404 });
@@ -128,6 +134,7 @@ export default {
     try { body = await request.json(); } catch (e) { return json({ error: 'Invalid JSON' }, 400); }
 
     // Accounts: sign-in, memory and kept conversations.
+    if (body.mode === 'daily-preview') return json(await preview(env));
     if (body.mode === 'account') {
       try { return json(await accountOp(env, body, { underQuota: (who, kind, amount, limit) => underQuota(env, who, kind, amount, limit) })); }
       catch (e) { console.error('account', e && e.message); return json({ error: 'Something went wrong. Please try again.' }, 500); }

@@ -100,6 +100,8 @@ export class Directory {
       case 'map.put': await s.put(d.key, d.value); return Response.json({ ok: true });
       case 'map.get': return Response.json((await s.get(d.key)) ?? null);
       case 'map.del': await s.delete(d.key); return Response.json({ ok: true });
+      case 'inc': { const v = ((await s.get(d.key)) || 0) + (d.n || 1); await s.put(d.key, v); return Response.json(v); }
+      case 'list': { const m = await s.list({ prefix: d.prefix, start: d.start, limit: Math.min(d.limit || 1000, 5000) }); return Response.json([...m.entries()]); }
       case 'map.take': { const v = await s.get(d.key); if (v != null) await s.delete(d.key); return Response.json(v ?? null); }
     }
     return Response.json({ error: 'op' }, { status: 400 });
@@ -251,6 +253,7 @@ export async function accountOp(env, body, helpers) {
       const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
       await call(D, { op: 'cred.put', id: b64u(ad.credId), rec: { uid: ch.uid, ...key, count: ad.count } });
       await call(user(env, ch.uid), { op: 'init', uid: ch.uid, name });
+      await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':account' });
       return await signedIn(ch.uid);
     } catch (e) { console.error('register', e && e.message); return { error: "Your passkey couldn't be saved. Please try again." }; }
   }
@@ -281,6 +284,27 @@ export async function accountOp(env, body, helpers) {
   }
 
   // Waitlist: saved here, and (if the NOTIFY_EMAIL secret is set) emailed to the owner. Keeps any personal address out of the public page.
+  // Anonymous usage counters (no names, no content): one number per event per day.
+  if (op === 'stat') {
+    const ev = String(body.ev || '');
+    const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'fb_up', 'fb_down', 'call'];
+    if (!OK.includes(ev)) return { error: 'event' };
+    await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':' + ev });
+    return { ok: true };
+  }
+
+  // Daily North Star email: opt-in list (dn:<email>), each with a private unsubscribe token.
+  if (op === 'daily.sub') {
+    const email = normEmail(body.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: 'Please enter a valid email address.' };
+    const had = await call(D, { op: 'map.get', key: 'dn:' + email });
+    if (!had) {
+      await call(D, { op: 'map.put', key: 'dn:' + email, value: { email, t: Date.now(), tok: b64u(rand(18)) } });
+      await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':daily_sub' });
+    }
+    return { ok: true, already: !!had };
+  }
+
   if (op === 'waitlist') {
     const email = normEmail(body.email);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: 'Please enter a valid email address.' };
@@ -288,6 +312,7 @@ export async function accountOp(env, body, helpers) {
     const question = String(body.question || '').slice(0, 300);
     const already = await call(D, { op: 'map.get', key: 'wl:' + email });
     await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: (already && already.t) || Date.now() } });
+    if (!already) await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':waitlist' });
     if (!already && env.RESEND_API_KEY) await sendWelcome(env, email).catch((e) => console.error('welcome', e && e.message));
     if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
       const esc = (x) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -331,6 +356,7 @@ export async function accountOp(env, body, helpers) {
       uid = b64u(rand(16));
       await call(D, { op: 'map.put', key: 'email:' + v.email, value: uid });
       await call(user(env, uid), { op: 'init', uid, email: v.email, name: '' });
+      await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':account' });
     }
     return await signedIn(uid);
   }

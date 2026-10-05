@@ -429,6 +429,26 @@
   .musicbtn.on .mb-note{display:none}.musicbtn.on .mb-eq{display:flex}
   @keyframes mbeq{0%,100%{height:30%}50%{height:100%}}
   @media (prefers-reduced-motion:reduce){.musicbtn .mb-eq i{animation:none}.musicbtn .mb-eq i:nth-child(2){height:80%}.musicbtn .mb-eq i:nth-child(3){height:60%}}
+  /* ---- Feedback, share, daily sign-up, first-visit simplicity ---- */
+  .actrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .actrow .listen{margin:2px 0 16px}
+  .fb{margin:2px 0 16px;width:40px;height:36px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:17px;line-height:1;cursor:pointer;filter:grayscale(.35);opacity:.85}
+  .fb:hover{opacity:1;filter:none}
+  .fb.on{filter:none;opacity:1;border-color:var(--earth);background:#f6efe8}
+  .fb:disabled:not(.on){opacity:.35;cursor:default}
+  .ns-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+  .ns-share,.ns-daily{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .ns-share svg{width:18px;height:18px}
+  .ns-daily{background:transparent;color:var(--earth)}
+  .ns-share:disabled{opacity:.6}
+  .ns-dailyform{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+  .ns-dailyform input{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
+  .ns-dailyform button{padding:10px 14px;border:none;border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
+  .ns-dailynote{margin:4px 0 0;width:100%;font-size:15px;color:#4d5f7a}
+  .emaildaily{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:14.5px;font-weight:600}
+  .emaildaily input{width:18px;height:18px;accent-color:var(--earth)}
+  html.photo .emaildaily{color:#eef2fb;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+  body.firstvisit .callbar,body.firstvisit .emailstep{display:none !important}
 </style>
 </head>
 <body>
@@ -563,8 +583,13 @@
       if (p[0] === 'u') return 'Background photograph: ' + (p[4] ? p[4] + ' (one of the wonders of the world)' : 'a sky photograph (sunrise, daytime sky, sunset, aurora or night sky)') + ', photo by ' + p[2] + ' on Unsplash.';
       return 'Background image: "' + p[3] + '", a real space telescope image from the ' + (p[0] === 'w' ? 'James Webb' : 'Hubble') + ' Space Telescope; credit: ' + p[2] + '.';
     }
+    function shareInfo(W, H) {
+      if (cur < 0) return null; var p = P[cur];
+      if (p[0] === 'u') return { url: 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&crop=entropy&q=80&w=' + W + '&h=' + H, credit: (p[4] ? p[4] + ' \u00b7 ' : '') + 'Photo: ' + p[2] + ' on Unsplash' };
+      return { url: (p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org') + '/archives/images/screen/' + p[1] + '.jpg', credit: p[3] + ' \u00b7 ' + p[2] };
+    }
     var api = {
-      describe: describe,
+      describe: describe, shareInfo: shareInfo,
       list: P, get: function () { return JSON.parse(JSON.stringify(S)); }, current: function () { return cur; },
       counts: function () { return { sky: 50, space: 25, wonders: P.length - 75, favs: S.favs.length }; },
       set: function (patch) {
@@ -671,7 +696,7 @@
       describe: describe,
       MOODS: MOODS, INST: INST, count: count,
       state: function () { return { on: on, mood: M.mood, inst: M.inst, vol: M.vol, track: list.length ? track() : null, note: note, size: list.length, mode: mode, level: Math.round(level * 1000) / 1000, webAudio: !!gain }; },
-      start: function () { on = true; mode = 'full'; voiceAudio = 0; graph(); if (!list.length) build(); if (!a.src) load(); play(); update(); ui(); },
+      start: function () { if (window.BC_STAT) window.BC_STAT('music'); on = true; mode = 'full'; voiceAudio = 0; graph(); if (!list.length) build(); if (!a.src) load(); play(); update(); ui(); },
       stop: function () { on = false; ramp(0, 600, function () { if (!on) a.pause(); }); ui(); },
       toggle: function () { if (on) api.stop(); else api.start(); },
       next: function () { if (!list.length) build(); at++; load(); if (on) play(); },
@@ -729,6 +754,7 @@
           <input type="email" id="email" name="email" placeholder="you@email.com" required>
           <button type="submit">Notify Me</button>
         </form>
+        <label class="emaildaily"><input type="checkbox" id="emailDaily"> Also send me a Daily North Star each morning</label>
         <p class="emailhint">Get early access when Biblicall fully launches. Leave your email above.</p>
         <p class="emailnote" id="emailNote" aria-live="polite"></p>
       </div>
@@ -790,6 +816,7 @@
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'bad');
+      if (document.getElementById('emailDaily') && document.getElementById('emailDaily').checked) { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'daily.sub', email }) }).catch(() => {}); lsSet('bc_daily', email); }
       note.textContent = "You're on the list. We'll email you when Biblicall fully launches.";
       emailForm.reset();
     } catch (err) {
@@ -799,11 +826,15 @@
 
   // ---- North Star: biblical wisdom, verified against the KJV ----
   const COMPASS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>';
+  // Scripture translation: King James (classic) or Berean Standard Bible (modern English). Both are public domain.
+  const BIBLES = { kjv: { file: 'kjv.json', short: 'KJV', name: 'King James (classic)' }, bsb: { file: 'bsb.json', short: 'BSB', name: 'Berean Standard (modern English)' } };
+  let bibleKey = (() => { try { const v = JSON.parse(localStorage.getItem('bc_bible') || '"kjv"'); return BIBLES[v] ? v : 'kjv'; } catch (e) { return 'kjv'; } })();
   let BIBLE = null, biblePromise = null;
   function loadBible() {
-    if (!biblePromise) biblePromise = fetch('kjv.json').then((r) => r.json()).then((d) => (BIBLE = d)).catch(() => null);
+    if (!biblePromise) biblePromise = fetch(BIBLES[bibleKey].file).then((r) => r.json()).then((d) => (BIBLE = d)).catch(() => null);
     return biblePromise;
   }
+  window.BC_BIBLE = { list: BIBLES, get: () => bibleKey, set: (k) => { if (!BIBLES[k] || k === bibleKey) return; bibleKey = k; try { localStorage.setItem('bc_bible', JSON.stringify(k)); } catch (e) {} BIBLE = null; biblePromise = null; loadBible(); } };
   const BOOK_ALIAS = { 'psalm':'psalms', 'song of songs':'song of solomon', 'songs':'song of solomon', 'canticles':'song of solomon', 'revelations':'revelation' };
   function bookIndex(name) {
     let s = name.trim().replace(/\./g, '').replace(/\s+/g, ' ').toLowerCase();
@@ -818,7 +849,7 @@
     const ch = BIBLE.text[bi][+m[2] - 1]; if (!ch) return null;
     const a = +m[3], b = m[4] ? +m[4] : a;
     if (a < 1 || b < a || b > ch.length || b - a > 5) return null;
-    return { label: BIBLE.books[bi] + ' ' + m[2] + ':' + a + (b > a ? '–' + b : ''), text: ch.slice(a - 1, b).join(' ') };
+    return { label: BIBLE.books[bi] + ' ' + m[2] + ':' + a + (b > a ? '–' + b : ''), text: ch.slice(a - 1, b).join(' '), tr: BIBLES[bibleKey].short };
   }
   // Short acknowledgments ("ok", "thanks", "amen", an emoji) never get a North Star.
   const ACK_WORDS = new Set(('ok okay k kk okey alright aight sure yes yeah yep yup ya no nope nah thanks thank thx ty tysm cheers ' +
@@ -844,7 +875,7 @@
     return 'You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that.\n\n' +
       ctx + 'The user\'s latest message:\n"""' + question.slice(0, 2000) + '"""\n\n' + rule +
       'In 2 to 4 sentences, teach how biblical wisdom speaks to this exact situation, warm and never preachy. ' +
-      'Then choose 1 or 2 King James Version passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision), each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the KJV and discarded if it does not match. Do not quote the verse text.\n\n' +
+      'Then choose 1 or 2 Bible passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision), each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the Bible text and discarded if it does not match. If the person seems to be in crisis or deep pain (thoughts of suicide or self-harm, abuse, grief), choose only gentle passages of comfort, hope and God\'s nearness, never verses of judgment or duty, and make the question very gentle. Do not quote the verse text.\n\n' +
       'Then reply with ONLY this JSON and nothing else:\n{"northStar": "2-4 sentences", "verses": [{"ref": "Book C:V", "why": "one sentence on why it applies"}], "reflect": "one short question for the user to ponder"}';
   }
   function parseJson(text) {
@@ -876,12 +907,67 @@
     return '<h2>' + COMPASS + 'North Star</h2>' +
       '<p class="teach">' + inline(ns.teach) + '</p>' +
       ns.verses.map((v) => '<div class="verse"><blockquote>' + escapeHtml(v.text) + '</blockquote>' +
-        '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">✓ Verified in the KJV</span></div>' +
+        '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">✓ Verified in the ' + escapeHtml(v.tr || 'KJV') + '</span></div>' +
         (v.why ? '<p class="why">' + inline(v.why) + '</p>' : '') + '</div>').join('') +
       (ns.reflect ? '<p class="reflect">' + inline(ns.reflect) + '</p>' : '');
   }
 
   q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = q.scrollHeight + 'px'; });
+
+  // ---- Share a moment: the North Star verse laid over the current photo, ready to post or text ----
+  function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = rej; i.src = src; setTimeout(rej, 12000); }); }
+  function wrapLines(x, text, maxW) {
+    const words = text.split(/\s+/), lines = []; let line = '';
+    words.forEach((w) => { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+    if (line) lines.push(line); return lines;
+  }
+  async function shareMoment(ns, btn) {
+    const v = ns.verses[0]; if (!v) return;
+    if (btn) { btn.disabled = true; }
+    stat('share');
+    try {
+      const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+      const info = window.BC_BG && window.BC_BG.shareInfo ? window.BC_BG.shareInfo(W, H) : null;
+      let drawn = false;
+      if (info && info.url) { try { const img = await loadImg(info.url); const r = Math.max(W / img.width, H / img.height), w = img.width * r, h = img.height * r; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); drawn = true; } catch (e) {} }
+      if (!drawn) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1b2a52'); g.addColorStop(0.55, '#6b4f7a'); g.addColorStop(1, '#e9a27f'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+      const sh = x.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(6,10,24,.45)'); sh.addColorStop(0.5, 'rgba(6,10,24,.38)'); sh.addColorStop(1, 'rgba(6,10,24,.7)'); x.fillStyle = sh; x.fillRect(0, 0, W, H);
+      try { await document.fonts.load('700 60px "Source Sans 3"'); } catch (e) {}
+      x.textAlign = 'center'; x.fillStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 18;
+      x.font = '700 30px "Source Sans 3", sans-serif'; x.fillText('\u2726  NORTH STAR', W / 2, 150);
+      let size = 66, lines; const quote = '\u201c' + v.text + '\u201d';
+      do { x.font = '700 ' + size + 'px "Source Sans 3", sans-serif'; lines = wrapLines(x, quote, W - 170); size -= 4; } while (lines.length * size * 1.3 > 760 && size > 30);
+      size += 4; const lh = size * 1.3, top = H / 2 - (lines.length * lh) / 2 + size * 0.35;
+      lines.forEach((ln, i) => x.fillText(ln, W / 2, top + i * lh));
+      x.font = '600 40px "Source Sans 3", sans-serif'; x.fillText(v.label + ' (' + (v.tr || 'KJV') + ')', W / 2, top + lines.length * lh + 50);
+      x.font = '700 46px "Source Sans 3", sans-serif'; x.fillText('Biblicall', W / 2, H - 120);
+      x.font = '500 28px "Source Sans 3", sans-serif'; x.fillText('Ask anything. Find your North Star. \u00b7 biblicall.com', W / 2, H - 76);
+      if (info && info.credit && drawn) { x.shadowBlur = 6; x.font = '500 21px "Source Sans 3", sans-serif'; x.textAlign = 'right'; x.fillStyle = 'rgba(255,255,255,.8)'; x.fillText(info.credit, W - 30, H - 26); }
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+      const file = new File([blob], 'biblicall-north-star.jpg', { type: 'image/jpeg' });
+      const text = '\u201c' + v.text + '\u201d \u2014 ' + v.label + '\nFound with Biblicall: https://biblicall.com';
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }).catch(() => {}); }
+      else { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = 'biblicall-north-star.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('Image saved. Share it anywhere.'); }
+    } catch (e) { toast('Couldn\u2019t make the image just now. Please try again.'); }
+    if (btn) btn.disabled = false;
+  }
+  // ---- Daily North Star email sign-up (opt-in) ----
+  function dailyForm(box, trigger) {
+    trigger.remove();
+    const f = document.createElement('form'); f.className = 'ns-dailyform';
+    const inp = document.createElement('input'); inp.type = 'email'; inp.required = true; inp.placeholder = 'you@email.com'; inp.autocomplete = 'email';
+    if (typeof acct !== 'undefined' && acct && acct.email) inp.value = acct.email;
+    const go = document.createElement('button'); go.type = 'submit'; go.textContent = 'Send me one each morning';
+    const note = document.createElement('p'); note.className = 'ns-dailynote'; note.textContent = 'One short verse and reflection with a beautiful photo, about 6 a.m. Central. Unsubscribe anytime.';
+    f.append(inp, go); box.append(f, note);
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault(); go.disabled = true;
+      const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'daily.sub', email: inp.value }) }).then((x) => x.json()).catch(() => ({}));
+      if (r.ok) { lsSet('bc_daily', inp.value.trim()); f.remove(); note.textContent = '\u2713 You\u2019re in. Your first Daily North Star arrives tomorrow morning.'; }
+      else { go.disabled = false; note.textContent = r.error || 'That didn\u2019t go through. Please try again.'; }
+    });
+    inp.focus();
+  }
 
   function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -958,15 +1044,39 @@
         lb.type = 'button'; lb.className = 'listen';
         lb._msg = m;
         setListenBtn(lb, speaking && speaking.msg === m ? speaking.state : 'idle');
-        lb.addEventListener('click', () => listen(m));
-        threadBox.appendChild(lb);
-        lastRow = lb;
+        lb.addEventListener('click', () => { if (!(speaking && speaking.msg === m)) stat('listen'); listen(m); });
+        const row = document.createElement('div'); row.className = 'actrow';
+        row.appendChild(lb);
+        if (m.q) {
+          [['up', '\uD83D\uDC4D', 'Helpful'], ['down', '\uD83D\uDC4E', 'Not helpful']].forEach(([k, icon, lab]) => {
+            const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'fb' + (m.fb === k ? ' on' : '');
+            fb.textContent = icon; fb.title = lab; fb.setAttribute('aria-label', lab); fb.setAttribute('aria-pressed', m.fb === k ? 'true' : 'false');
+            fb.disabled = !!m.fb;
+            fb.addEventListener('click', () => { if (m.fb) return; m.fb = k; stat(k === 'up' ? 'fb_up' : 'fb_down'); toast(k === 'up' ? 'Thank you! Glad it helped.' : 'Thank you. This helps Biblicall improve.'); persistConvo(); renderThread(); });
+            row.appendChild(fb);
+          });
+        }
+        threadBox.appendChild(row);
+        lastRow = row;
       }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
         panel.className = 'ns' + (m.ns === 'loading' ? ' loading' : '');
         if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
-        else panel.innerHTML = northStarHtml(m.ns);
+        else {
+          panel.innerHTML = northStarHtml(m.ns);
+          const tools = document.createElement('div'); tools.className = 'ns-tools';
+          const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'ns-share';
+          sh.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Share this verse';
+          sh.addEventListener('click', () => shareMoment(m.ns, sh));
+          tools.appendChild(sh);
+          if (!lsGet('bc_daily', '')) {
+            const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'ns-daily'; dl.textContent = '\u2709 Get a North Star every morning';
+            dl.addEventListener('click', () => dailyForm(tools, dl));
+            tools.appendChild(dl);
+          }
+          panel.appendChild(tools);
+        }
         threadBox.appendChild(panel);
         lastRow = panel;
       } else if (m.role === 'assistant' && m.nsOffer) {
@@ -1178,7 +1288,7 @@
     m.nsOffer = false; m.nsNote = ''; m.ns = 'loading';
     renderThread();
     const ns = await fetchNorthStar(m.q, m.hist, true);
-    if (ns) { m.ns = ns; }
+    if (ns) { m.ns = ns; stat('northstar'); }
     else { m.ns = null; m.nsOffer = true; m.nsNote = "Couldn't find a North Star just now. Try again in a moment."; }
     renderThread();
   }
@@ -1205,14 +1315,14 @@
       const images = sending.map((f) => ({ media_type: f.media_type, data: f.data }));
       if (!roomSend({ type: 'ask', content: q.value.trim(), images: images.length ? images : undefined })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
       if (sending.length) { pendingFiles = []; drawAttachRow(); }
-      document.body.classList.add('chatting');
+      document.body.classList.add('chatting'); document.body.classList.remove('firstvisit'); stat('question');
       q.value = ''; q.style.height = 'auto';
       lastQuestion = question;
       emailStep.classList.add('show');
       return;
     }
 
-    document.body.classList.add('chatting');
+    document.body.classList.add('chatting'); document.body.classList.remove('firstvisit'); stat('question');
     sendBtn.disabled = true;
     q.value = '';
     q.style.height = 'auto';
@@ -1244,7 +1354,7 @@
       scrollToStart(conversation[turn]);
       renderThread();
       const ns = await nsPromise;
-      if (ns) conversation[turn].ns = ns;
+      if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       else if (!ack) conversation[turn].nsOffer = true;
       if (!wantsRemember && !ack && personalFact(question) && !conversation.some((m) => m.memOffer) && !memory.some((x) => x.text === memText(question))) {
         conversation[turn].memOffer = memText(question);
@@ -1275,6 +1385,15 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
   }
   window.toast = toast;
+  // Anonymous usage counts (no names, no content), so the family can see what helps people.
+  function stat(ev) { try { fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'stat', ev }), keepalive: true }).catch(() => {}); } catch (e) {} }
+  window.BC_STAT = stat;
+  (function countVisit() {
+    const d = new Date().toISOString().slice(0, 10);
+    if (lsGet('bc_visit_day', '') === d) return;
+    lsSet('bc_visit_day', d); stat('visit');
+    if (!lsGet('bc_seen', false)) { lsSet('bc_seen', true); stat('visit_new'); }
+  })();
   // What the person sees and hears right now (background picture and music), so Biblicall can answer "what is this song?" or "where is this photo?"
   function ambience() {
     try {
@@ -1448,6 +1567,7 @@
 
   // ---- Saved conversations ----
   let convos = lsGet('bc_convos', []);
+  if (!convos.length && !/[?&](room|c|s|signin)=/.test(location.search)) document.body.classList.add('firstvisit');
   if (!Array.isArray(convos)) convos = [];
   let convId = null, persistTimer = null;
   function schedulePersist() { clearTimeout(persistTimer); persistTimer = setTimeout(persistConvo, 400); }
@@ -1580,6 +1700,12 @@
       const mv = el('button', 'bg-chip' + (s.motion ? ' on' : ''), s.motion ? 'Gentle motion: on' : 'Gentle motion: off'); mv.type = 'button';
       mv.addEventListener('click', () => { BG.set({ motion: !s.motion }); drawDrawer(); });
       acts.append(nx, mv); box.appendChild(acts);
+    }
+    if (window.BC_BIBLE) {
+      const B = window.BC_BIBLE;
+      sec('Scripture');
+      chips(Object.entries(B.list).map(([k, v]) => [k, v.name]), B.get(), (v) => { B.set(v); toast('North Star verses will use the ' + B.list[v].short + '.'); });
+      box.appendChild(el('p', 'acct-fine', 'Both translations are public domain. Every North Star verse is checked word for word against the one you choose.'));
     }
     if (MU) {
       const m = MU.state();
@@ -2075,6 +2201,7 @@
   callName.value = myName();
   callName.addEventListener('change', () => setMyName(callName.value));
   document.querySelectorAll('[data-call]').forEach((b) => b.addEventListener('click', () => {
+    stat('call');
     callStatus.textContent = '';
     callName.value = myName();
     callWin.showModal();
