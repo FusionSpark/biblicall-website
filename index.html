@@ -252,7 +252,6 @@
   .dr-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .dr-tabs::-webkit-scrollbar{display:none}
   .dr-tabs{gap:0 !important;padding-left:2px !important;padding-right:2px !important}
-  .dr-tabs button{flex:1 0 auto !important;padding:8px 3px !important;font-size:14px !important}
   .pz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
   .pz-thumb{padding:0;border:3px solid transparent;border-radius:10px;overflow:hidden;aspect-ratio:4/5;background:#cfd9e3;cursor:pointer}
   .pz-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -267,6 +266,17 @@
   .own-ask .row{display:flex;flex-wrap:wrap;gap:8px}
   .own-ask button{flex:1;min-width:140px;padding:8px 12px;border-radius:999px;border:1.5px solid #664336;background:#fff;color:#664336;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
   .own-ask .yes{background:#664336;color:#fff}
+  .drawer{overflow-y:auto}
+  .dr-body{flex:none !important;overflow:visible !important}
+  .dr-tabs{display:grid !important;grid-template-columns:1fr 1fr;gap:6px !important;padding:2px 12px 10px !important;overflow:visible !important}
+  .dr-tabs button{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 10px !important;font-size:16px !important;border:1px solid var(--line) !important;border-radius:12px;background:#fff;color:var(--earth-deep) !important;font-weight:600}
+  .dr-tabs button.on{background:var(--earth) !important;border-color:var(--earth) !important;color:#fff !important}
+  .dr-tabs .ti{font-size:17px;line-height:1}
+  .savebtn{margin:2px 0 16px;padding:6px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .save-ask{display:flex;align-items:center;gap:8px;margin:-8px 0 14px;flex-basis:100%;font-size:15.5px;color:var(--muted)}
+  .save-ask button{padding:6px 16px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
+  .file-item{margin:0 0 6px}
+  .files .acct-btn.ghost{text-align:left}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -884,7 +894,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="prayer">Prayer</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Personalize</button><button type="button" data-tab="account">Me</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -1361,6 +1371,11 @@
         lb.addEventListener('click', () => { if (!(speaking && speaking.msg === m)) stat('listen'); listen(m); });
         const row = document.createElement('div'); row.className = 'actrow';
         row.appendChild(lb);
+        if (m.q || m.content.length > 200) {
+          const sv = document.createElement('button'); sv.type = 'button'; sv.className = 'savebtn'; sv.textContent = '\u2913 Save'; sv.title = 'Save this answer as a PDF or Word document';
+          sv.addEventListener('click', () => saveChooser(sv, m.q || 'BibliCall answer', () => toBlocks(m.content).concat(nsBlocks(m.ns))));
+          row.appendChild(sv);
+        }
         if (m.q) {
           [['up', '\uD83D\uDC4D', 'Helpful'], ['down', '\uD83D\uDC4E', 'Not helpful']].forEach(([k, icon, lab]) => {
             const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'fb' + (m.fb === k ? ' on' : '');
@@ -2246,6 +2261,153 @@
     box.appendChild(el('p', 'acct-fine', 'Your prayer journal is saved only on this phone. If reminders are on, only the check-in note and its time go to the BibliCall server, and it is deleted once sent.'));
     return box;
   }
+  // ---- Save: answers, conversations, the week and the prayer journal as PDF or Word documents ----
+  // On phones the share sheet opens, so people save straight into Files, Google Drive, Dropbox or OneDrive (into their "BibliCall" folder).
+  const libs = {};
+  function loadLib(name, url, test) {
+    if (!libs[name]) libs[name] = new Promise((res, rej) => { if (test()) return res(test()); const s = document.createElement('script'); s.src = url; s.onload = () => res(test()); s.onerror = rej; document.head.appendChild(s); setTimeout(() => rej(new Error('timeout')), 15000); });
+    return libs[name];
+  }
+  let fontData = null;
+  async function pdfFonts() {
+    if (fontData) return fontData;
+    const b64 = async (u) => { const buf = new Uint8Array(await (await fetch(u)).arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 32768) s += String.fromCharCode.apply(null, buf.subarray(i, i + 32768)); return btoa(s); };
+    fontData = await Promise.all([b64('fonts/SourceSans3-Regular.ttf'), b64('fonts/SourceSans3-Bold.ttf')]);
+    return fontData;
+  }
+  // Turn an answer (light markdown) into blocks: {h} headings, {p} paragraphs, {li} bullets.
+  function toBlocks(text) {
+    const out = [];
+    String(text || '').replace(/\r/g, '').split('\n').forEach((ln) => {
+      const t = ln.trim(); if (!t) return;
+      let m;
+      if ((m = t.match(/^#{1,6}\s+(.+)/))) out.push({ h: m[1].replace(/\*\*/g, '') });
+      else if ((m = t.match(/^[-*•]\s+(.+)/))) out.push({ li: m[1].replace(/\*\*/g, '') });
+      else if ((m = t.match(/^(\d+)[.)]\s+(.+)/))) out.push({ li: m[2].replace(/\*\*/g, ''), n: m[1] });
+      else if ((m = t.match(/^\*\*(.+)\*\*:?$/))) out.push({ h: m[1] });
+      else out.push({ p: t.replace(/\*\*/g, '') });
+    });
+    return out;
+  }
+  function nsBlocks(ns) {
+    if (!ns || !ns.verses) return [];
+    const b = [{ h: '✦ North Star' }, { p: ns.teach }];
+    ns.verses.forEach((v) => { b.push({ q: '“' + v.text + '”', ref: v.label + ' (' + (v.tr || 'KJV') + ')' }); if (v.why) b.push({ p: v.why }); });
+    if (ns.reflect) b.push({ p: ns.reflect, i: true });
+    return b;
+  }
+  function fileName(title, ext) { return 'BibliCall - ' + String(title || 'Notes').replace(/[\\/:*?"<>|\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) + '.' + ext; }
+  async function makePdf(title, blocks) {
+    const J = await loadLib('jspdf', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => window.jspdf && window.jspdf.jsPDF);
+    const [reg, bold] = await pdfFonts();
+    const doc = new J({ unit: 'pt', format: 'letter' });
+    doc.addFileToVFS('ss-r.ttf', reg); doc.addFont('ss-r.ttf', 'SS', 'normal');
+    doc.addFileToVFS('ss-b.ttf', bold); doc.addFont('ss-b.ttf', 'SS', 'bold');
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), L = 60, R = W - 60, maxW = R - L;
+    let y = 64;
+    const need = (h) => { if (y + h > H - 60) { doc.addPage(); y = 64; } };
+    const write = (text, size, style, color, indent, gap) => {
+      doc.setFont('SS', style); doc.setFontSize(size); doc.setTextColor.apply(doc, color);
+      const lines = doc.splitTextToSize(text, maxW - (indent || 0));
+      lines.forEach((ln) => { need(size * 1.35); doc.text(ln, L + (indent || 0), y); y += size * 1.35; });
+      y += gap || 0;
+    };
+    doc.setFont('SS', 'bold'); doc.setFontSize(11); doc.setTextColor(102, 67, 54); doc.text('BibliCall', L, 40);
+    doc.setFont('SS', 'normal'); doc.setFontSize(10); doc.setTextColor(91, 107, 120); doc.text(new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }), R, 40, { align: 'right' });
+    write(title, 19, 'bold', [74, 47, 38], 0, 8);
+    blocks.forEach((b) => {
+      if (b.h) { y += 4; write(b.h, 13.5, 'bold', [74, 47, 38], 0, 3); }
+      else if (b.li) write((b.n ? b.n + '. ' : '• ') + b.li, 11.5, 'normal', [44, 33, 23], 12, 3);
+      else if (b.q) { write(b.q, 12, 'bold', [44, 33, 23], 14, 1); write(b.ref + '  ✓ verified', 10.5, 'normal', [52, 80, 106], 14, 6); }
+      else if (b.p) write(b.p, 11.5, b.i ? 'bold' : 'normal', b.i ? [102, 67, 54] : [44, 33, 23], 0, 6);
+    });
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('SS', 'normal'); doc.setFontSize(9); doc.setTextColor(120, 130, 140); doc.text('Saved from BibliCall · biblicall.com', L, H - 30); if (n > 1) doc.text(i + ' / ' + n, R, H - 30, { align: 'right' }); }
+    return new File([doc.output('blob')], fileName(title, 'pdf'), { type: 'application/pdf' });
+  }
+  async function makeDocx(title, blocks) {
+    const Z = await loadLib('jszip', 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', () => window.JSZip);
+    const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const run = (t, o) => '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>' + (o.b ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') + '<w:color w:val="' + (o.c || '2C2117') + '"/><w:sz w:val="' + (o.s || 23) + '"/></w:rPr><w:t xml:space="preserve">' + x(t) + '</w:t></w:r>';
+    const para = (runs, o) => '<w:p><w:pPr><w:spacing w:after="' + ((o && o.after) || 120) + '"/>' + (o && o.ind ? '<w:ind w:left="' + o.ind + '"/>' : '') + '</w:pPr>' + runs + '</w:p>';
+    let body = para(run('BibliCall · ' + new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }), { s: 18, c: '664336', b: true }));
+    body += para(run(title, { b: true, s: 36, c: '4A2F26' }), { after: 200 });
+    blocks.forEach((b) => {
+      if (b.h) body += para(run(b.h, { b: true, s: 27, c: '4A2F26' }), { after: 80 });
+      else if (b.li) body += para(run((b.n ? b.n + '. ' : '• ') + b.li, {}), { ind: 360, after: 60 });
+      else if (b.q) body += para(run(b.q, { b: true, s: 24 }), { ind: 360, after: 40 }) + para(run(b.ref + '  ✓ verified', { s: 20, c: '34506A' }), { ind: 360 });
+      else if (b.p) body += para(run(b.p, { i: !!b.i, c: b.i ? '664336' : '2C2117' }));
+    });
+    body += para(run('Saved from BibliCall · biblicall.com', { s: 18, c: '78828C' }));
+    const zip = new Z();
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1200" w:right="1200" w:bottom="1200" w:left="1200" w:header="600" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>');
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    return new File([blob], fileName(title, 'docx'), { type: blob.type });
+  }
+  async function deliverFile(file) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: file.name }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    const u = URL.createObjectURL(file), a = document.createElement('a'); a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+    toast('Saved to your downloads: ' + file.name);
+  }
+  async function saveDoc(title, blocks, kind) {
+    toast('Preparing your ' + (kind === 'docx' ? 'Word document' : 'PDF') + '…');
+    try { const f = kind === 'docx' ? await makeDocx(title, blocks) : await makePdf(title, blocks); stat('save_' + kind); await deliverFile(f); }
+    catch (e) { toast('That couldn’t be saved just now. Please try again.'); }
+  }
+  // A small "PDF or Word?" choice under the Save button.
+  function saveChooser(anchor, title, getBlocks) {
+    const old = anchor.parentNode.querySelector('.save-ask'); if (old) { old.remove(); return; }
+    const box = document.createElement('div'); box.className = 'save-ask';
+    box.innerHTML = '<span>Save as</span><button type="button" data-k="pdf">PDF</button><button type="button" data-k="docx">Word</button>';
+    box.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { box.remove(); saveDoc(title, getBlocks(), b.dataset.k); }));
+    anchor.insertAdjacentElement('afterend', box);
+  }
+  function convoBlocks() {
+    const out = [];
+    conversation.filter((m) => !m.loading && m.content && m.content !== 'Thinking…').forEach((m) => {
+      if (m.role === 'user') out.push({ h: (m.name ? m.name + ': ' : 'You: ') + String(m.content).slice(0, 300) });
+      else { toBlocks(m.content).forEach((b) => out.push(b)); nsBlocks(m.ns).forEach((b) => out.push(b)); }
+    });
+    return out;
+  }
+  function weekBlocks() {
+    const b = [{ h: 'This week’s goals' }];
+    if (!PLAN.goals.length) b.push({ p: 'No goals yet.' });
+    PLAN.goals.forEach((g) => b.push({ li: (g.done ? '✓ ' : '○ ') + g.t }));
+    const up = PLAN.rems.filter((r) => r.at > Date.now());
+    if (up.length) { b.push({ h: 'Upcoming reminders' }); up.forEach((r) => b.push({ li: whenLabel(r.at) + ': ' + r.text })); }
+    if (PLAN.read && !PLAN.read.finished && BIBLE) b.push({ h: 'Bible reading' }, { p: readLabel() + ' is next.' });
+    return b;
+  }
+  function prayerBlocks() {
+    const b = [], open = prayers.filter((p) => !p.ans), done = prayers.filter((p) => p.ans);
+    b.push({ h: 'Praying for' }); if (!open.length) b.push({ p: 'Nothing yet.' });
+    open.forEach((p) => b.push({ li: p.t + ' (since ' + new Date(p.at).toLocaleDateString() + ')' }));
+    if (done.length) { b.push({ h: 'Answered prayers' }, { p: '“Hitherto hath the LORD helped us.” 1 Samuel 7:12', i: true }); done.forEach((p) => b.push({ li: p.t + ' — answered ' + new Date(p.ans).toLocaleDateString() + (p.note ? ': ' + p.note : '') })); }
+    return b;
+  }
+  function drawFiles() {
+    const box = el('div', 'plan files');
+    box.appendChild(el('p', 'acct-fine', 'Save anything from BibliCall as a PDF or Word document, straight into your own storage. Your files stay yours: BibliCall never keeps a copy.'));
+    const item = (label, sub, title, getBlocks) => {
+      const wrap = el('div', 'file-item'); const b = el('button', 'acct-btn ghost', label); b.type = 'button';
+      b.addEventListener('click', () => saveChooser(b, title, getBlocks));
+      wrap.append(b); if (sub) wrap.appendChild(el('p', 'acct-fine', sub)); box.appendChild(wrap);
+    };
+    box.appendChild(el('h4', 'bg-sub', 'Save'));
+    if (conversation.some((m) => m.role === 'assistant' && !m.loading)) item('💬 This conversation', null, (conversation.find((m) => m.role === 'user') || {}).content || 'Conversation', convoBlocks);
+    item('📅 My week', 'Goals, reminders and today’s reading.', 'My week', weekBlocks);
+    item('🙏 My prayer journal', 'Including your answered prayers.', 'My prayer journal', prayerBlocks);
+    box.appendChild(el('p', 'acct-fine', 'Tip: every answer also has a ⤓ Save button.'));
+    box.appendChild(el('h4', 'bg-sub', 'Your BibliCall folder'));
+    box.appendChild(el('p', 'acct-fine', isIOS ? 'On iPhone: when the share sheet opens, tap “Save to Files” (or Google Drive, Dropbox or OneDrive). The first time, make a folder named “BibliCall” and choose it. Your phone remembers it next time.'
+      : 'When you save, choose Google Drive, Dropbox, OneDrive or your phone’s storage. The first time, make a folder named “BibliCall” and keep everything there.'));
+    box.appendChild(el('h4', 'bg-sub', 'Coming soon'));
+    box.appendChild(el('p', 'acct-fine', 'Connect Google Drive, Dropbox or OneDrive once, and every Save goes straight into a “BibliCall” folder in your account. BibliCall will only ever see that one folder.'));
+    return box;
+  }
   // ---- Uploads: photos, PDFs, Word and text files, sent to BibliCall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -2648,6 +2810,7 @@
     if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
     if (drTab === 'plan') { drBody.appendChild(drawPlan()); return; }
     if (drTab === 'prayer') { drBody.appendChild(drawPrayer()); return; }
+    if (drTab === 'files') { drBody.appendChild(drawFiles()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
