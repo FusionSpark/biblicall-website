@@ -251,7 +251,8 @@
   .grp-join input{flex:1 1 100%}
   .dr-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .dr-tabs::-webkit-scrollbar{display:none}
-  .dr-tabs button{flex:none !important;padding:8px 9px !important}
+  .dr-tabs{gap:2px !important;padding-left:8px !important;padding-right:8px !important}
+  .dr-tabs button{flex:1 0 auto !important;padding:8px 4px !important;font-size:14.5px !important}
   .pz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
   .pz-thumb{padding:0;border:3px solid transparent;border-radius:10px;overflow:hidden;aspect-ratio:4/5;background:#cfd9e3;cursor:pointer}
   .pz-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -824,7 +825,7 @@
       next: function () { if (!list.length) build(); at++; load(); if (on) play(); },
       set: function (patch) { Object.assign(M, patch); if ('mood' in patch || 'inst' in patch) M.pick = null; lset('bc_music', M); build(); load(); if (on) play(); },
       // Choose one piece yourself: it plays (and repeats) until you go back to shuffle.
-      pick: function (title) { M.pick = title || null; lset('bc_music', M); build(); load(); if (on) play(); else api.start(); },
+      pick: function (title) { M.pick = title || null; lset('bc_music', M); build(); load(); if (on) play(); else if (title) api.start(); },
       picked: function () { return M.pick || null; },
       pieces: function (mood, inst) { return all.filter(function (t) { return match(t, mood || 'any', inst || 'any'); }).map(function (t) { return { title: t[0], by: SRC[t[1]].by }; }); },
       setVol: function (v) { M.vol = v; lset('bc_music', M); clearInterval(fade); if (on && mode !== 'mute') { level = target(); applyLevel(); } }
