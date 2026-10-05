@@ -16,6 +16,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Biblicall — Learn anything, guided by a true North Star</title>
 <meta name="description" content="Ask Biblicall anything. A full AI assistant guided by biblical wisdom. When it matters most, Biblicall adds a North Star: scripture, quoted word for word from the King James Bible, to guide your decisions and encourage you.">
+<link rel="canonical" href="https://biblicall.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Biblicall">
+<meta property="og:title" content="Biblicall — Ask anything. Find your North Star.">
+<meta property="og:description" content="A friend shared a North Star with you. Biblicall is a free AI assistant guided by scripture, quoted word for word and verified. Ask it anything.">
+<meta property="og:url" content="https://biblicall.com/">
+<meta property="og:image" content="https://biblicall.com/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Biblicall: Ask anything. Find your North Star.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Biblicall — Ask anything. Find your North Star.">
+<meta name="twitter:description" content="A free AI assistant guided by scripture, quoted word for word and verified.">
+<meta name="twitter:image" content="https://biblicall.com/og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -440,7 +454,20 @@
   .ns-share,.ns-daily{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .ns-share svg{width:18px;height:18px}
   .ns-daily{background:transparent;color:var(--earth)}
-  .ns-share:disabled{opacity:.6}
+  .ns-share:disabled,.ns-save:disabled{opacity:.6}
+  .ns-save{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--earth);background:transparent;color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .svcard{position:relative;max-width:560px;margin:0 auto 22px;padding:22px 22px 18px;border-radius:20px;background:rgba(255,255,255,.9);color:#2c2117;text-align:center;box-shadow:0 10px 34px rgba(10,20,40,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .svcard .svk{font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#664336;margin:0 0 10px}
+  .svcard blockquote{margin:0;font-size:21px;line-height:1.45;font-weight:600;color:#2c2117}
+  .svcard .svref{margin:10px 0 0;font-size:16px;color:#34506a}
+  .svcard .svref b{color:#4a2f26}
+  .svcard .svok{display:inline-block;margin-left:8px;color:#2f6b3a;font-weight:600}
+  .svcard .svgo{display:block;width:100%;margin:16px 0 8px;padding:12px 16px;border:0;border-radius:999px;background:#664336;color:#fff;font-family:inherit;font-size:18px;font-weight:700;cursor:pointer}
+  .svcard .svown{background:none;border:0;color:#664336;font-family:inherit;font-size:16px;font-weight:600;text-decoration:underline;cursor:pointer}
+  .svcard .svx{position:absolute;top:6px;right:10px;background:none;border:0;font-size:24px;line-height:1;color:#7a6a60;cursor:pointer}
+  .svcard .svfree{margin:8px 0 0;font-size:14px;color:#5b6b78}
+  body.sharedverse .intro{margin-bottom:18px}
+  body.chatting .svcard{display:none}
   .ns-dailyform{display:flex;gap:8px;flex-wrap:wrap;width:100%}
   .ns-dailyform input{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
   .ns-dailyform button{padding:10px 14px;border:none;border-radius:12px;background:var(--earth);color:#fff;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
@@ -728,6 +755,7 @@
     </div>
     <h1 class="sr-only">Biblicall</h1>
     <p class="intro">Ask anything. Find your North Star.</p>
+    <div class="svcard" id="svCard" hidden></div>
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="Biblicall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
@@ -836,21 +864,53 @@
   }
   window.BC_BIBLE = { list: BIBLES, get: () => bibleKey, set: (k) => { if (!BIBLES[k] || k === bibleKey) return; bibleKey = k; try { localStorage.setItem('bc_bible', JSON.stringify(k)); } catch (e) {} BIBLE = null; biblePromise = null; loadBible(); } };
   const BOOK_ALIAS = { 'psalm':'psalms', 'song of songs':'song of solomon', 'songs':'song of solomon', 'canticles':'song of solomon', 'revelations':'revelation' };
-  function bookIndex(name) {
+  function bookIndex(name, B) {
+    B = B || BIBLE;
     let s = name.trim().replace(/\./g, '').replace(/\s+/g, ' ').toLowerCase();
     s = s.replace(/^(1|first|1st)\s+/, 'i ').replace(/^(2|second|2nd)\s+/, 'ii ').replace(/^(3|third|3rd)\s+/, 'iii ');
     s = BOOK_ALIAS[s] || s;
-    return BIBLE.books.findIndex((b) => b.toLowerCase() === s);
+    return B.books.findIndex((b) => b.toLowerCase() === s);
   }
-  function lookupVerse(ref) {
+  function lookupVerse(ref, B, key) {
+    B = B || BIBLE; key = key || bibleKey;
     const m = String(ref).trim().match(/^(.+?)\s+(\d+):(\d+)(?:\s*[-–—,]\s*(\d+))?$/);
-    if (!m || !BIBLE) return null;
-    const bi = bookIndex(m[1]); if (bi < 0) return null;
-    const ch = BIBLE.text[bi][+m[2] - 1]; if (!ch) return null;
+    if (!m || !B) return null;
+    const bi = bookIndex(m[1], B); if (bi < 0) return null;
+    const ch = B.text[bi][+m[2] - 1]; if (!ch) return null;
     const a = +m[3], b = m[4] ? +m[4] : a;
     if (a < 1 || b < a || b > ch.length || b - a > 5) return null;
-    return { label: BIBLE.books[bi] + ' ' + m[2] + ':' + a + (b > a ? '–' + b : ''), text: ch.slice(a - 1, b).join(' '), tr: BIBLES[bibleKey].short };
+    return { label: B.books[bi] + ' ' + m[2] + ':' + a + (b > a ? '–' + b : ''), text: ch.slice(a - 1, b).join(' '), tr: BIBLES[key].short };
   }
+  // A link to one verse: biblicall.com/?verse=John 3:16&tr=kjv&photo=12 (the photo it was shared over).
+  function verseLink(v) {
+    const key = Object.keys(BIBLES).find((k) => BIBLES[k].short === v.tr) || 'kjv';
+    const ph = window.BC_BG && window.BC_BG.current ? window.BC_BG.current() : -1;
+    return 'https://biblicall.com/?verse=' + encodeURIComponent(v.label.replace('–', '-')).replace(/%20/g, '+').replace(/%3A/g, ':') + '&tr=' + key + (ph >= 0 ? '&photo=' + ph : '');
+  }
+  // Someone opened a shared verse: check it against the Bible text (never trust text in a link), then welcome them.
+  (async function sharedVerse() {
+    const sp = new URLSearchParams(location.search), ref = sp.get('verse'); if (!ref) return;
+    const key = BIBLES[sp.get('tr')] ? sp.get('tr') : 'kjv';
+    const B = key === bibleKey ? await loadBible() : await fetch(BIBLES[key].file).then((r) => r.json()).catch(() => null);
+    const v = lookupVerse(ref.slice(0, 40), B, key); if (!v) return;
+    const card = document.getElementById('svCard');
+    card.innerHTML = '<button type="button" class="svx" aria-label="Close">&times;</button>' +
+      '<p class="svk">\u2726 A friend shared a North Star with you</p>' +
+      '<blockquote>\u201c' + escapeHtml(v.text) + '\u201d</blockquote>' +
+      '<p class="svref"><b>' + escapeHtml(v.label) + '</b><span class="svok">\u2713 Verified in the ' + v.tr + '</span></p>' +
+      '<button type="button" class="svgo">Ask Biblicall what this verse means for you</button>' +
+      '<button type="button" class="svown">Or ask your own question</button>' +
+      '<p class="svfree">Free. No sign-up needed.</p>';
+    card.hidden = false; document.body.classList.add('sharedverse'); stat('shared_open');
+    card.querySelector('.svx').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); };
+    card.querySelector('.svown').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); q.focus(); };
+    card.querySelector('.svgo').onclick = () => {
+      stat('shared_ask');
+      q.value = 'A friend shared ' + v.label + ' with me: \u201c' + v.text + '\u201d What does this verse mean, and how can I live it out today?';
+      sendBtn.click();
+    };
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  })();
   // Short acknowledgments ("ok", "thanks", "amen", an emoji) never get a North Star.
   const ACK_WORDS = new Set(('ok okay k kk okey alright aight sure yes yeah yep yup ya no nope nah thanks thank thx ty tysm cheers ' +
     'you great good nice cool awesome perfect got it gotcha understood understand makes sense sounds fine will do done noted ' +
@@ -921,10 +981,25 @@
     words.forEach((w) => { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
     if (line) lines.push(line); return lines;
   }
+  // Share a link to this verse: in Messages, WhatsApp, email, etc. it arrives as a tappable Biblicall preview card.
+  async function shareLink(ns, btn) {
+    const v = ns.verses[0]; if (!v) return;
+    stat('share');
+    const url = verseLink(v), text = '\u201c' + v.text + '\u201d \u2014 ' + v.label + '\nA North Star I found with Biblicall:';
+    if (navigator.share) { try { await navigator.share({ title: 'A North Star for you', text, url }); } catch (e) {} return; }
+    try { await navigator.clipboard.writeText(text + ' ' + url); toast('Link copied. Paste it in a text or email.'); }
+    catch (e) { prompt('Copy this link:', url); }
+  }
+  let qrLib = null;
+  function loadQR() {
+    if (!qrLib) qrLib = new Promise((res, rej) => { if (window.qrcode) return res(window.qrcode); const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload = () => res(window.qrcode); s.onerror = rej; document.head.appendChild(s); setTimeout(rej, 6000); });
+    return qrLib;
+  }
   async function shareMoment(ns, btn) {
     const v = ns.verses[0]; if (!v) return;
     if (btn) { btn.disabled = true; }
     stat('share');
+    const link = verseLink(v);
     try {
       const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
       const info = window.BC_BG && window.BC_BG.shareInfo ? window.BC_BG.shareInfo(W, H) : null;
@@ -942,10 +1017,17 @@
       x.font = '600 40px "Source Sans 3", sans-serif'; x.fillText(v.label + ' (' + (v.tr || 'KJV') + ')', W / 2, top + lines.length * lh + 50);
       x.font = '700 46px "Source Sans 3", sans-serif'; x.fillText('Biblicall', W / 2, H - 120);
       x.font = '500 28px "Source Sans 3", sans-serif'; x.fillText('Ask anything. Find your North Star. \u00b7 biblicall.com', W / 2, H - 76);
+      try {
+        const QR = await loadQR(), qr = QR(0, 'M'); qr.addData(link); qr.make();
+        const n = qr.getModuleCount(), S = 132, pad = 10, cell = S / n, X0 = 34, Y0 = 34;
+        x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.94)'; x.fillRect(X0 - pad, Y0 - pad, S + pad * 2, S + pad * 2); x.fillStyle = '#2c2117';
+        for (let r = 0; r < n; r++) for (let cc = 0; cc < n; cc++) if (qr.isDark(r, cc)) x.fillRect(X0 + cc * cell, Y0 + r * cell, Math.ceil(cell), Math.ceil(cell));
+        x.fillStyle = '#fff'; x.shadowBlur = 8; x.font = '600 19px "Source Sans 3", sans-serif'; x.textAlign = 'left'; x.fillText('Scan to open', X0 - 2, Y0 + S + pad + 24); x.textAlign = 'center'; x.shadowBlur = 18;
+      } catch (e) {}
       if (info && info.credit && drawn) { x.shadowBlur = 6; x.font = '500 21px "Source Sans 3", sans-serif'; x.textAlign = 'right'; x.fillStyle = 'rgba(255,255,255,.8)'; x.fillText(info.credit, W - 30, H - 26); }
       const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
       const file = new File([blob], 'biblicall-north-star.jpg', { type: 'image/jpeg' });
-      const text = '\u201c' + v.text + '\u201d \u2014 ' + v.label + '\nFound with Biblicall: https://biblicall.com';
+      const text = '\u201c' + v.text + '\u201d \u2014 ' + v.label + '\nFound with Biblicall: ' + link;
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }).catch(() => {}); }
       else { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = 'biblicall-north-star.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('Image saved. Share it anywhere.'); }
     } catch (e) { toast('Couldn\u2019t make the image just now. Please try again.'); }
@@ -1068,8 +1150,11 @@
           const tools = document.createElement('div'); tools.className = 'ns-tools';
           const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'ns-share';
           sh.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Share this verse';
-          sh.addEventListener('click', () => shareMoment(m.ns, sh));
-          tools.appendChild(sh);
+          sh.addEventListener('click', () => shareLink(m.ns, sh));
+          const im = document.createElement('button'); im.type = 'button'; im.className = 'ns-save'; im.textContent = 'Save as image';
+          im.title = 'A picture of this verse over the current photo, with a code that opens it on Biblicall';
+          im.addEventListener('click', () => shareMoment(m.ns, im));
+          tools.append(sh, im);
           if (!lsGet('bc_daily', '')) {
             const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'ns-daily'; dl.textContent = '\u2709 Get a North Star every morning';
             dl.addEventListener('click', () => dailyForm(tools, dl));

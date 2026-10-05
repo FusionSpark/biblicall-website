@@ -120,7 +120,7 @@ export async function runDaily(env, force) {
 }
 
 const LABELS = [['visit', 'Visits (devices per day)'], ['visit_new', 'New visitors'], ['question', 'Questions asked'], ['northstar', 'North Stars shown'],
-  ['listen', 'Listen (voice) taps'], ['music', 'Music turned on'], ['share', 'Verses shared'], ['fb_up', '👍 Helpful'], ['fb_down', '👎 Not helpful'],
+  ['listen', 'Listen (voice) taps'], ['music', 'Music turned on'], ['share', 'Verses shared'], ['shared_open', 'Shared verses opened by friends'], ['shared_ask', 'Friends who then asked a question'], ['fb_up', '👍 Helpful'], ['fb_down', '👎 Not helpful'],
   ['waitlist', 'Waitlist signups'], ['daily_sub', 'Daily North Star signups'], ['account', 'Accounts created'], ['call', 'Group calls started'], ['daily_sent', 'Daily emails sent']];
 
 async function sendStats(env, D) {
