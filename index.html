@@ -878,6 +878,11 @@
     if (!biblePromise) biblePromise = fetch(BIBLES[bibleKey].file).then((r) => r.json()).then((d) => (BIBLE = d)).catch(() => null);
     return biblePromise;
   }
+  // Church tradition (optional): shapes answers on church teaching and practice. Default: Christian, no specific tradition.
+  const TRADS = [['', 'Christian (no specific tradition)'], ['catholic', 'Catholic'], ['orthodox', 'Orthodox'], ['baptist', 'Baptist'], ['methodist', 'Methodist'], ['lutheran', 'Lutheran'],
+    ['reformed', 'Presbyterian / Reformed'], ['anglican', 'Anglican / Episcopal'], ['pentecostal', 'Pentecostal / Charismatic'], ['nondenom', 'Non-denominational']];
+  let tradKey = (() => { try { const v = JSON.parse(localStorage.getItem('bc_trad') || '""'); return TRADS.some((t) => t[0] === v) ? v : ''; } catch (e) { return ''; } })();
+  window.BC_TRAD = { list: TRADS, get: () => tradKey, set: (k) => { if (!TRADS.some((t) => t[0] === k)) return; tradKey = k; try { localStorage.setItem('bc_trad', JSON.stringify(k)); } catch (e) {} } };
   window.BC_BIBLE = { list: BIBLES, get: () => bibleKey, set: (k) => { if (!BIBLES[k] || k === bibleKey) return; bibleKey = k; try { localStorage.setItem('bc_bible', JSON.stringify(k)); } catch (e) {} BIBLE = null; biblePromise = null; loadBible(); } };
   const BOOK_ALIAS = { 'psalm':'psalms', 'song of songs':'song of solomon', 'songs':'song of solomon', 'canticles':'song of solomon', 'revelations':'revelation' };
   function bookIndex(name, B) {
@@ -1473,7 +1478,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience() })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -1834,6 +1839,12 @@
       sec('Scripture');
       chips(Object.entries(B.list).map(([k, v]) => [k, v.name]), B.get(), (v) => { B.set(v); toast('North Star verses will use the ' + B.list[v].short + '.'); });
       box.appendChild(el('p', 'acct-fine', 'Both translations are public domain. Every North Star verse is checked word for word against the one you choose.'));
+    }
+    if (window.BC_TRAD) {
+      const TR = window.BC_TRAD;
+      sec('Your tradition');
+      chips(TR.list, TR.get(), (v) => { TR.set(v); toast(v ? 'BibliCall will answer church questions from a ' + TR.list.find((t) => t[0] === v)[1] + ' perspective.' : 'BibliCall will answer as a Christian, with no specific tradition.'); });
+      box.appendChild(el('p', 'acct-fine', 'Optional. Shapes answers about church teaching and practice (baptism, communion, prayer, the saints). Everything else, and every North Star verse, stays the same.'));
     }
     if (MU) {
       const m = MU.state();
