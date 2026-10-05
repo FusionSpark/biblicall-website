@@ -121,7 +121,7 @@ export async function runDaily(env, force) {
 
 const LABELS = [['visit', 'Visits (devices per day)'], ['visit_new', 'New visitors'], ['question', 'Questions asked'], ['northstar', 'North Stars shown'],
   ['listen', 'Listen (voice) taps'], ['music', 'Music turned on'], ['share', 'Verses shared'], ['shared_open', 'Shared verses opened by friends'], ['shared_ask', 'Friends who then asked a question'], ['fb_up', '👍 Helpful'], ['fb_down', '👎 Not helpful'],
-  ['waitlist', 'Waitlist signups'], ['daily_sub', 'Daily North Star signups'], ['account', 'Accounts created'], ['call', 'Invite window opened'], ['invite_offer', 'Invite suggested in a chat'], ['invite_yes', 'Invite suggestion accepted'], ['daily_sent', 'Daily emails sent']];
+  ['waitlist', 'Waitlist signups'], ['daily_sub', 'Daily North Star signups'], ['account', 'Accounts created'], ['call', 'Invite window opened'], ['invite_offer', 'Invite suggested in a chat'], ['invite_yes', 'Invite suggestion accepted'], ['read_chapter', 'Chapters opened from a verse'], ['pray', 'Pray with me taps'], ['daily_sent', 'Daily emails sent']];
 
 async function sendStats(env, D) {
   const days = []; for (let i = 7; i >= 1; i--) days.push(new Date(Date.now() - i * 86400000 - 6 * 3600000).toISOString().slice(0, 10));

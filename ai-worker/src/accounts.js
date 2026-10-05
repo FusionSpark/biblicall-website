@@ -287,7 +287,7 @@ export async function accountOp(env, body, helpers) {
   // Anonymous usage counters (no names, no content): one number per event per day.
   if (op === 'stat') {
     const ev = String(body.ev || '');
-    const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'shared_open', 'shared_ask', 'fb_up', 'fb_down', 'call', 'invite_offer', 'invite_yes'];
+    const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'shared_open', 'shared_ask', 'fb_up', 'fb_down', 'call', 'invite_offer', 'invite_yes', 'read_chapter', 'pray'];
     if (!OK.includes(ev)) return { error: 'event' };
     await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':' + ev });
     return { ok: true };

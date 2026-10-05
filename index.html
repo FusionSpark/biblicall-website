@@ -208,6 +208,20 @@
   dialog.callwin{border:1px solid var(--line);border-radius:20px;background:var(--card);color:var(--ink);
     padding:22px 22px 18px;width:min(420px,calc(100vw - 32px));box-shadow:0 18px 50px rgba(74,47,38,.28)}
   dialog.callwin::backdrop{background:rgba(44,33,23,.38)}
+  .readch{border:0;background:none;padding:0;font-family:inherit;font-size:16px;font-weight:600;color:var(--earth);text-decoration:underline;cursor:pointer}
+  dialog.reader{border:0;border-radius:20px;background:#fbfdff;color:#2c2117;padding:0;width:min(640px,calc(100vw - 24px));max-height:min(86vh,900px);box-shadow:0 18px 50px rgba(20,20,40,.35);overflow:hidden}
+  dialog.reader[open]{display:flex;flex-direction:column}
+  dialog.reader::backdrop{background:rgba(20,24,40,.45)}
+  .reader .rhead{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid #d9e6f2}
+  .reader .rhead h2{flex:1;margin:0;font-size:22px;font-weight:700;color:#4a2f26}
+  .reader .rhead button{border:1px solid #c9d9e8;background:#fff;border-radius:999px;min-width:38px;height:36px;padding:0 10px;font-family:inherit;font-size:16px;font-weight:600;color:#664336;cursor:pointer}
+  .reader .rhead button:disabled{opacity:.35}
+  .reader .rbody{overflow-y:auto;padding:14px 20px 24px;font-size:19px;line-height:1.6}
+  .reader .rbody p{margin:0 0 6px}
+  .reader .rbody sup{font-size:12px;font-weight:700;color:#7a8ba0;margin-right:4px}
+  .reader .rbody .hl{background:#fff1c9;border-radius:6px;box-shadow:0 0 0 4px #fff1c9}
+  .reader .rfoot{margin:0;padding:8px 16px 12px;font-size:13.5px;color:#5b6b78;border-top:1px solid #d9e6f2}
+  .pray{margin:2px 0 16px;padding:0 14px;height:36px;border-radius:999px;border:1.5px solid var(--earth);background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .callwin h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:26.5px;color:var(--earth-deep);margin:0 0 6px}
   .callwin p{margin:0 0 14px;font-size:18px;line-height:1.45;color:var(--muted)}
   .callwin .row{display:flex;gap:8px}
@@ -812,6 +826,11 @@
   </div>
 </div>
 
+<dialog class="reader" id="readerWin" aria-labelledby="readerTitle">
+  <div class="rhead"><button type="button" id="rdPrev" aria-label="Previous chapter">&lsaquo;</button><h2 id="readerTitle">Chapter</h2><button type="button" id="rdNext" aria-label="Next chapter">&rsaquo;</button><button type="button" id="rdClose" aria-label="Close">&times;</button></div>
+  <div class="rbody" id="readerBody"></div>
+  <p class="rfoot" id="readerFoot"></p>
+</dialog>
 <dialog class="callwin" id="callWin" aria-labelledby="callTitle">
   <button type="button" class="close" id="callClose" aria-label="Close">&times;</button>
   <h2 id="callTitle">Invite a friend to the call</h2>
@@ -910,6 +929,49 @@
     const ph = window.BC_BG && window.BC_BG.current ? window.BC_BG.current() : -1;
     return 'https://biblicall.com/?verse=' + encodeURIComponent(v.label.replace('–', '-')).replace(/%20/g, '+').replace(/%3A/g, ':') + '&tr=' + key + (ph >= 0 ? '&photo=' + ph : '');
   }
+  // ---- Read the whole chapter around a North Star verse ----
+  const bibleCache = {};
+  async function getBible(key) {
+    if (key === bibleKey) return loadBible();
+    if (!bibleCache[key]) bibleCache[key] = fetch(BIBLES[key].file).then((r) => r.json()).catch(() => null);
+    return bibleCache[key];
+  }
+  const readerWin = document.getElementById('readerWin');
+  let rd = null;
+  function drawChapter(scroll) {
+    const B = rd.B, ch = B.text[rd.bi][rd.ch - 1];
+    document.getElementById('readerTitle').textContent = B.books[rd.bi] + ' ' + rd.ch + ' (' + BIBLES[rd.key].short + ')';
+    const body = document.getElementById('readerBody'); body.innerHTML = '';
+    ch.forEach((t, i) => {
+      const n = i + 1, p = document.createElement('p'), sp = document.createElement('span');
+      sp.innerHTML = '<sup>' + n + '</sup>' + escapeHtml(t);
+      if (rd.hl && n >= rd.hl[0] && n <= rd.hl[1]) sp.className = 'hl';
+      p.appendChild(sp); body.appendChild(p);
+    });
+    document.getElementById('rdPrev').disabled = rd.bi === 0 && rd.ch === 1;
+    document.getElementById('rdNext').disabled = rd.bi === B.books.length - 1 && rd.ch === B.text[rd.bi].length;
+    document.getElementById('readerFoot').textContent = (rd.key === 'kjv' ? 'King James Version' : 'Berean Standard Bible') + ' \u00b7 public domain';
+    const hl = body.querySelector('.hl');
+    if (scroll && hl) setTimeout(() => hl.scrollIntoView({ block: 'center' }), 30); else body.scrollTop = 0;
+  }
+  function stepChapter(d) {
+    if (!rd) return; const B = rd.B; rd.hl = null; rd.ch += d;
+    if (rd.ch < 1) { rd.bi--; rd.ch = B.text[rd.bi].length; }
+    else if (rd.ch > B.text[rd.bi].length) { rd.bi++; rd.ch = 1; }
+    drawChapter(false);
+  }
+  async function openChapter(label, trShort) {
+    const key = Object.keys(BIBLES).find((k) => BIBLES[k].short === trShort) || bibleKey;
+    const B = await getBible(key); if (!B) { toast('Couldn\u2019t open the Bible just now. Please try again.'); return; }
+    const m = String(label).replace(/[\u2013\u2014]/g, '-').match(/^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$/); if (!m) return;
+    const bi = bookIndex(m[1], B); if (bi < 0 || !B.text[bi][+m[2] - 1]) return;
+    rd = { B, key, bi, ch: +m[2], hl: [+m[3], +(m[4] || m[3])] };
+    drawChapter(true); readerWin.showModal(); stat('read_chapter');
+  }
+  document.getElementById('rdPrev').addEventListener('click', () => stepChapter(-1));
+  document.getElementById('rdNext').addEventListener('click', () => stepChapter(1));
+  document.getElementById('rdClose').addEventListener('click', () => readerWin.close());
+  readerWin.addEventListener('click', (e) => { if (e.target === readerWin) readerWin.close(); });
   // Someone opened a shared verse: check it against the Bible text (never trust text in a link), then welcome them.
   (async function sharedVerse() {
     const sp = new URLSearchParams(location.search), ref = sp.get('verse'); if (!ref) return;
@@ -942,6 +1004,9 @@
   // Moments when talking it through with a friend could help: loneliness, wanting someone to talk to, praying or studying together.
   const WANTS_COMPANY = /\b(talk(ing)?|speak(ing)?|vent(ing)?) (to|with) (someone|somebody|anyone|anybody|a friend|my friends?|people|a person|someone who)|\b(lonely|loneliness|so alone|all alone|feel(ing)? (so )?alone|isolated|no one to talk|nobody to talk|no one to turn|have no one|no friends|no one understands|nobody understands|no one cares|nobody cares|no one listens|nobody listens)\b|\bwish (i|someone|somebody) (could|had|would|was|were)\b.*\b(talk|someone|somebody|friend|here|with me|listen)|\b(need|want) (someone|somebody|a friend)\b|\bpray (with|together)|\b(study|read)(ing)? (the bible |scripture |this )?(together|with (my|a) )|\bbible study\b|\b(share|show|send) (this|it) (with|to) (my |a )?(friends?|wife|husband|spouse|mom|mother|dad|father|son|daughter|kids|children|family|sister|brother|group|pastor)/i;
   function wantsCompany(text) { return WANTS_COMPANY.test(String(text)); }
+  // Hard moments where a short prayer can help (grief, worry, illness, a big decision, a broken relationship).
+  const HARD_MOMENT = /\b(griev|grief|mourn|passed away|died|dying|death of|funeral|lost my|miscarri|cancer|tumou?r|diagnos|surgery|hospital|chemo|sick|illness|ill\b|pain|hurting|hurt\b|heartbr|broken ?heart|anxi|worr|afraid|scared|fear|panic|stress|overwhelm|depress|hopeless|despair|exhausted|burn(ed|t)? out|struggl|suffer|lonely|alone|divorc|separat|affair|betray|cheat|fight(ing)? with|estranged|addict|relapse|laid off|lost my job|fired|unemploy|debt|bankrupt|foreclos|evict|can'?t pay|interview|exam\b|big decision|hard decision|don'?t know what to do|crossroads|pray)/i;
+  function hardMoment(text) { return HARD_MOMENT.test(String(text)); }
   function isAck(text) {
     const t = String(text).toLowerCase().replace(/[^a-z\s']/g, ' ').replace(/'/g, '').trim();
     if (!t) return true; // only emoji / punctuation
@@ -993,7 +1058,7 @@
     return '<h2>' + COMPASS + 'North Star</h2>' +
       '<p class="teach">' + inline(ns.teach) + '</p>' +
       ns.verses.map((v) => '<div class="verse"><blockquote>' + escapeHtml(v.text) + '</blockquote>' +
-        '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">✓ Verified in the ' + escapeHtml(v.tr || 'KJV') + '</span></div>' +
+        '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">✓ Verified in the ' + escapeHtml(v.tr || 'KJV') + '</span><button type="button" class="readch" data-ref="' + escapeHtml(v.label) + '" data-tr="' + escapeHtml(v.tr || 'KJV') + '">Read the chapter</button></div>' +
         (v.why ? '<p class="why">' + inline(v.why) + '</p>' : '') + '</div>').join('') +
       (ns.reflect ? '<p class="reflect">' + inline(ns.reflect) + '</p>' : '');
   }
@@ -1176,6 +1241,12 @@
             row.appendChild(fb);
           });
         }
+        if (m.pray === 1 && !room) {
+          const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'pray'; pb.textContent = '\uD83D\uDE4F Pray with me';
+          pb.title = 'A short prayer for this situation';
+          pb.addEventListener('click', () => { m.pray = 2; stat('pray'); q.value = 'Please pray with me about this.'; sendBtn.click(); });
+          row.appendChild(pb);
+        }
         threadBox.appendChild(row);
         lastRow = row;
       }
@@ -1185,6 +1256,7 @@
         if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
         else {
           panel.innerHTML = northStarHtml(m.ns);
+          panel.querySelectorAll('.readch').forEach((b) => b.addEventListener('click', () => openChapter(b.dataset.ref, b.dataset.tr)));
           const tools = document.createElement('div'); tools.className = 'ns-tools';
           const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'ns-share';
           sh.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Share this verse';
@@ -1490,6 +1562,7 @@
       const ns = await nsPromise;
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       else if (!ack) conversation[turn].nsOffer = true;
+      if (!ack && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
       if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
       if (!wantsRemember && !ack && personalFact(question) && !conversation.some((m) => m.memOffer) && !memory.some((x) => x.text === memText(question))) {
         conversation[turn].memOffer = memText(question);
