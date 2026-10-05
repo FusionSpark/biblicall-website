@@ -2,7 +2,7 @@ import { accountOp, checkToken, Directory, UserData } from './accounts.js';
 import { runDaily, unsubscribe, preview } from './daily.js';
 export { Directory, UserData };
 
-// Biblicall AI worker.
+// BibliCall AI worker.
 //   POST { messages: [{role, content}], memory?: [string], mode?: "answer" | "northstar", group?: bool,
 //          attachments?: [{kind: "image"|"pdf"|"text", name, media_type?, data?, text?}] } -> { answer }
 //   attachments are files the visitor uploaded; they are given to Claude with the latest user message.
@@ -14,7 +14,7 @@ const ORIGINS = ['https://biblicall.com', 'https://www.biblicall.com'];
 const MODEL = 'claude-sonnet-5-5';
 const NS_MODEL = 'claude-haiku-4-5-20251001';
 const FALLBACK_MODEL = 'claude-sonnet-4-5';
-// Fair use per visitor per day (by network address until Biblicall has accounts), and per live call per day.
+// Fair use per visitor per day (by network address until BibliCall has accounts), and per live call per day.
 const DAILY = { ask: 60, roomAsk: 400, speakChars: 20000, transcribe: 120 };
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 4000;
@@ -51,13 +51,13 @@ function attachmentBlocks(list) {
 }
 
 function systemPrompt(today, memory, group, decide, ambience) {
-  const base = `You are Biblicall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
+  const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
 
-When a question touches decisions, character, relationships, work, money, or hardship, let biblical wisdom (honesty, justice, mercy, humility, stewardship, love of neighbor) shape your judgment, the way a wise and trusted mentor would: warmly, naturally, never preachy or condemning. Where it fits naturally, weave in a short biblical phrase or principle in your own words (for example "iron sharpens iron" or "count the cost"), but don't cite chapter and verse; Biblicall adds verified scripture in its North Star below your answer. Respect people of every background, and never take partisan political sides.
+When a question touches decisions, character, relationships, work, money, or hardship, let biblical wisdom (honesty, justice, mercy, humility, stewardship, love of neighbor) shape your judgment, the way a wise and trusted mentor would: warmly, naturally, never preachy or condemning. Where it fits naturally, weave in a short biblical phrase or principle in your own words (for example "iron sharpens iron" or "count the cost"), but don't cite chapter and verse; BibliCall adds verified scripture in its North Star below your answer. Respect people of every background, and never take partisan political sides.
 
-When someone is hurting (grief, fear, shame, abuse, thoughts of suicide or self-harm), lead with gentle care before anything else: never lecture, never use scripture as a rebuke, and remind them that God is near to the brokenhearted. If there is any sign of danger to themselves or others, ask gently whether they are safe, give the 988 Suicide & Crisis Lifeline (call or text 988 in the US) or local emergency help, and encourage them to reach a trusted person or pastor. Never suggest that faith requires someone to stay where they are being abused. Biblicall has an Invite Friends feature: the person can bring a friend or family member into this same conversation, live, by text link. If they say they feel alone, wish they had someone to talk to, or want to pray, study or talk this through with someone, you may gently mention once that they can invite a friend to join them here (the button appears just below your answer, and it is also in the menu). Never let this replace care, and in any crisis still give the crisis help above first.
+When someone is hurting (grief, fear, shame, abuse, thoughts of suicide or self-harm), lead with gentle care before anything else: never lecture, never use scripture as a rebuke, and remind them that God is near to the brokenhearted. If there is any sign of danger to themselves or others, ask gently whether they are safe, give the 988 Suicide & Crisis Lifeline (call or text 988 in the US) or local emergency help, and encourage them to reach a trusted person or pastor. Never suggest that faith requires someone to stay where they are being abused. BibliCall has an Invite Friends feature: the person can bring a friend or family member into this same conversation, live, by text link. If they say they feel alone, wish they had someone to talk to, or want to pray, study or talk this through with someone, you may gently mention once that they can invite a friend to join them here (the button appears just below your answer, and it is also in the menu). Never let this replace care, and in any crisis still give the crisis help above first.
 
 When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
 
@@ -70,10 +70,10 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
     s += `\n\nBefore replying, decide whether you should speak at all. Speak only if the latest message is addressed to you, asks a question meant for you, or the friends are weighing something where a short, wise thought from you would clearly help. If the friends are simply talking to each other (greetings, plans, replies to one another, small talk), do not interrupt: reply with exactly [[PASS]] and nothing else.`;
   }
   if (ambience) {
-    s += `\n\nThe Biblicall app reports what this person sees and hears on screen right now (from the app itself, not typed by them): ${ambience}\nIf they ask about the music, the song, the artist, the background picture or where it is, tell them from this, and feel free to share a little interesting background (the composer or piece, the place, or the space object), searching the web if it helps. Never claim you can't see or hear it: the app has told you. Don't bring it up unless they ask.`;
+    s += `\n\nThe BibliCall app reports what this person sees and hears on screen right now (from the app itself, not typed by them): ${ambience}\nIf they ask about the music, the song, the artist, the background picture or where it is, tell them from this, and feel free to share a little interesting background (the composer or piece, the place, or the space object), searching the web if it helps. Never claim you can't see or hear it: the app has told you. Don't bring it up unless they ask.`;
   }
   if (memory.length) {
-    s += `\n\nThis person has asked Biblicall to remember the following about them. Use it only when it is relevant, and don't list it back to them:\n` + memory.map((m) => '- ' + m).join('\n');
+    s += `\n\nThis person has asked BibliCall to remember the following about them. Use it only when it is relevant, and don't list it back to them:\n` + memory.map((m) => '- ' + m).join('\n');
   }
   // The fixed instructions are marked for prompt caching (re-sent instructions cost up to 90% less);
   // per-person extras (group call, memory) follow in their own block.
@@ -82,7 +82,7 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   return blocks;
 }
 
-const NORTH_STAR_SYSTEM = `You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. You never answer the question itself. You follow the instructions in the user message exactly and reply with only the JSON it asks for.`;
+const NORTH_STAR_SYSTEM = `You are the North Star layer of BibliCall, an AI assistant guided by biblical wisdom. You never answer the question itself. You follow the instructions in the user message exactly and reply with only the JSON it asks for.`;
 
 export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(runDaily(env).then((r) => console.log('daily', JSON.stringify(r)))); },
@@ -118,12 +118,12 @@ export default {
     if (!allowed) return json({ error: 'Forbidden' }, 403);
 
     // Fair use: each visitor (by IP) gets VISITOR_LIMIT calls a minute; the call server shares ROOMS_LIMIT.
-    const fromRooms = request.headers.get('X-Biblicall-Source') === 'rooms';
+    const fromRooms = request.headers.get('X-BibliCall-Source') === 'rooms';
     let visitor = 'v:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
     const busy = () => json({ error: 'busy', message: 'Too many questions at once. Please wait a minute and try again.' }, 429);
     if (fromRooms) {
       // Each call has its own allowance, inside an overall cap for all calls together.
-      const roomKey = 'room:' + String(request.headers.get('X-Biblicall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      const roomKey = 'room:' + String(request.headers.get('X-BibliCall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
       if (env.ROOM_LIMIT && !(await env.ROOM_LIMIT.limit({ key: roomKey })).success) return busy();
       if (env.ROOMS_LIMIT && !(await env.ROOMS_LIMIT.limit({ key: 'rooms' })).success) return busy();
     } else if (env.VISITOR_LIMIT) {
@@ -204,9 +204,9 @@ export default {
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Chicago' });
 
     if (!northStar) {
-      const roomId = 'r:' + String(request.headers.get('X-Biblicall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      const roomId = 'r:' + String(request.headers.get('X-BibliCall-Room') || 'unknown').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
       const ok = fromRooms ? await underQuota(env, roomId, 'ask', 1, DAILY.roomAsk) : await underQuota(env, visitor, 'ask', 1, DAILY.ask);
-      if (!ok) return json({ answer: "You've reached today's limit of questions for Biblicall. It resets tomorrow, and I'll be here. In the meantime, take a quiet moment with what we've already talked about." });
+      if (!ok) return json({ answer: "You've reached today's limit of questions for BibliCall. It resets tomorrow, and I'll be here. In the meantime, take a quiet moment with what we've already talked about." });
       // Cache the conversation so far, so a follow-up question re-reads it at the lower cached price.
       const last = messages[messages.length - 1];
       if (typeof last.content === 'string') last.content = [{ type: 'text', text: last.content }];

@@ -1,4 +1,4 @@
-// Biblicall accounts: sign in with Face ID / Touch ID (passkeys), an account code, or an emailed link.
+// BibliCall accounts: sign in with Face ID / Touch ID (passkeys), an account code, or an emailed link.
 // Stores each person's memory and the conversations they choose to keep forever.
 //   Directory (one instance): sign-in challenges, passkeys, account codes, email sign-in links, email -> account.
 //   UserData (one per account): profile, sessions, memory, kept conversations.
@@ -181,14 +181,14 @@ const normEmail = (e) => String(e || '').trim().toLowerCase();
 
 async function sendEmail(env, to, link) {
   const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:17px;color:#2c2117;line-height:1.5">
-    <p>Tap the button below to sign in to Biblicall. The link works once and expires in 20 minutes.</p>
-    <p><a href="${link}" style="display:inline-block;background:#664336;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Sign in to Biblicall</a></p>
+    <p>Tap the button below to sign in to BibliCall. The link works once and expires in 20 minutes.</p>
+    <p><a href="${link}" style="display:inline-block;background:#664336;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Sign in to BibliCall</a></p>
     <p style="color:#6b5948;font-size:14px">If you didn't ask to sign in, you can ignore this email.</p></div>`;
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [to], subject: 'Your Biblicall sign-in link',
-      html, text: 'Sign in to Biblicall: ' + link + '\n\nThe link works once and expires in 20 minutes.' })
+    body: JSON.stringify({ from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [to], subject: 'Your BibliCall sign-in link',
+      html, text: 'Sign in to BibliCall: ' + link + '\n\nThe link works once and expires in 20 minutes.' })
   });
   if (!r.ok) throw new Error('email ' + r.status);
 }
@@ -196,26 +196,26 @@ async function sendEmail(env, to, link) {
 // Welcome email for new waitlist signups (sent once per address).
 async function sendWelcome(env, to) {
   const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:17px;color:#2c2117;line-height:1.6;max-width:560px">
-    <p style="font-size:22px;font-weight:700;color:#4a2f26;margin:0 0 14px">Welcome to Biblicall</p>
-    <p>Thank you for joining the Biblicall waitlist. We're so glad you're here.</p>
-    <p>Biblicall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a <b>North Star</b>: scripture quoted word for word from the King James Bible to guide and encourage you.</p>
-    <p>You can already try it at <a href="https://biblicall.com" style="color:#664336;font-weight:700">biblicall.com</a>. We'll write again when Biblicall fully launches.</p>
+    <p style="font-size:22px;font-weight:700;color:#4a2f26;margin:0 0 14px">Welcome to BibliCall</p>
+    <p>Thank you for joining the BibliCall waitlist. We're so glad you're here.</p>
+    <p>BibliCall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a <b>North Star</b>: scripture quoted word for word from the King James Bible to guide and encourage you.</p>
+    <p>You can already try it at <a href="https://biblicall.com" style="color:#664336;font-weight:700">biblicall.com</a>. We'll write again when BibliCall fully launches.</p>
     <div style="margin:22px 0;padding:14px 18px;background:#f6efe8;border-radius:12px">
       <p style="margin:0;font-style:italic">“Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.”</p>
       <p style="margin:6px 0 0;font-weight:700;color:#664336">Proverbs 3:5–6</p>
     </div>
-    <p>Grace and peace,<br>The Biblicall team</p>
+    <p>Grace and peace,<br>The BibliCall team</p>
     <p style="color:#6b5948;font-size:13.5px;margin-top:26px">You're receiving this because this address joined the waitlist at biblicall.com. To be removed, just reply with “remove.” <a href="https://biblicall.com/privacy.html" style="color:#6b5948">Privacy</a></p></div>`;
-  const text = 'Welcome to Biblicall\n\nThank you for joining the Biblicall waitlist. We\'re so glad you\'re here.\n\n' +
-    'Biblicall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a North Star: scripture quoted word for word from the King James Bible to guide and encourage you.\n\n' +
-    'You can already try it at https://biblicall.com. We\'ll write again when Biblicall fully launches.\n\n' +
+  const text = 'Welcome to BibliCall\n\nThank you for joining the BibliCall waitlist. We\'re so glad you\'re here.\n\n' +
+    'BibliCall is an AI assistant guided by biblical wisdom. Ask it anything, from business plans and hard decisions to writing, research and everyday questions. When it matters most, it adds a North Star: scripture quoted word for word from the King James Bible to guide and encourage you.\n\n' +
+    'You can already try it at https://biblicall.com. We\'ll write again when BibliCall fully launches.\n\n' +
     '"Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." (Proverbs 3:5-6)\n\n' +
-    'Grace and peace,\nThe Biblicall team\n\nTo be removed from the waitlist, reply with "remove".';
+    'Grace and peace,\nThe BibliCall team\n\nTo be removed from the waitlist, reply with "remove".';
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [to], reply_to: 'hello@biblicall.com',
-      subject: 'Welcome to Biblicall', html, text,
+    body: JSON.stringify({ from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [to], reply_to: 'hello@biblicall.com',
+      subject: 'Welcome to BibliCall', html, text,
       headers: { 'List-Unsubscribe': '<mailto:hello@biblicall.com?subject=remove>' } })
   });
   if (!r.ok) throw new Error('welcome ' + r.status);
@@ -263,7 +263,7 @@ export async function accountOp(env, body, helpers) {
     if (!ch) return { error: 'That sign-in took too long. Please try again.' };
     try {
       const rec = await call(D, { op: 'cred.get', id: body.id });
-      if (!rec) return { error: "This passkey isn't connected to a Biblicall account. Create an account first." };
+      if (!rec) return { error: "This passkey isn't connected to a BibliCall account. Create an account first." };
       const cdBytes = unb64u(body.clientDataJSON), adBytes = unb64u(body.authenticatorData);
       checkClientData(cdBytes, 'webauthn.get', body.challenge);
       const ad = parseAuthData(adBytes);
@@ -318,9 +318,9 @@ export async function accountOp(env, body, helpers) {
       const esc = (x) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       await fetch('https://api.resend.com/emails', { method: 'POST',
         headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: 'New Biblicall waitlist signup',
-          html: '<p><b>' + esc(email) + '</b> joined the Biblicall waitlist.</p>' + (question ? '<p>Last question asked: ' + esc(question) + '</p>' : ''),
-          text: email + ' joined the Biblicall waitlist.' + (question ? '\nLast question asked: ' + question : '') }) }).catch(() => {});
+        body: JSON.stringify({ from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: 'New BibliCall waitlist signup',
+          html: '<p><b>' + esc(email) + '</b> joined the BibliCall waitlist.</p>' + (question ? '<p>Last question asked: ' + esc(question) + '</p>' : ''),
+          text: email + ' joined the BibliCall waitlist.' + (question ? '\nLast question asked: ' + question : '') }) }).catch(() => {});
     }
     return { ok: true };
   }
@@ -334,7 +334,7 @@ export async function accountOp(env, body, helpers) {
     const linkUid = body.token ? await checkToken(env, body.token) : null;
     if (linkUid) {
       const owner = await call(D, { op: 'map.get', key: 'email:' + email });
-      if (owner && owner !== linkUid) return { error: 'That email is already used by another Biblicall account.' };
+      if (owner && owner !== linkUid) return { error: 'That email is already used by another BibliCall account.' };
     }
     const tok = b64u(rand(24));
     await call(D, { op: 'map.put', key: 'et:' + await hashHex(tok), value: { email, linkUid: linkUid || null, exp: Date.now() + 20 * 60000 } });

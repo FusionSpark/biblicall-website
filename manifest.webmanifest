@@ -1,6 +1,6 @@
 {
-  "name": "Biblicall",
-  "short_name": "Biblicall",
+  "name": "BibliCall",
+  "short_name": "BibliCall",
   "description": "An AI assistant guided by biblical wisdom.",
   "start_url": "/?source=homescreen",
   "scope": "/",

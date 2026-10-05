@@ -1,4 +1,4 @@
-// Daily North Star email (opt-in) and the weekly Biblicall stats summary.
+// Daily North Star email (opt-in) and the weekly BibliCall stats summary.
 // Runs from the Cron Trigger in wrangler.toml (every morning). Subscribers live in the Directory Durable Object as dn:<email>.
 
 const PHOTOS = [ // Unsplash photos already used on biblicall.com: [id, photographer, place]
@@ -40,7 +40,7 @@ async function makeNorthStar(env, recent) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content:
-        'You write Biblicall\'s Daily North Star: one short, warm morning encouragement guided by biblical wisdom, for people of all walks of life. Today is ' + date + '. ' +
+        'You write BibliCall\'s Daily North Star: one short, warm morning encouragement guided by biblical wisdom, for people of all walks of life. Today is ' + date + '. ' +
         'Choose ONE King James Version passage (one verse, or up to 3 verses) that you are certain exists' + (recent.length ? ', and not any of these recent ones: ' + recent.join('; ') : '') + '. ' +
         'Write a gentle 3-sentence reflection that applies it to ordinary life today (work, family, worry, gratitude, courage), never preachy, and one short question to carry through the day. ' +
         'Reply with ONLY JSON: {"ref": "Book C:V", "title": "3-6 word title", "reflection": "3 sentences", "question": "one question"}' }] })
@@ -65,7 +65,7 @@ function emailHtml(ns, photo, unsub) {
       <p style="margin:0 0 16px;font-size:14px;font-weight:700;color:#664336">${esc(ns.verse.label)} (KJV)</p>
       <p style="margin:0 0 14px;font-size:17px;line-height:1.6">${esc(ns.reflection)}</p>
       ${ns.question ? `<p style="margin:0 0 18px;font-size:17px;line-height:1.5;font-weight:700">${esc(ns.question)}</p>` : ''}
-      <p style="margin:0 0 22px"><a href="https://biblicall.com" style="display:inline-block;background:#664336;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Talk it through with Biblicall</a></p>
+      <p style="margin:0 0 22px"><a href="https://biblicall.com" style="display:inline-block;background:#664336;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Talk it through with BibliCall</a></p>
     </div>
     <div style="padding:0 24px 20px;font-size:12.5px;line-height:1.5;color:#6b5948">
       Photo${photo[2] ? ' of ' + esc(photo[2]) : ''} by ${esc(photo[1])}.<br>
@@ -98,7 +98,7 @@ export async function runDaily(env, force) {
         const base = 'https://biblicall-ai.sjonlich.workers.dev/u?';
         await sendBatch(env, subs.map((s) => {
           const unsub = base + 'e=' + encodeURIComponent(s.email) + '&t=' + s.tok;
-          return { from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [s.email], reply_to: 'hello@biblicall.com',
+          return { from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [s.email], reply_to: 'hello@biblicall.com',
             subject: '✦ ' + (ns.title || 'Your Daily North Star'), html: emailHtml(ns, photo, unsub),
             text: (ns.title || 'Daily North Star') + '\n\n"' + ns.verse.text + '"\n' + ns.verse.label + ' (KJV)\n\n' + ns.reflection + '\n\n' + (ns.question || '') + '\n\nbiblicall.com\nUnsubscribe: ' + unsub,
             headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } };
@@ -128,12 +128,12 @@ async function sendStats(env, D) {
   const rows = await call(D, { op: 'list', prefix: 'st:', start: 'st:' + days[0], limit: 2000 });
   const tot = {}; rows.forEach(([k, v]) => { const [, d, ev] = k.split(':'); if (days.includes(d)) tot[ev] = (tot[ev] || 0) + v; });
   const subs = (await call(D, { op: 'list', prefix: 'dn:', limit: 5000 })).length;
-  const html = '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117;font-size:16px"><h2 style="color:#4a2f26">Biblicall: last 7 days</h2><p>' + days[0] + ' to ' + days[6] + '</p><table cellpadding="6" style="border-collapse:collapse">' +
+  const html = '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117;font-size:16px"><h2 style="color:#4a2f26">BibliCall: last 7 days</h2><p>' + days[0] + ' to ' + days[6] + '</p><table cellpadding="6" style="border-collapse:collapse">' +
     LABELS.map(([k, l]) => '<tr><td style="border-bottom:1px solid #eee">' + l + '</td><td style="border-bottom:1px solid #eee;text-align:right;font-weight:700">' + (tot[k] || 0) + '</td></tr>').join('') +
     '<tr><td>Daily North Star subscribers (total)</td><td style="text-align:right;font-weight:700">' + subs + '</td></tr></table>' +
-    '<p style="color:#6b5948;font-size:13px">Counts only: Biblicall does not record who asked what.</p></div>';
+    '<p style="color:#6b5948;font-size:13px">Counts only: BibliCall does not record who asked what.</p></div>';
   await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: 'Biblicall weekly summary', html }) });
+    body: JSON.stringify({ from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: 'BibliCall weekly summary', html }) });
 }
 
 export async function unsubscribe(env, url) {
@@ -142,9 +142,9 @@ export async function unsubscribe(env, url) {
   const ok = rec && rec.tok === t;
   if (ok) await call(D, { op: 'map.del', key: 'dn:' + e });
   const msg = ok ? 'You’re unsubscribed from the Daily North Star. You won’t get these emails anymore.' : 'This link has already been used, or it isn’t valid. If you still get emails, reply to one with “remove.”';
-  return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Biblicall</title>
+  return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BibliCall</title>
     <body style="margin:0;background:#eef6fc;font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117"><div style="max-width:520px;margin:12vh auto;background:#fff;border-radius:16px;padding:28px 24px;font-size:18px;line-height:1.55">
-    <h1 style="margin:0 0 10px;font-size:24px;color:#4a2f26">Biblicall</h1><p>${msg}</p><p><a href="https://biblicall.com" style="color:#664336;font-weight:700">Go to biblicall.com</a></p></div></body>`,
+    <h1 style="margin:0 0 10px;font-size:24px;color:#4a2f26">BibliCall</h1><p>${msg}</p><p><a href="https://biblicall.com" style="color:#664336;font-weight:700">Go to biblicall.com</a></p></div></body>`,
     { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
@@ -157,6 +157,6 @@ export async function preview(env) {
   const ns = await makeNorthStar(env, []);
   if (!ns) return { error: 'Could not prepare a North Star right now.' };
   const photo = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
-  await sendBatch(env, [{ from: env.EMAIL_FROM || 'Biblicall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: '[Preview] \u2726 ' + (ns.title || 'Daily North Star'), html: emailHtml(ns, photo, 'https://biblicall.com') }]);
+  await sendBatch(env, [{ from: env.EMAIL_FROM || 'BibliCall <hello@biblicall.com>', to: [env.NOTIFY_EMAIL], subject: '[Preview] \u2726 ' + (ns.title || 'Daily North Star'), html: emailHtml(ns, photo, 'https://biblicall.com') }]);
   return { ok: true, ref: ns.verse.label, title: ns.title };
 }

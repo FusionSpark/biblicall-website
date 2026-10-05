@@ -17,7 +17,7 @@ const pad = (n) => String(n).padStart(9, '0');
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === '/') return new Response('Biblicall rooms', { headers: { 'content-type': 'text/plain' } });
+    if (url.pathname === '/') return new Response('BibliCall rooms', { headers: { 'content-type': 'text/plain' } });
     // Photos: GET /room/<id>/img/<seq>-<n> (the room id is the secret, as with the call itself).
     const im = url.pathname.match(/^\/room\/([A-Za-z0-9_-]{12,40})\/img\/(\d{1,9})-(\d)$/);
     if (im && req.method === 'GET') return env.ROOMS.get(env.ROOMS.idFromName(im[1])).fetch(req);
@@ -57,7 +57,7 @@ function parseJson(text) {
   return null;
 }
 function nsPrompt(question, ctx) {
-  return 'You are the North Star layer of Biblicall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that. Several friends may be sharing this conversation.\n\n' +
+  return 'You are the North Star layer of BibliCall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that. Several friends may be sharing this conversation.\n\n' +
     (ctx ? 'Recent conversation, for context:\n"""' + ctx + '"""\n\n' : '') +
     'The latest message:\n"""' + question.slice(0, 2000) + '"""\n\n' +
     'Provide a North Star for this message. Every question, practical, technical or factual ones included, can be seen in the light of biblical wisdom, so find the connection. ' +
@@ -149,7 +149,7 @@ export class Room extends DurableObject {
         const role = x && x.role === 'assistant' ? 'assistant' : 'user';
         const content = clean(x && x.content, 4000);
         if (!content) continue;
-        const msg = { role, content, from: role === 'user' ? me.id : 'ai', name: role === 'user' ? me.name : 'Biblicall' };
+        const msg = { role, content, from: role === 'user' ? me.id : 'ai', name: role === 'user' ? me.name : 'BibliCall' };
         if (role === 'assistant' && x.ns && Array.isArray(x.ns.verses)) msg.ns = this.cleanNs(x.ns);
         await this.add(msg);
       }
@@ -168,7 +168,7 @@ export class Room extends DurableObject {
       await this.add({ role: 'user', content, from: me.id, name: me.name }, photos);
       const addressed = ADDRESSED.test(content);
       if (this.busy) {
-        // Friends keep talking while Biblicall thinks; if someone calls on it, it answers next.
+        // Friends keep talking while BibliCall thinks; if someone calls on it, it answers next.
         if (addressed) this.pending = true;
         return;
       }
@@ -177,7 +177,7 @@ export class Room extends DurableObject {
     }
   }
 
-  // Decide whether Biblicall speaks, and if so answer (plus a North Star when it fits).
+  // Decide whether BibliCall speaks, and if so answer (plus a North Star when it fits).
   async respond(addressed) {
     this.busy = true;
     let showed = false;
@@ -189,7 +189,7 @@ export class Room extends DurableObject {
       const names = new Set(recent.filter((m) => m.role === 'user').map((m) => m.name));
       const group = this.ctx.getWebSockets().length > 1 || names.size > 1;
       const mustAnswer = !group || addressed;
-      // Quick chatter between friends ("lol", "amen", "see you Tuesday") never needs Biblicall: skip the check entirely.
+      // Quick chatter between friends ("lol", "amen", "see you Tuesday") never needs BibliCall: skip the check entirely.
       if (group && !addressed && isChatter(lastUser.content)) return;
       if (mustAnswer) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
 
@@ -200,10 +200,10 @@ export class Room extends DurableObject {
         if (last && last.role === m.role) last.content += '\n\n' + text; else turns.push({ role: m.role, content: text });
       }
       while (turns.length && turns[0].role !== 'user') turns.shift();
-      const ctx = recent.slice(-7, -1).map((m) => (m.role === 'user' ? m.name + ': ' : 'Biblicall: ') + String(m.content).slice(0, 600)).join('\n');
+      const ctx = recent.slice(-7, -1).map((m) => (m.role === 'user' ? m.name + ': ' : 'BibliCall: ') + String(m.content).slice(0, 600)).join('\n');
       const question = lastUser.content;
 
-      // Solo: answer and North Star in parallel. Group: only look for a North Star once Biblicall decides to speak.
+      // Solo: answer and North Star in parallel. Group: only look for a North Star once BibliCall decides to speak.
       const nsEarly = !group && !isAck(question) ? this.northStar(question, ctx) : null;
       // Photos from the latest message that had any (within the recent turns) go to the AI with the conversation.
       const attachments = [];
@@ -217,11 +217,11 @@ export class Room extends DurableObject {
       }
       let answer;
       try { answer = await this.ai(turns, { group, decide: group && !addressed, attachments: attachments.length ? attachments : undefined }); }
-      catch (e) { answer = mustAnswer ? "Biblicall couldn't answer that just now. Please try again in a moment." : PASS; }
+      catch (e) { answer = mustAnswer ? "BibliCall couldn't answer that just now. Please try again in a moment." : PASS; }
       if (!answer || answer.includes(PASS)) return; // stays quiet, keeps listening
       if (!showed) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
       const ns = nsEarly ? await nsEarly : (group && !isAck(question) ? await this.northStar(question, ctx) : null);
-      await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'Biblicall', ns: ns || undefined, offer: !ns && !isAck(question) });
+      await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'BibliCall', ns: ns || undefined, offer: !ns && !isAck(question) });
     } finally {
       this.busy = false;
       if (showed) this.broadcast({ type: 'thinking', on: false });
@@ -239,7 +239,7 @@ export class Room extends DurableObject {
   async ai(messages, opts) {
     const r = await fetch(this.env.AI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com', 'X-Biblicall-Source': 'rooms', 'X-Biblicall-Room': this.ctx.id.toString() },
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://biblicall.com', 'X-BibliCall-Source': 'rooms', 'X-BibliCall-Room': this.ctx.id.toString() },
       body: JSON.stringify({ messages, ...(opts || {}) })
     });
     const j = await r.json();
