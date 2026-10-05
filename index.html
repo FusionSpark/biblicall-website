@@ -221,6 +221,20 @@
   .reader .rbody sup{font-size:12px;font-weight:700;color:#7a8ba0;margin-right:4px}
   .reader .rbody .hl{background:#fff1c9;border-radius:6px;box-shadow:0 0 0 4px #fff1c9}
   .reader .rfoot{margin:0;padding:8px 16px 12px;font-size:13.5px;color:#5b6b78;border-top:1px solid #d9e6f2}
+  .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
+  .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
+  .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .act-text{flex:1;min-width:140px}
+  .act-done{font-weight:700;color:#2f6b3a}
+  .act-link{border:0;background:none;padding:0;color:var(--earth);font-family:inherit;font-size:16px;font-weight:600;text-decoration:underline;cursor:pointer}
+  .plan .acct-btn{margin:6px 0 4px}
+  .plan-goal input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:#664336}
+  .plan-goal.done .mem-text{text-decoration:line-through;opacity:.6}
+  .plan-cal{font-size:20px;text-decoration:none;padding:4px 6px}
+  .plan-remadd{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 6px}
+  .plan-remadd input{flex:1 1 100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
+  .plan-remadd input[type=datetime-local]{flex:1 1 60%}
+  .plan-remadd button{flex:none;padding:10px 16px;border:0;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .pray{margin:2px 0 16px;padding:0 14px;height:36px;border-radius:999px;border:1.5px solid var(--earth);background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .callwin h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:26.5px;color:var(--earth-deep);margin:0 0 6px}
   .callwin p{margin:0 0 14px;font-size:18px;line-height:1.45;color:var(--muted)}
@@ -772,7 +786,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite friends<small>Bring a friend into this conversation, live</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse and short reflection each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on">Chats</button><button type="button" data-tab="plan">Week</button><button type="button" data-tab="memory">Memory</button><button type="button" data-tab="style">Style</button><button type="button" data-tab="account">Account</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -1249,6 +1263,7 @@
         }
         threadBox.appendChild(row);
         lastRow = row;
+        if (m.acts && m.acts.length) { const ab = drawActs(m); threadBox.appendChild(ab); lastRow = ab; }
       }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
@@ -1552,11 +1567,12 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext() })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
-      conversation[turn] = { role: 'assistant', content: data.answer, q: question, hist: history };
+      const ex = extractActs(data.answer);
+      conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined };
       scrollToStart(conversation[turn]);
       renderThread();
       const ns = await nsPromise;
@@ -1564,8 +1580,9 @@
       else if (!ack) conversation[turn].nsOffer = true;
       if (!ack && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
       if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
-      if (!wantsRemember && !ack && personalFact(question) && !conversation.some((m) => m.memOffer) && !memory.some((x) => x.text === memText(question))) {
-        conversation[turn].memOffer = memText(question);
+      if (!wantsRemember && !ack && personalFact(question) && !memory.some((x) => x.text === memText(question))) {
+        if (lsGet('bc_autorem', false)) { if (addMemory(question)) toast('\u2713 Saved to memory'); }
+        else if (!conversation.some((m) => m.memOffer)) conversation[turn].memOffer = memText(question);
       }
     } catch (err) {
       conversation[turn] = {
@@ -1629,6 +1646,181 @@
     return item;
   }
   function removeMemory(id) { memory = memory.filter((m) => m.id !== id); lsSet('bc_memory', memory); drawDrawer(); syncMemorySoon(); }
+  // ---- My week: reminders, weekly goals and gentle check-ins (phone notifications the person turns on) ----
+  const PLAN = (() => { const d = lsGet('bc_plan', null); return Object.assign({ goals: [], rems: [], checkin: '', sunday: false, push: false, week: '' }, d && typeof d === 'object' ? d : {}); })();
+  const DEVICE = (() => { let v = lsGet('bc_did', ''); if (!/^[A-Za-z0-9_-]{16,40}$/.test(v)) { const a = crypto.getRandomValues(new Uint8Array(16)); v = btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); lsSet('bc_did', v); } return v; })();
+  const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } })();
+  const standaloneApp = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function weekId(d) { const x = new Date(d || Date.now()); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); }
+  // A new week: finished goals are cleared, unfinished ones carry over. Past reminders are tidied away.
+  if (PLAN.week !== weekId()) { if (PLAN.week) PLAN.goals = PLAN.goals.filter((g) => !g.done); PLAN.week = weekId(); }
+  PLAN.rems = PLAN.rems.filter((r) => r.at > Date.now() - 6 * 3600000);
+  function savePlan() { lsSet('bc_plan', PLAN); }
+  savePlan();
+  function planApi(op, extra) {
+    return fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'plan', op, did: DEVICE, ...(extra || {}) }) }).then((r) => r.json()).catch(() => ({ error: 'offline' }));
+  }
+  let planSyncTimer = null;
+  function syncPlanSoon() { if (!PLAN.push) return; clearTimeout(planSyncTimer); planSyncTimer = setTimeout(() => planApi('sync', { tz: TZ, checkin: PLAN.checkin, sunday: PLAN.sunday, goals: PLAN.goals }), 600); }
+  function whenLabel(at) {
+    const d = new Date(at), now = new Date(), day = new Date(d); day.setHours(0, 0, 0, 0); const today = new Date(now); today.setHours(0, 0, 0, 0);
+    const diff = Math.round((day - today) / 86400000), time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (diff === 0) return 'Today ' + time; if (diff === 1) return 'Tomorrow ' + time;
+    if (diff > 1 && diff < 7) return d.toLocaleDateString([], { weekday: 'long' }) + ' ' + time;
+    return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + time;
+  }
+  function calLink(r) { return WORKER_URL + '/ics?t=' + encodeURIComponent(r.text) + '&s=' + r.at + '&m=30'; }
+  async function addReminder(r) {
+    r = { rid: Math.random().toString(36).slice(2, 12), at: r.at, text: String(r.text).slice(0, 160), conv: r.conv || '', kind: r.kind || 'task' };
+    if (!(r.at > Date.now())) { toast('Please choose a time in the future.'); return null; }
+    PLAN.rems.push(r); PLAN.rems.sort((a, b) => a.at - b.at); savePlan(); stat('reminder');
+    if (PLAN.push) { const x = await planApi('rem.add', { ...r }); if (x && x.error) toast(x.error); }
+    return r;
+  }
+  function removeReminder(rid) { PLAN.rems = PLAN.rems.filter((r) => r.rid !== rid); savePlan(); if (PLAN.push) planApi('rem.del', { rid }); }
+  function addGoal(t) {
+    t = String(t || '').trim().slice(0, 140); if (!t) return false;
+    if (PLAN.goals.some((g) => g.t.toLowerCase() === t.toLowerCase())) return false;
+    if (PLAN.goals.length >= 12) { toast('That’s plenty for one week. Finish or remove one first.'); return false; }
+    PLAN.goals.push({ t, done: false }); savePlan(); syncPlanSoon(); stat('goal'); return true;
+  }
+  function unb64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); }
+  async function enablePush() {
+    if (!pushSupported()) { toast(isIOS && !standaloneApp() ? 'First add BibliCall to your Home Screen, then open it from there.' : 'This browser can’t show reminders. Use Add to calendar instead.'); return false; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Notifications are off for BibliCall. You can allow them in your phone’s Settings.'); return false; }
+    try {
+      const reg = await navigator.serviceWorker.ready, k = await planApi('key');
+      if (!k || !k.pub) throw new Error('key');
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: unb64(k.pub) });
+      const r = await planApi('sync', { sub: sub.toJSON(), tz: TZ, checkin: PLAN.checkin, sunday: PLAN.sunday, goals: PLAN.goals });
+      if (!r || !r.ok) throw new Error((r && r.error) || 'sync');
+      PLAN.push = true; savePlan(); stat('push_on');
+      for (const rem of PLAN.rems.filter((x) => x.at > Date.now())) await planApi('rem.add', { ...rem });
+      return true;
+    } catch (e) { toast('Reminders couldn’t be turned on just now. Please try again.'); return false; }
+  }
+  async function disablePush() {
+    PLAN.push = false; savePlan(); await planApi('off');
+    try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (e) {}
+  }
+  // In-app reminder for anything due (useful when notifications are off).
+  function dueCheck() {
+    const now = Date.now(), due = PLAN.rems.filter((r) => r.at <= now);
+    if (!due.length) return;
+    PLAN.rems = PLAN.rems.filter((r) => r.at > now); savePlan();
+    if (!PLAN.push) toast('⏰ ' + due[0].text);
+    if (!drawer.hidden && drTab === 'plan') drawDrawer();
+  }
+  setInterval(dueCheck, 60000); setTimeout(dueCheck, 3000);
+  // What BibliCall knows about the plan, sent with each question so it can encourage and keep the person on track.
+  function planContext() {
+    const local = new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + (TZ ? ' (' + TZ + ')' : '');
+    const goals = PLAN.goals.map((g) => (g.done ? '[done] ' : '') + g.t).join('; ');
+    const upcoming = PLAN.rems.filter((r) => r.at > Date.now()).slice(0, 8).map((r) => whenLabel(r.at) + ': ' + r.text).join('; ');
+    return { local, goals, upcoming };
+  }
+  // BibliCall can suggest reminders and goals at the end of an answer; they become buttons the person taps to confirm.
+  function extractActs(text) {
+    const acts = [];
+    const out = String(text).replace(/\[\[(remind|goal)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
+      k = k.toLowerCase();
+      if (k === 'goal') { const t = rest.trim(); if (t) acts.push({ k: 'goal', text: t.slice(0, 140) }); return ''; }
+      const m = rest.match(/^\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\s*\|\s*(.+)$/);
+      if (m) { const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); if (at > Date.now() - 60000) acts.push({ k: 'remind', at, text: m[6].trim().slice(0, 160) }); }
+      return '';
+    }).replace(/\n{3,}/g, '\n\n').trim();
+    return { text: out, acts: acts.slice(0, 3) };
+  }
+  function drawActs(m) {
+    const box = el('div', 'acts');
+    m.acts.forEach((a) => {
+      const row = el('div', 'act');
+      if (a.k === 'remind') {
+        if (a.done) {
+          row.appendChild(el('span', 'act-done', '✓ Reminder set · ' + whenLabel(a.at)));
+          const cal = el('a', 'act-link', '📅 Add to calendar'); cal.href = calLink(a); cal.target = '_blank'; cal.rel = 'noopener'; row.appendChild(cal);
+          if (!PLAN.push) { const on = el('button', 'act-link', 'Get it on my phone'); on.type = 'button'; on.addEventListener('click', () => openDrawer('plan')); row.appendChild(on); }
+        } else {
+          const b = el('button', 'act-btn', '⏰ Remind me · ' + whenLabel(a.at)); b.type = 'button';
+          b.addEventListener('click', async () => { const r = await addReminder({ at: a.at, text: a.text, conv: convId || '', kind: /\?\s*$/.test(a.text) ? 'follow' : 'task' }); if (r) { a.done = true; renderThread(); if (!PLAN.push) toast('Saved in My week. Turn on reminders there so your phone can tell you.'); } });
+          row.appendChild(b); row.appendChild(el('span', 'act-text', a.text));
+        }
+      } else {
+        if (a.done) row.appendChild(el('span', 'act-done', '✓ Added to My week: ' + a.text));
+        else { const b = el('button', 'act-btn', '＋ Add to my week'); b.type = 'button'; b.addEventListener('click', () => { addGoal(a.text); a.done = true; renderThread(); }); row.appendChild(b); row.appendChild(el('span', 'act-text', a.text)); }
+      }
+      box.appendChild(row);
+    });
+    return box;
+  }
+  function drawPlan() {
+    const box = el('div', 'plan');
+    const ask = el('button', 'acct-btn', '✦ Plan my week with BibliCall'); ask.type = 'button';
+    ask.addEventListener('click', () => { closeDrawer(); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); });
+    box.appendChild(el('p', 'acct-fine', 'BibliCall can remind you of what matters and help you stay on track with work, family and faith. Nothing is sent unless you ask for it.'));
+    box.appendChild(ask);
+    box.appendChild(el('h4', 'bg-sub', 'Reminders on this phone'));
+    if (PLAN.push) {
+      box.appendChild(el('p', 'acct-fine', '✓ Reminders are on.'));
+      const acts = el('div', 'bg-chips');
+      const t = el('button', 'bg-chip', 'Send a test'); t.type = 'button'; t.addEventListener('click', async () => { const r = await planApi('test'); toast(r && r.ok ? 'Sent. It should arrive in a moment.' : (r && r.error) || 'That didn’t go through.'); });
+      const o = el('button', 'bg-chip', 'Turn off'); o.type = 'button'; o.addEventListener('click', async () => { await disablePush(); toast('Reminders are off.'); drawDrawer(); });
+      acts.append(t, o); box.appendChild(acts);
+    } else if (pushSupported()) {
+      const on = el('button', 'acct-btn', '🔔 Turn on reminders'); on.type = 'button';
+      on.addEventListener('click', async () => { on.disabled = true; if (await enablePush()) toast('Reminders are on.'); drawDrawer(); });
+      box.appendChild(on);
+    } else if (isIOS && !standaloneApp()) {
+      box.appendChild(el('p', 'acct-fine', 'On iPhone, reminders work once BibliCall is on your Home Screen: tap the Share button, then “Add to Home Screen”. Open BibliCall from there and turn reminders on here.'));
+    } else box.appendChild(el('p', 'acct-fine', 'This browser can’t show reminders, but you can add each one to your calendar.'));
+    const done = PLAN.goals.filter((g) => g.done).length;
+    box.appendChild(el('h4', 'bg-sub', 'This week’s goals' + (PLAN.goals.length ? ' · ' + done + ' of ' + PLAN.goals.length + ' done' : '')));
+    PLAN.goals.forEach((g, i) => {
+      const row = el('div', 'dr-item plan-goal' + (g.done ? ' done' : ''));
+      const cb = el('input'); cb.type = 'checkbox'; cb.checked = g.done; cb.setAttribute('aria-label', 'Done');
+      cb.addEventListener('change', () => { g.done = cb.checked; savePlan(); syncPlanSoon(); if (g.done) { stat('goal_done'); toast(PLAN.goals.every((x) => x.done) ? 'Every goal done this week. Well done!' : 'Well done!'); } drawDrawer(); });
+      const lab = el('div', 'mem-text', g.t);
+      const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove goal');
+      del.addEventListener('click', () => { PLAN.goals.splice(i, 1); savePlan(); syncPlanSoon(); drawDrawer(); });
+      row.append(cb, lab, del); box.appendChild(row);
+    });
+    const gf = el('form', 'mem-add'); const gi = el('input'); gi.type = 'text'; gi.maxLength = 140; gi.placeholder = 'e.g. Family dinner three nights'; gi.setAttribute('aria-label', 'Add a goal');
+    const ga = el('button', null, 'Add'); ga.type = 'submit'; gf.append(gi, ga);
+    gf.addEventListener('submit', (e) => { e.preventDefault(); if (addGoal(gi.value)) drawDrawer(); else gi.value = ''; });
+    box.appendChild(gf);
+    box.appendChild(el('h4', 'bg-sub', 'Upcoming reminders'));
+    const up = PLAN.rems.filter((r) => r.at > Date.now());
+    if (!up.length) box.appendChild(el('p', 'acct-fine', 'None yet. Tell BibliCall what you need to do and when, or add one here.'));
+    up.forEach((r) => {
+      const row = el('div', 'dr-item plan-rem');
+      const t = el('div', 'mem-text'); t.append(el('b', null, whenLabel(r.at)), document.createElement('br'), r.text);
+      const cal = el('a', 'plan-cal', '📅'); cal.href = calLink(r); cal.target = '_blank'; cal.rel = 'noopener'; cal.title = 'Add to calendar'; cal.setAttribute('aria-label', 'Add to calendar');
+      const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove reminder');
+      del.addEventListener('click', () => { removeReminder(r.rid); drawDrawer(); });
+      row.append(t, cal, del); box.appendChild(row);
+    });
+    const rf = el('form', 'plan-remadd'); const ri = el('input'); ri.type = 'text'; ri.maxLength = 160; ri.placeholder = 'Remind me to…'; ri.setAttribute('aria-label', 'Reminder');
+    const rt = el('input'); rt.type = 'datetime-local'; rt.setAttribute('aria-label', 'When');
+    const soon = new Date(Date.now() + 3600000); soon.setMinutes(0, 0, 0); rt.value = new Date(soon - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const ra = el('button', null, 'Add'); ra.type = 'submit'; rf.append(ri, rt, ra);
+    rf.addEventListener('submit', async (e) => { e.preventDefault(); if (!ri.value.trim() || !rt.value) return; const at = new Date(rt.value).getTime(); if (await addReminder({ at, text: ri.value.trim() })) { toast('Reminder set for ' + whenLabel(at) + '.'); drawDrawer(); } });
+    box.appendChild(rf);
+    box.appendChild(el('h4', 'bg-sub', 'Gentle check-ins'));
+    box.appendChild(el('p', 'acct-fine', 'A short morning note with your week’s progress, and an invitation on Sunday evening to plan the week ahead.' + (PLAN.push ? '' : ' (Turn on reminders above to receive them.)')));
+    const ck = el('div', 'bg-chips');
+    [['', 'Morning: off'], ['06:30', '6:30'], ['07:00', '7:00'], ['07:30', '7:30'], ['08:00', '8:00'], ['09:00', '9:00']].forEach(([v, l]) => {
+      const b = el('button', 'bg-chip' + (PLAN.checkin === v ? ' on' : ''), l); b.type = 'button';
+      b.addEventListener('click', () => { PLAN.checkin = v; savePlan(); syncPlanSoon(); drawDrawer(); }); ck.appendChild(b);
+    });
+    box.appendChild(ck);
+    const sun = el('div', 'bg-chips'); const sb = el('button', 'bg-chip' + (PLAN.sunday ? ' on' : ''), PLAN.sunday ? 'Sunday 6 p.m. planning: on' : 'Sunday 6 p.m. planning: off'); sb.type = 'button';
+    sb.addEventListener('click', () => { PLAN.sunday = !PLAN.sunday; savePlan(); syncPlanSoon(); drawDrawer(); }); sun.appendChild(sb); box.appendChild(sun);
+    box.appendChild(el('p', 'acct-fine', 'Your goals and reminders are saved on this phone. When reminders are on, only the reminder text, times and your goals are kept on the BibliCall server so it can notify you; reminders are deleted once sent or removed.'));
+    return box;
+  }
   // ---- Uploads: photos, PDFs, Word and text files, sent to BibliCall with the next question ----
   const MAX_FILES = 5;
   const attachRow = document.getElementById('attachRow');
@@ -1775,7 +1967,7 @@
 
   // ---- Saved conversations ----
   let convos = lsGet('bc_convos', []);
-  if (!convos.length && !/[?&](room|c|s|signin)=/.test(location.search)) document.body.classList.add('firstvisit');
+  if (!convos.length && !/[?&](room|c|s|signin|open|plan)=/.test(location.search)) document.body.classList.add('firstvisit');
   if (!Array.isArray(convos)) convos = [];
   let convId = null, persistTimer = null;
   function schedulePersist() { clearTimeout(persistTimer); persistTimer = setTimeout(persistConvo, 400); }
@@ -1957,6 +2149,7 @@
     if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your BibliCall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Account tab) to keep memory and chosen conversations forever.';
     if (drTab === 'account') { drBody.appendChild(drawAccount()); return; }
     if (drTab === 'style') { drBody.appendChild(drawStyle()); return; }
+    if (drTab === 'plan') { drBody.appendChild(drawPlan()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
@@ -1974,6 +2167,11 @@
         row.appendChild(open); row.appendChild(star); row.appendChild(del); drBody.appendChild(row);
       });
     } else {
+      const auto = lsGet('bc_autorem', false), ar = el('div', 'bg-chips');
+      const ab = el('button', 'bg-chip' + (auto ? ' on' : ''), auto ? 'Remember automatically: on' : 'Remember automatically: off'); ab.type = 'button';
+      ab.addEventListener('click', () => { lsSet('bc_autorem', !auto); toast(!auto ? 'BibliCall will remember what you share about your life. You can remove anything here.' : 'BibliCall will ask before remembering.'); drawDrawer(); });
+      ar.appendChild(ab); drBody.appendChild(ar);
+      drBody.appendChild(el('p', 'acct-fine', 'When on, BibliCall saves what you tell it about your life, work and family (like \u201cI run a magazine\u201d or \u201cmy son is 17\u201d) so it can help you better over time. Everything saved is listed below, and you can remove anything.'));
       drBody.appendChild(el('p', 'mem-intro', 'BibliCall uses these in future answers. To add one, tap the Remember chip in the chat box, start a message with “Remember”, or type it here.'));
       const f = el('form', 'mem-add');
       const inp = el('input'); inp.type = 'text'; inp.maxLength = 300; inp.placeholder = 'e.g. I have three kids'; inp.setAttribute('aria-label', 'Add something to remember');
@@ -2008,6 +2206,17 @@
   function openDrawer(tab) { if (tab) drTab = tab; drawer.hidden = false; drawerBack.hidden = false; drawDailyMenu(); drawDrawer(); }
   function closeDrawer() { drawer.hidden = true; drawerBack.hidden = true; }
   document.getElementById('menuBtn').addEventListener('click', () => openDrawer());
+  // Opened from a reminder notification: go to that conversation, or to My week.
+  (function fromNotification() {
+    const sp = new URLSearchParams(location.search), open = sp.get('open'), plan = sp.get('plan');
+    if (!open && !plan) return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    setTimeout(() => {
+      if (open && convos.some((c) => c.id === open)) openConvo(open);
+      else if (plan === 'week') { q.value = 'Help me plan my week. I\u2019d like a few goals for work, family and faith.'; q.focus(); }
+      else openDrawer('plan');
+    }, 400);
+  })();
   document.getElementById('drawerClose').addEventListener('click', closeDrawer);
   drawerBack.addEventListener('click', closeDrawer);
   document.getElementById('newChat').addEventListener('click', newConvo);

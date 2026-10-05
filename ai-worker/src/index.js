@@ -1,6 +1,7 @@
 import { accountOp, checkToken, Directory, UserData } from './accounts.js';
 import { runDaily, unsubscribe, preview } from './daily.js';
-export { Directory, UserData };
+import { Planner, planOp, runPlanner, icsFile } from './plan.js';
+export { Directory, UserData, Planner };
 
 // BibliCall AI worker.
 //   POST { messages: [{role, content}], memory?: [string], mode?: "answer" | "northstar", group?: bool,
@@ -51,7 +52,7 @@ function attachmentBlocks(list) {
 }
 
 const TRADITIONS = { catholic: 'Catholic', orthodox: 'Eastern Orthodox', baptist: 'Baptist', methodist: 'Methodist', lutheran: 'Lutheran', reformed: 'Presbyterian / Reformed', anglican: 'Anglican / Episcopal', pentecostal: 'Pentecostal / Charismatic', nondenom: 'non-denominational evangelical', oriental: 'Oriental Orthodox (Coptic, Armenian, Ethiopian, Syriac)', wesleyan: 'Wesleyan / Holiness (such as the Church of the Nazarene)', cofc: 'Churches of Christ', adventist: 'Seventh-day Adventist', anabaptist: 'Mennonite / Anabaptist', messianic: 'Messianic Jewish' };
-function systemPrompt(today, memory, group, decide, ambience, tradition) {
+function systemPrompt(today, memory, group, decide, ambience, tradition, plan) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
@@ -76,6 +77,18 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   if (ambience) {
     s += `\n\nThe BibliCall app reports what this person sees and hears on screen right now (from the app itself, not typed by them): ${ambience}\nIf they ask about the music, the song, the artist, the background picture or where it is, tell them from this, and feel free to share a little interesting background (the composer or piece, the place, or the space object), searching the web if it helps. Never claim you can't see or hear it: the app has told you. Don't bring it up unless they ask.`;
   }
+  if (plan && !group) {
+    s += `\n\nBibliCall can set reminders and weekly goals for this person, as a kind, encouraging personal assistant and mentor for work, family and faith. Their local date and time right now: ${plan.local}.
+When they ask to be reminded, mention a task with a day or time (for example "I need to call the insurance company Thursday"), or name a goal for this week, offer to help, and at the very end of your reply add one line per item, exactly in this form:
+[[remind|YYYY-MM-DDTHH:MM|short reminder text]]   (their local time; if they gave only a day, choose a sensible time such as 09:00)
+[[goal|short goal for this week]]
+The app turns these lines into buttons they tap to confirm, so say something like "Tap Remind me below" and never claim it is already set, and never mention the brackets. At most 3 such lines, and only when they would truly help.
+When they are facing a hard moment with a known date (an interview, a surgery, a difficult conversation), you may gently offer to check in afterward; only if they say yes, add a remind line whose text is a warm one-line check-in question, like "How did the interview go? I'm here if you want to talk."
+If they ask to plan their week, help them choose a few goals across work, family and faith, then offer them as goal lines.`;
+    if (plan.goals) s += `\nTheir goals this week: ${plan.goals}`;
+    if (plan.upcoming) s += `\nTheir upcoming reminders: ${plan.upcoming}`;
+    if (plan.goals || plan.upcoming) s += `\nWhen it fits naturally, encourage them and help them stay on track with these, kindly and never nagging; don't list them unless asked.`;
+  }
   if (memory.length) {
     s += `\n\nThis person has asked BibliCall to remember the following about them. Use it only when it is relevant, and don't list it back to them:\n` + memory.map((m) => '- ' + m).join('\n');
   }
@@ -89,7 +102,10 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
 const NORTH_STAR_SYSTEM = `You are the North Star layer of BibliCall, an AI assistant guided by biblical wisdom. You never answer the question itself. You follow the instructions in the user message exactly and reply with only the JSON it asks for.`;
 
 export default {
-  async scheduled(event, env, ctx) { ctx.waitUntil(runDaily(env).then((r) => console.log('daily', JSON.stringify(r)))); },
+  async scheduled(event, env, ctx) {
+    if (event.cron === '0 11 * * *') ctx.waitUntil(runDaily(env).then((r) => console.log('daily', JSON.stringify(r))));
+    else ctx.waitUntil(runPlanner(env).then((r) => console.log('planner', JSON.stringify(r))));
+  },
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const allowed = ORIGINS.includes(origin);
@@ -105,6 +121,7 @@ export default {
     // GET /m/<file>.mp3 streams that one file from incompetech's royalty-free folder, with CORS and range support.
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/u') return unsubscribe(env, url);
+    if (request.method === 'GET' && url.pathname === '/ics') return icsFile(url);
     if (request.method === 'POST' && url.pathname === '/u') { await unsubscribe(env, url); return new Response('ok'); } // one-click unsubscribe from mail apps
     if (request.method === 'GET' && url.pathname.startsWith('/m/')) {
       const name = decodeURIComponent(url.pathname.slice(3));
@@ -139,6 +156,10 @@ export default {
 
     // Accounts: sign-in, memory and kept conversations.
     if (body.mode === 'daily-preview') return json(await preview(env));
+    if (body.mode === 'plan') {
+      try { return json(await planOp(env, body)); }
+      catch (e) { console.error('plan', e && e.message); return json({ error: 'Something went wrong. Please try again.' }, 500); }
+    }
     if (body.mode === 'account') {
       try { return json(await accountOp(env, body, { underQuota: (who, kind, amount, limit) => underQuota(env, who, kind, amount, limit) })); }
       catch (e) { console.error('account', e && e.message); return json({ error: 'Something went wrong. Please try again.' }, 500); }
@@ -220,7 +241,7 @@ export default {
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || '')), messages,
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan)), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
         };
 
@@ -253,6 +274,12 @@ export default {
 
 
 // ---- Fair-use counters: one tiny Durable Object per visitor (or call) per day ----
+function cleanPlan(p) {
+  if (!p || typeof p !== 'object') return null;
+  const c = (x, n) => String(x || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, n);
+  return { local: c(p.local, 80) || 'unknown', goals: c(p.goals, 900), upcoming: c(p.upcoming, 900) };
+}
+
 export class Quota {
   constructor(state) { this.state = state; }
   async fetch(req) {
