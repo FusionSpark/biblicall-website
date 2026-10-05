@@ -68,7 +68,7 @@ function emailHtml(ns, photo, unsub) {
       <p style="margin:0 0 22px"><a href="https://biblicall.com" style="display:inline-block;background:#664336;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Talk it through with Biblicall</a></p>
     </div>
     <div style="padding:0 24px 20px;font-size:12.5px;line-height:1.5;color:#6b5948">
-      Photo${photo[2] ? ' of ' + esc(photo[2]) : ''} by ${esc(photo[1])} on Unsplash.<br>
+      Photo${photo[2] ? ' of ' + esc(photo[2]) : ''} by ${esc(photo[1])}.<br>
       You're receiving this because you asked for the Daily North Star at biblicall.com. <a href="${unsub}" style="color:#6b5948">Unsubscribe</a> &middot; <a href="https://biblicall.com/privacy.html" style="color:#6b5948">Privacy</a>
     </div>
   </div></div>`;

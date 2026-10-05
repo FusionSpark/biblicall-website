@@ -560,10 +560,9 @@
       return host + '/archives/images/' + (w * d > 1300 && w > h ? 'wallpaper4' : 'screen') + '/' + p[1] + '.jpg';
     }
     function creditBy(p) {
-      if (p[0] === 'u') return 'Photo: <a href="https://unsplash.com/@' + p[3] + '?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">' + p[2] +
-        '</a> on <a href="https://unsplash.com/?utm_source=biblicall&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>';
-      var site = p[0] === 'w' ? 'https://esawebb.org' : 'https://esahubble.org';
-      return '<a href="' + site + '/images/' + p[1] + '/" target="_blank" rel="noopener">' + p[2] + '</a> &middot; CC BY 4.0';
+      // Plain-text credit only: we honor the photographer by name, with no links out.
+      if (p[0] === 'u') return 'Photo: ' + p[2];
+      return p[2] + ' &middot; CC BY 4.0';
     }
     function drawCredit() {
       if (cur < 0) { credit.innerHTML = ''; return; }
@@ -628,7 +627,7 @@
     }
     function shareInfo(W, H) {
       if (cur < 0) return null; var p = P[cur];
-      if (p[0] === 'u') return { url: 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&crop=entropy&q=80&w=' + W + '&h=' + H, credit: (p[4] ? p[4] + ' \u00b7 ' : '') + 'Photo: ' + p[2] + ' on Unsplash' };
+      if (p[0] === 'u') return { url: 'https://images.unsplash.com/' + p[1] + '?auto=format&fit=crop&crop=entropy&q=80&w=' + W + '&h=' + H, credit: (p[4] ? p[4] + ' \u00b7 ' : '') + 'Photo: ' + p[2] };
       return { url: (p[0] === 'w' ? 'https://cdn.esawebb.org' : 'https://cdn.esahubble.org') + '/archives/images/screen/' + p[1] + '.jpg', credit: p[3] + ' \u00b7 ' + p[2] };
     }
     var api = {
