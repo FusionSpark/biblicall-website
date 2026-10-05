@@ -94,7 +94,7 @@ export async function planOp(env, body) {
     const at = Math.round(+body.at), text = clean(body.text, 160);
     if (!text || !(at > Date.now() - 60000) || at > Date.now() + 400 * 86400000) return { error: 'Please choose a time in the future.' };
     const rid = clean(body.rid, 24).replace(/[^A-Za-z0-9_-]/g, '') || crypto.randomUUID().slice(0, 12);
-    return await call(env, { op: 'rem.add', did, rem: { rid, at, text, conv: clean(body.conv, 40).replace(/[^A-Za-z0-9_-]/g, ''), kind: body.kind === 'follow' ? 'follow' : 'task' } });
+    return await call(env, { op: 'rem.add', did, rem: { rid, at, text, conv: clean(body.conv, 40).replace(/[^A-Za-z0-9_-]/g, ''), kind: body.kind === 'follow' ? 'follow' : 'task', repeat: ['w', '2w', 'm'].includes(body.repeat) ? body.repeat : undefined } });
   }
   if (op === 'rem.del') return await call(env, { op: 'rem.del', did, rid: clean(body.rid, 24) });
   if (op === 'rem.list') return { reminders: await call(env, { op: 'rem.list', did }) };
@@ -199,6 +199,10 @@ export async function runPlanner(env) {
   for (const key of due) {
     const { did, rem } = await call(env, { op: 'take', key });
     if (!rem) continue;
+    if (rem.repeat) { // repeating reminders (like a weekly payment) schedule their next time
+      let next = rem.at; do { const d = new Date(next); if (rem.repeat === 'm') d.setUTCMonth(d.getUTCMonth() + 1); else d.setUTCDate(d.getUTCDate() + (rem.repeat === '2w' ? 14 : 7)); next = d.getTime(); } while (next <= now);
+      await call(env, { op: 'rem.add', did, rem: { ...rem, at: next } });
+    }
     const dev = devCache[did] || (devCache[did] = await call(env, { op: 'dev.get', did }));
     const late = now - rem.at > 6 * 3600000; // skip reminders more than 6 hours old (the phone was off for the night, say)
     if (!late && (await push(env, did, dev, { title: rem.kind === 'follow' ? 'BibliCall is thinking of you' : 'BibliCall reminder', body: rem.text, url: rem.conv ? '/?open=' + rem.conv : '/?plan=1', tag: 'r-' + rem.rid })).ok) sent++;
