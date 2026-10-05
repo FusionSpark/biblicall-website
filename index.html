@@ -277,6 +277,11 @@
   .save-ask button{padding:6px 16px;border-radius:999px;border:1.5px solid var(--earth);background:var(--earth);color:#fff;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
   .file-item{margin:0 0 6px}
   .files .acct-btn.ghost{text-align:left}
+  .goal-clock{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:30px;font-size:15px;cursor:pointer;filter:grayscale(.4);opacity:.85}
+  .goal-clock.on{filter:none;opacity:1;border-color:#664336;background:#f6eee8}
+  .goal-when{display:block;font-size:14px;font-weight:600;color:#664336;margin-top:2px}
+  .goal-remform{margin:-2px 0 10px 34px}
+  .goal-remrm{flex:none;padding:10px 12px;border:1.5px solid var(--earth) !important;border-radius:10px;background:transparent !important;color:var(--earth) !important;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -1899,6 +1904,22 @@
     });
     return box;
   }
+  // Guess a reminder time from a to-do's own words: "Tuesday 8:30 am", "by FRI", "tomorrow", "tonight", "5:30".
+  function guessWhen(text) {
+    const t = String(text).toLowerCase(), now = new Date(), d = new Date(now);
+    let h = 9, mi = 0, dayFound = false;
+    const tm = t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=\s|$|[?.,!])/);
+    if (tm && (tm[2] || tm[3]) && +tm[1] <= 12) { h = +tm[1]; mi = tm[2] ? +tm[2] : 0; const ap = tm[3] ? tm[3][0] : ''; if (ap === 'p' && h < 12) h += 12; else if (ap === 'a' && h === 12) h = 0; else if (!ap && h < 7) h += 12; }
+    else if (/\btonight\b/.test(t)) h = 19;
+    const days = [['sun', 0], ['mon', 1], ['tue', 2], ['wed', 3], ['thu', 4], ['fri', 5], ['sat', 6]];
+    if (/\btomorrow\b/.test(t)) { d.setDate(d.getDate() + 1); dayFound = true; }
+    else if (/\b(today|tonight)\b/.test(t)) dayFound = true;
+    else for (const [k, n] of days) { if (new RegExp('\\b' + k + '[a-z]*\\b').test(t)) { let add = (n - now.getDay() + 7) % 7; d.setDate(d.getDate() + add); dayFound = true; break; } }
+    d.setHours(h, mi, 0, 0);
+    if (d.getTime() <= Date.now()) { if (dayFound && !/\b(today|tonight)\b/.test(t) && !/\btomorrow\b/.test(t)) d.setDate(d.getDate() + 7); else d.setDate(d.getDate() + 1); }
+    return d;
+  }
+  let goalRemOpen = -1;
   function drawPlan() {
     const box = el('div', 'plan');
     const ask = el('button', 'acct-btn', '✦ Plan my week with BibliCall'); ask.type = 'button';
@@ -1929,11 +1950,32 @@
     PLAN.goals.forEach((g, i) => {
       const row = el('div', 'dr-item plan-goal' + (g.done ? ' done' : ''));
       const cb = el('input'); cb.type = 'checkbox'; cb.checked = g.done; cb.setAttribute('aria-label', 'Done');
-      cb.addEventListener('change', () => { g.done = cb.checked; savePlan(); syncPlanSoon(); if (g.done) { stat('goal_done'); toast(PLAN.goals.every((x) => x.done) ? 'Every goal done this week. Well done!' : 'Well done!'); } drawDrawer(); });
+      const gRem = g.rem ? PLAN.rems.find((r) => r.rid === g.rem && r.at > Date.now()) : null; if (g.rem && !gRem) g.rem = null;
+      cb.addEventListener('change', () => { g.done = cb.checked; if (g.done && g.rem) { removeReminder(g.rem); g.rem = null; } savePlan(); syncPlanSoon(); if (g.done) { stat('goal_done'); toast(PLAN.goals.every((x) => x.done) ? 'Every goal done this week. Well done!' : 'Well done!'); } drawDrawer(); });
       const lab = el('div', 'mem-text', g.t);
-      const del = el('button', 'dr-del', '×'); del.type = 'button'; del.setAttribute('aria-label', 'Remove goal');
-      del.addEventListener('click', () => { PLAN.goals.splice(i, 1); savePlan(); syncPlanSoon(); drawDrawer(); });
-      row.append(cb, lab, del); box.appendChild(row);
+      if (gRem) lab.appendChild(el('small', 'goal-when', '\u23f0 ' + whenLabel(gRem.at)));
+      const clk = el('button', 'goal-clock' + (gRem ? ' on' : ''), '\u23f0'); clk.type = 'button'; clk.setAttribute('aria-label', gRem ? 'Change reminder' : 'Remind me');
+      clk.title = gRem ? 'Change or remove the reminder' : 'Turn this into a reminder on your phone';
+      clk.addEventListener('click', () => { goalRemOpen = goalRemOpen === i ? -1 : i; drawDrawer(); });
+      const del = el('button', 'dr-del', '\u00d7'); del.type = 'button'; del.setAttribute('aria-label', 'Remove goal');
+      del.addEventListener('click', () => { if (g.rem) removeReminder(g.rem); PLAN.goals.splice(i, 1); goalRemOpen = -1; savePlan(); syncPlanSoon(); drawDrawer(); });
+      if (!g.done) row.append(cb, lab, clk, del); else row.append(cb, lab, del);
+      box.appendChild(row);
+      if (goalRemOpen === i && !g.done) {
+        const f = el('form', 'plan-remadd goal-remform');
+        const when = el('input'); when.type = 'datetime-local'; when.setAttribute('aria-label', 'When');
+        const at0 = gRem ? new Date(gRem.at) : guessWhen(g.t); when.value = new Date(at0 - at0.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        const go = el('button', null, gRem ? 'Update' : 'Remind me'); go.type = 'submit'; f.append(when, go);
+        if (gRem) { const rm = el('button', 'goal-remrm', 'Remove reminder'); rm.type = 'button'; rm.addEventListener('click', () => { removeReminder(g.rem); g.rem = null; goalRemOpen = -1; savePlan(); drawDrawer(); }); f.appendChild(rm); }
+        f.addEventListener('submit', async (e) => {
+          e.preventDefault(); const at = new Date(when.value).getTime(); if (!(at > Date.now())) { toast('Please choose a time in the future.'); return; }
+          if (g.rem) removeReminder(g.rem);
+          const r = await addReminder({ at, text: g.t }); if (!r) return;
+          g.rem = r.rid; goalRemOpen = -1; savePlan(); stat('goal_reminder');
+          toast('\u23f0 Reminder set for ' + whenLabel(at) + (PLAN.push ? '.' : '. Turn on reminders below to get it on your phone.')); drawDrawer();
+        });
+        box.appendChild(f);
+      }
     });
     const gf = el('form', 'mem-add'); const gi = el('input'); gi.type = 'text'; gi.maxLength = 140; gi.placeholder = 'e.g. Family dinner three nights'; gi.setAttribute('aria-label', 'Add a goal');
     const ga = el('button', null, 'Add'); ga.type = 'submit'; gf.append(gi, ga);
