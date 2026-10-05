@@ -292,7 +292,8 @@
   .mem-text{flex:1;min-width:0;padding:9px 10px;font-size:17px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
   .mem-clear{margin:12px 10px 4px;border:none;background:none;color:var(--muted);font-family:inherit;font-size:15.5px;text-decoration:underline;cursor:pointer}
   .dr-fine{margin:0;padding:10px 16px 16px;font-size:14.5px;color:var(--muted);border-top:1px solid var(--line)}
-  .toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:50;background:var(--earth-deep);color:#fff;padding:9px 16px;border-radius:999px;
+  .toast{max-width:calc(100vw - 32px);white-space:normal !important;text-align:center;line-height:1.35;
+    position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:50;background:var(--earth-deep);color:#fff;padding:9px 16px;border-radius:999px;
     font-size:17px;font-weight:600;box-shadow:0 8px 24px rgba(44,33,23,.25);opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
   .toast.show{opacity:1}
   .installtip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;width:min(440px,calc(100vw - 32px));background:var(--card);
@@ -1745,7 +1746,7 @@
           if (!PLAN.push) { const on = el('button', 'act-link', 'Get it on my phone'); on.type = 'button'; on.addEventListener('click', () => openDrawer('plan')); row.appendChild(on); }
         } else {
           const b = el('button', 'act-btn', '⏰ Remind me · ' + whenLabel(a.at)); b.type = 'button';
-          b.addEventListener('click', async () => { const r = await addReminder({ at: a.at, text: a.text, conv: convId || '', kind: /\?\s*$/.test(a.text) ? 'follow' : 'task' }); if (r) { a.done = true; renderThread(); if (!PLAN.push) toast('Saved in My week. Turn on reminders there so your phone can tell you.'); } });
+          b.addEventListener('click', async () => { const r = await addReminder({ at: a.at, text: a.text, conv: convId || '', kind: /\?\s*$/.test(a.text) ? 'follow' : 'task' }); if (r) { a.done = true; renderThread(); if (!PLAN.push) toast('Saved in My week. Turn on reminders there to get it on your phone.'); } });
           row.appendChild(b); row.appendChild(el('span', 'act-text', a.text));
         }
       } else {
