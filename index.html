@@ -1488,7 +1488,7 @@
   function deviceVoice() {
     const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
     const prefer = ['Aaron', 'Daniel', 'Arthur', 'Reed', 'Evan', 'Nathan', 'Tom', 'Alex', 'Google UK English Male', 'Microsoft Guy', 'Microsoft Andrew', 'Microsoft David'];
-    if (langKey !== 'en') return voices.find((x) => x.lang && x.lang.toLowerCase().indexOf(langKey) === 0) || null;
+    if (langKey !== 'en') return voices.find((x) => x.lang && x.lang.toLowerCase().indexOf(speechLang()) === 0) || null;
     return prefer.map((n) => voices.find((x) => x.name.indexOf(n) === 0 && /^en/i.test(x.lang))).find(Boolean) || voices.find((x) => /^en/i.test(x.lang));
   }
   async function speakOnDevice(text, token) {
@@ -1498,7 +1498,7 @@
       if (!speaking || speaking.token !== token) return;
       await new Promise((res) => {
         const u = new SpeechSynthesisUtterance(sentence);
-        if (v) u.voice = v; if (langKey !== 'en') u.lang = langKey; u.rate = 0.9; u.pitch = 0.85;
+        if (v) u.voice = v; if (langKey !== 'en') u.lang = speechLang(); u.rate = 0.9; u.pitch = 0.85;
         u.onend = u.onerror = res;
         speechSynthesis.speak(u);
       });
@@ -1950,23 +1950,28 @@
     card.querySelector('.svgo').onclick = () => { card.hidden = true; document.body.classList.remove('sharedverse'); q.value = 'Help me plan my week. I’d like a few goals for work, family and faith.'; sendBtn.click(); };
   })();
   // ---- Language: BibliCall answers (and greets) in the language each person chooses ----
-  const LANG_LIST = [['en', 'English'], ['es', 'Español'], ['pt', 'Português'], ['fr', 'Français'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pl', 'Polski'], ['uk', 'Українська'], ['ru', 'Русский'],
+  const LANG_LIST = [['en', 'English'], ['es', 'Español'], ['pt', 'Português'], ['fr', 'Français'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pl', 'Polski'], ['uk', 'Українська'], ['ru', 'Русский'], ['hr', 'Hrvatski'], ['sr', 'Srpski (latinica)'], ['src', 'Српски (ћирилица)'],
     ['zh', '中文'], ['ko', '한국어'], ['ja', '日本語'], ['tl', 'Tagalog'], ['vi', 'Tiếng Việt'], ['id', 'Bahasa Indonesia'], ['hi', 'हिन्दी'], ['sw', 'Kiswahili'], ['ar', 'العربية']];
   const UI_TEXT = {
     es: ['Pregunta lo que quieras. Encuentra tu Estrella del Norte.', 'Pregunta lo que quieras…'], pt: ['Pergunte qualquer coisa. Encontre sua Estrela do Norte.', 'Pergunte qualquer coisa…'],
     fr: ['Demandez ce que vous voulez. Trouvez votre étoile du Nord.', 'Demandez ce que vous voulez…'], de: ['Frag, was du willst. Finde deinen Nordstern.', 'Frag, was du willst…'],
     it: ['Chiedi qualsiasi cosa. Trova la tua Stella Polare.', 'Chiedi qualsiasi cosa…'], pl: ['Zapytaj o cokolwiek. Odnajdź swoją Gwiazdę Polarną.', 'Zapytaj o cokolwiek…'],
     uk: ['Запитуй будь-що. Знайди свою Полярну зорю.', 'Запитуй будь-що…'], ru: ['Спрашивайте о чём угодно. Найдите свою Полярную звезду.', 'Спросите о чём угодно…'],
+    hr: ['Pitaj bilo što. Pronađi svoju Sjevernjaču.', 'Pitaj bilo što…'], sr: ['Pitaj bilo šta. Pronađi svoju Severnjaču.', 'Pitaj bilo šta…'],
+    src: ['Питај било шта. Пронађи своју Северњачу.', 'Питај било шта…'],
     zh: ['有问必答。找到你的北极星。', '问任何问题…'], ko: ['무엇이든 물어보세요. 당신의 북극성을 찾으세요.', '무엇이든 물어보세요…'], ja: ['何でも聞いてください。あなたの北極星を見つけましょう。', '何でも聞いてください…'],
     tl: ['Itanong ang kahit ano. Hanapin ang iyong North Star.', 'Itanong ang kahit ano…'], vi: ['Hỏi bất cứ điều gì. Tìm Sao Bắc Đẩu của bạn.', 'Hỏi bất cứ điều gì…'],
     id: ['Tanyakan apa saja. Temukan Bintang Utara Anda.', 'Tanyakan apa saja…'], hi: ['कुछ भी पूछें। अपना ध्रुव तारा खोजें।', 'कुछ भी पूछें…'],
     sw: ['Uliza chochote. Pata Nyota yako ya Kaskazini.', 'Uliza chochote…'], ar: ['اسأل أي شيء. اعثر على نجمك الشمالي.', 'اسأل أي شيء…']
   };
-  const LANG_NAME_EN = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', pl: 'Polish', uk: 'Ukrainian', ru: 'Russian', zh: 'Chinese (Simplified)', ko: 'Korean', ja: 'Japanese', tl: 'Tagalog', vi: 'Vietnamese', id: 'Indonesian', hi: 'Hindi', sw: 'Swahili', ar: 'Arabic' };
+  const LANG_NAME_EN = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', pl: 'Polish', uk: 'Ukrainian', ru: 'Russian', hr: 'Croatian', sr: 'Serbian (Latin script)', src: 'Serbian (Cyrillic script)', zh: 'Chinese (Simplified)', ko: 'Korean', ja: 'Japanese', tl: 'Tagalog', vi: 'Vietnamese', id: 'Indonesian', hi: 'Hindi', sw: 'Swahili', ar: 'Arabic' };
   let langKey = (() => {
     const v = lsGet('bc_lang', ''); if (LANG_LIST.some((l) => l[0] === v)) return v;
-    const nav = String(navigator.language || 'en').slice(0, 2).toLowerCase(); return LANG_LIST.some((l) => l[0] === nav) ? nav : 'en';
+    const full = String(navigator.language || 'en'); let nav = full.slice(0, 2).toLowerCase();
+    if (nav === 'sr') nav = /latn/i.test(full) ? 'sr' : 'src'; else if (nav === 'bs' || nav === 'sh') nav = 'hr';
+    return LANG_LIST.some((l) => l[0] === nav) ? nav : 'en';
   })();
+  function speechLang() { return langKey === 'src' ? 'sr' : langKey; }
   function applyLang() {
     const t = UI_TEXT[langKey], intro = document.querySelector('.intro');
     if (intro) intro.textContent = t ? t[0] : 'Ask anything. Find your North Star.';
@@ -2815,7 +2820,7 @@
   // Way 1: browser speech recognition
   if (SpeechRec) {
     recog = new SpeechRec();
-    recog.lang = langKey !== 'en' ? langKey : (navigator.language || 'en-US');
+    recog.lang = langKey !== 'en' ? speechLang() : (navigator.language || 'en-US');
     recog.interimResults = true;
     recog.continuous = false;
     recog.onstart = () => { heard = false; micOn('Listening… speak now'); };

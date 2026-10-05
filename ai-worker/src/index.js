@@ -52,7 +52,7 @@ function attachmentBlocks(list) {
 }
 
 const TRADITIONS = { catholic: 'Catholic', orthodox: 'Eastern Orthodox', baptist: 'Baptist', methodist: 'Methodist', lutheran: 'Lutheran', reformed: 'Presbyterian / Reformed', anglican: 'Anglican / Episcopal', pentecostal: 'Pentecostal / Charismatic', nondenom: 'non-denominational evangelical', oriental: 'Oriental Orthodox (Coptic, Armenian, Ethiopian, Syriac)', wesleyan: 'Wesleyan / Holiness (such as the Church of the Nazarene)', cofc: 'Churches of Christ', adventist: 'Seventh-day Adventist', anabaptist: 'Mennonite / Anabaptist', messianic: 'Messianic Jewish' };
-const LANGS = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', zh: 'Chinese (Simplified)', ko: 'Korean', tl: 'Tagalog', vi: 'Vietnamese', hi: 'Hindi', sw: 'Swahili', ru: 'Russian', uk: 'Ukrainian', pl: 'Polish', ar: 'Arabic', ja: 'Japanese', id: 'Indonesian' };
+const LANGS = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', zh: 'Chinese (Simplified)', ko: 'Korean', tl: 'Tagalog', vi: 'Vietnamese', hi: 'Hindi', sw: 'Swahili', ru: 'Russian', uk: 'Ukrainian', pl: 'Polish', hr: 'Croatian', sr: 'Serbian (Latin script)', src: 'Serbian (Cyrillic script)', ar: 'Arabic', ja: 'Japanese', id: 'Indonesian' };
 function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
