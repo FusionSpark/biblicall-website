@@ -646,6 +646,19 @@
   html[data-sky="night"] .invoffer button,html.photo .invoffer button,html[data-sky="night"] .pk-b button,html.photo .pk-b button,
   html[data-sky="night"] .act-btn,html.photo .act-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:none}
   html[data-sky="night"] .act-link,html.photo .act-link,html[data-sky="night"] .act-done,html.photo .act-done{color:#fff}
+
+  /* Launch offer: one calm line under the tagline, no card. */
+  .offer{max-width:520px;margin:-6px auto 22px;text-align:center}
+  body.chatting .offer,body.sharedverse .offer{display:none}
+  .of-line{border:0;background:none;padding:0 6px;font-family:inherit;font-size:17px;line-height:1.45;color:var(--ink);cursor:pointer}
+  .of-line u{text-underline-offset:3px;font-weight:700}
+  .of-form{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .of-form[hidden]{display:none}
+  .of-form input{flex:1;min-width:190px;max-width:280px;padding:9px 14px;border-radius:999px;border:1px solid var(--line);font-family:inherit;font-size:16px;background:rgba(255,255,255,.92);color:#2c2117}
+  .of-form button{padding:9px 18px;border-radius:999px;border:0;background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .of-note{margin:8px 0 0;font-size:15.5px;min-height:0}
+  .of-note:empty{display:none}
+  html[data-sky="night"] .of-line,html.photo .of-line,html[data-sky="night"] .of-note,html.photo .of-note{color:#f3f6fd;text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 18px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
@@ -976,6 +989,7 @@
     </div>
     <h1 class="sr-only">BibliCall</h1>
     <p class="intro">Ask anything. Find your North Star.</p>
+    <div class="offer" id="offer"><button type="button" class="of-line" id="offerBtn"><b>✦ Launch offer:</b> $20 a month, and bring a friend free for the first month. <u>Reserve it</u></button><form class="of-form" id="offerForm" hidden><input type="email" id="offerEmail" required placeholder="you@email.com" autocomplete="email"><button type="submit">Reserve</button></form><p class="of-note" id="offerNote"></p></div>
     <div class="svcard" id="svCard" hidden></div>
     <div class="pickup" id="pickup" hidden aria-live="polite"></div>
 
@@ -1077,6 +1091,28 @@
       note.textContent = "That didn't go through. Check your connection and try again.";
     } finally { btn.disabled = false; }
   });
+
+  // Launch offer: reserve it with an email now; becomes a real sign-up once payments are ready.
+  (function launchOffer() {
+    const line = document.getElementById('offerBtn'), form = document.getElementById('offerForm'), note = document.getElementById('offerNote');
+    if (lsGet('bc_offer', '')) { line.innerHTML = '<b>\u2713 Your launch offer is reserved.</b> $20 a month, with a friend free for the first month.'; line.disabled = true; line.style.cursor = 'default'; return; }
+    line.addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) { stat('offer_open'); document.getElementById('offerEmail').focus(); } });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('offerEmail').value.trim(); if (!email) return;
+      const btn = form.querySelector('button'); btn.disabled = true; note.textContent = 'Saving\u2026';
+      try {
+        const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'account', op: 'waitlist', email, offer: true, question: 'Reserved the launch offer: $20/month, friend free for the first month' }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || !j.ok) throw new Error(j.error || 'bad');
+        lsSet('bc_offer', email); stat('offer_reserve');
+        form.hidden = true; line.innerHTML = '<b>\u2713 Reserved.</b> We\u2019ll email you when sign-up opens, with your friend\u2019s free month included.'; line.disabled = true;
+        note.textContent = '';
+      } catch (err) { note.textContent = (err && err.message && err.message !== 'bad') ? err.message : 'That didn\u2019t go through. Please try again.'; }
+      finally { btn.disabled = false; }
+    });
+  })();
 
   // ---- North Star: biblical wisdom, verified against the KJV ----
   const COMPASS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>';

@@ -297,7 +297,7 @@ export async function accountOp(env, body, helpers) {
   }
   if (op === 'stat') {
     const ev = String(body.ev || '');
-    const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'shared_open', 'shared_ask', 'fb_up', 'fb_down', 'call', 'invite_offer', 'invite_yes', 'read_chapter', 'pray', 'reminder', 'goal', 'goal_done', 'push_on', 'own_photo', 'own_photo_shared', 'save_pdf', 'save_docx', 'goal_reminder', 'pay_open', 'pay_reminder', 'payee_add', 'monday_connect', 'monday_sync', 'faith_set_1', 'faith_set_2', 'faith_set_3', 'faith_invite', 'faith_up', 'ns_more', 'talk', 'pickup_show', 'pickup_yes', 'pickup_no', 'tabs_all', 'level_1', 'level_2', 'level_3', 'share_week', 'week_open', 'cheer', 'prayer_add', 'prayer_answered', 'read_plan', 'group_create', 'group_join', 'group_open', 'group_invite'];
+    const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'shared_open', 'shared_ask', 'fb_up', 'fb_down', 'call', 'invite_offer', 'invite_yes', 'read_chapter', 'pray', 'reminder', 'goal', 'goal_done', 'push_on', 'own_photo', 'own_photo_shared', 'save_pdf', 'save_docx', 'goal_reminder', 'pay_open', 'pay_reminder', 'payee_add', 'monday_connect', 'monday_sync', 'faith_set_1', 'faith_set_2', 'faith_set_3', 'faith_invite', 'faith_up', 'ns_more', 'offer_open', 'offer_reserve', 'talk', 'pickup_show', 'pickup_yes', 'pickup_no', 'tabs_all', 'level_1', 'level_2', 'level_3', 'share_week', 'week_open', 'cheer', 'prayer_add', 'prayer_answered', 'read_plan', 'group_create', 'group_join', 'group_open', 'group_invite'];
     if (!OK.includes(ev)) return { error: 'event' };
     await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':' + ev });
     return { ok: true };
@@ -321,7 +321,7 @@ export async function accountOp(env, body, helpers) {
     if (helpers && !(await helpers.underQuota('w:' + email, 'email', 1, 3))) return { ok: true };
     const question = String(body.question || '').slice(0, 300);
     const already = await call(D, { op: 'map.get', key: 'wl:' + email });
-    await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: (already && already.t) || Date.now() } });
+    await call(D, { op: 'map.put', key: 'wl:' + email, value: { email, question, t: (already && already.t) || Date.now(), offer: body.offer ? 'launch' : (already && already.offer) || undefined } });
     if (!already) await call(D, { op: 'inc', key: 'st:' + new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10) + ':waitlist' });
     if (!already && env.RESEND_API_KEY) await sendWelcome(env, email).catch((e) => console.error('welcome', e && e.message));
     if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
