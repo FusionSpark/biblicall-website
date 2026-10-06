@@ -287,6 +287,11 @@
   .pay-quick input[type=text]{flex:1 1 60%}
   .apps-steps{margin:4px 0 8px;padding-left:22px;font-size:15.5px;line-height:1.45;color:var(--ink)}
   .apps .grp .bg-chip{margin-top:6px}
+  .faith-levels{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .faith-lvl{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:#2c2117;font-family:inherit;cursor:pointer}
+  .faith-lvl b{font-size:16.5px}
+  .faith-lvl small{font-size:14px;color:#5b6b78;margin-top:2px;line-height:1.35}
+  .faith-lvl.on{border-color:#664336;background:#f6eee8}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -1153,10 +1158,21 @@
   function recentContext(history) {
     return history.slice(-6).map((m) => (m.role === 'user' ? 'User: ' : 'BibliCall: ') + String(m.content).slice(0, 600)).join('\n');
   }
+  // Faith in my answers: 1 Everyday Wisdom, 2 Gentle Guidance (default), 3 Faith Forward. Faith is never zero, only quieter;
+  // the person chooses, and BibliCall may invite (once in a while) to move up, never on its own.
+  let faithLvl = (() => { const v = +lsGet('bc_faith', 2); return [1, 2, 3].includes(v) ? v : 2; })();
+  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Wise, values-shaped answers. Scripture only when you tap \u201c\u2726 Show North Star.\u201d'], [2, 'Gentle Guidance', 'A North Star for meaningful moments: decisions, relationships, work struggles, hard times.'], [3, 'Faith Forward', 'A North Star with every answer, plus prayer and Scripture woven in.']];
+  function setFaith(v) { if (![1, 2, 3].includes(v)) return; faithLvl = v; lsSet('bc_faith', v); stat('faith_set_' + v); }
+  window.BC_FAITH = { get: () => faithLvl, set: setFaith };
+  const FAITH_WORDS = /\b(god|jesus|christ|bible|biblical|scripture|verse|pray|praying|prayer|church|faith|holy spirit|lord|psalms?|gospel|sermon|pastor|salvation|heaven)\b/i;
+  function faithAsk(t) { return FAITH_WORDS.test(String(t)); }
   function northStarPrompt(question, history, force) {
     const ctx = history && history.length ? 'Recent conversation, for context:\n"""' + recentContext(history) + '"""\n\n' : '';
     const rule = force
       ? 'The user has asked to see a North Star for this message, so always provide one.\n\n'
+      : faithLvl === 2 && !faithAsk(question)
+      ? 'Provide a North Star ONLY if this message touches something meaningful: a decision, a relationship or family matter, work or career struggles, money stress, character, purpose, grief, fear or any hardship, or faith itself. ' +
+        'For purely practical, technical, factual or creative requests (a recipe, code, a spreadsheet, a definition, trivia, travel logistics, writing a simple email), and for greetings or short acknowledgments, reply with ONLY {"skip": true}.\n\n'
       : 'Provide a North Star for this message. Every question, practical, technical or factual ones included, can be seen in the light of biblical wisdom, so find the connection. ' +
         'The ONLY exception: if the message is just a greeting or a short acknowledgment (like "thanks", "ok", "got it"), reply with ONLY {"skip": true}.\n\n';
     return 'You are the North Star layer of BibliCall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that.\n\n' +
@@ -1436,7 +1452,7 @@
         btn.type = 'button';
         btn.className = 'ns-offer';
         btn.textContent = '\u2726 Show North Star';
-        btn.addEventListener('click', () => showNorthStar(m, btn));
+        btn.addEventListener('click', () => { lsSet('bc_ns_taps', (+lsGet('bc_ns_taps', 0)) + 1); showNorthStar(m, btn); });
         threadBox.appendChild(btn);
         lastRow = btn;
         if (m.nsNote) {
@@ -1463,6 +1479,14 @@
       }
       threadBox.appendChild(box);
       if (offerIdx === conversation.length - 1) lastRow = box;
+    }
+    const fIdx = room ? -1 : conversation.findIndex((m) => m.faithInv > 1);
+    if (fIdx >= 0 && fIdx === conversation.length - 1) {
+      const m = conversation[fIdx], box = document.createElement('div'); box.className = 'invoffer';
+      box.innerHTML = '<p>' + (m.faithInv === 2 ? 'Would you like BibliCall to share Scripture\u2019s perspective when something meaningful comes up?' : 'Would you like Scripture\u2019s perspective with every answer, and an offer to pray when life is heavy?') + ' You can change this anytime in Personalize.</p><div class="row"><button type="button" class="yes">Yes, include it more</button><button type="button" class="no">Not now</button></div>';
+      box.querySelector('.yes').addEventListener('click', () => { setFaith(m.faithInv); stat('faith_up'); m.faithInv = 0; toast('Done. You can change this anytime in Personalize.'); renderThread(); });
+      box.querySelector('.no').addEventListener('click', () => { m.faithInv = 0; renderThread(); });
+      threadBox.appendChild(box); lastRow = box;
     }
     const invIdx = room ? -1 : conversation.findIndex((m) => m.invOffer === 1);
     if (invIdx >= 0 && invIdx === conversation.length - 1) {
@@ -1704,13 +1728,13 @@
     const turn = conversation.length - 1;
     const history = conversation.slice(0, -2).map(({ role, content }) => ({ role, content }));
     const ack = isAck(question);
-    const nsPromise = ack ? Promise.resolve(null) : fetchNorthStar(question, history, false);
+    const nsPromise = ack || (faithLvl === 1 && !faithAsk(question)) ? Promise.resolve(null) : fetchNorthStar(question, history, false);
 
     try {
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined })
+        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined, faith: faithLvl })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -1721,7 +1745,10 @@
       const ns = await nsPromise;
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       else if (!ack) conversation[turn].nsOffer = true;
-      if (!ack && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
+      if (!ack && (faithLvl >= 2 || faithAsk(question)) && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
+      if (!ack && faithLvl < 3 && Date.now() - (+lsGet('bc_faith_inv_t', 0)) > 21 * 86400000 && ((+lsGet('bc_ns_taps', 0)) >= 3 || faithAsk(question))) {
+        conversation[turn].faithInv = faithLvl + 1; lsSet('bc_faith_inv_t', Date.now()); lsSet('bc_ns_taps', 0); stat('faith_invite');
+      }
       if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
       if (!wantsRemember && !ack && personalFact(question) && !memory.some((x) => x.text === memText(question))) {
         if (lsGet('bc_autorem', false)) { if (addMemory(question)) toast('\u2713 Saved to memory'); }
@@ -3008,6 +3035,18 @@
       chips(Object.entries(B.list).map(([k, v]) => [k, v.name]), B.get(), (v) => { B.set(v); toast('North Star verses will use the ' + B.list[v].short + '.'); });
       box.appendChild(el('p', 'acct-fine', 'Both translations are public domain. Every North Star verse is checked word for word against the one you choose.'));
     }
+    {
+      sec('Faith in my answers');
+      const wrap = el('div', 'faith-levels');
+      FAITH_LEVELS.forEach(([v, name, desc]) => {
+        const b = el('button', 'faith-lvl' + (faithLvl === v ? ' on' : '')); b.type = 'button';
+        b.append(el('b', null, (faithLvl === v ? '\u2713 ' : '') + name), el('small', null, desc));
+        b.addEventListener('click', () => { setFaith(v); toast(name + ' is on.'); drawDrawer(); });
+        wrap.appendChild(b);
+      });
+      box.appendChild(wrap);
+      box.appendChild(el('p', 'acct-fine', 'At every level BibliCall stays kind, honest and guided by biblical values, and offers gentle care in hard moments.'));
+    }
     if (window.BC_LANG) {
       const LG = window.BC_LANG; sec('Language');
       const sl = el('select', 'read-any'); sl.setAttribute('aria-label', 'Language');
@@ -3250,7 +3289,7 @@
   // One anonymous check-in per day so the family can see how many people use BibliCall and come back (no name, no content).
   function activePing() {
     const d = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10); if (lsGet('bc_active_day', '') === d) return;
-    lsSet('bc_active_day', d); fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'active', did: DEVICE }), keepalive: true }).catch(() => {});
+    lsSet('bc_active_day', d); stat('level_' + faithLvl); fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'active', did: DEVICE }), keepalive: true }).catch(() => {});
   }
   activePing(); document.addEventListener('visibilitychange', () => { if (!document.hidden) activePing(); });
   function drawSync() {

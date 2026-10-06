@@ -53,7 +53,12 @@ function attachmentBlocks(list) {
 
 const TRADITIONS = { catholic: 'Catholic', orthodox: 'Eastern Orthodox', baptist: 'Baptist', methodist: 'Methodist', lutheran: 'Lutheran', reformed: 'Presbyterian / Reformed', anglican: 'Anglican / Episcopal', pentecostal: 'Pentecostal / Charismatic', nondenom: 'non-denominational evangelical', oriental: 'Oriental Orthodox (Coptic, Armenian, Ethiopian, Syriac)', wesleyan: 'Wesleyan / Holiness (such as the Church of the Nazarene)', cofc: 'Churches of Christ', adventist: 'Seventh-day Adventist', anabaptist: 'Mennonite / Anabaptist', messianic: 'Messianic Jewish' };
 const LANGS = { es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', it: 'Italian', zh: 'Chinese (Simplified)', ko: 'Korean', tl: 'Tagalog', vi: 'Vietnamese', hi: 'Hindi', sw: 'Swahili', ru: 'Russian', uk: 'Ukrainian', pl: 'Polish', hr: 'Croatian', sr: 'Serbian (Latin script)', src: 'Serbian (Cyrillic script)', ar: 'Arabic', ja: 'Japanese', id: 'Indonesian' };
-function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang) {
+const FAITH = {
+  1: 'This person chose "Everyday Wisdom" for how much faith appears in BibliCall\'s answers. Let biblical values (honesty, fairness, humility, stewardship, love of neighbor) quietly shape your advice, but do not mention God, faith, prayer, the Bible or biblical phrases, and do not add [[prayer|...]] lines, unless they bring faith up themselves. In grief, fear or crisis, lead with warm, human care (and crisis help when needed); you may gently mention God\'s nearness only if they seem open to it. Never mention this setting.',
+  2: 'This person chose "Gentle Guidance" for how much faith appears in BibliCall\'s answers. For practical, technical, factual or creative requests, give a plain, excellent answer with no faith language. When something meaningful is at stake (decisions, relationships, work struggles, character, hardship), a short biblical principle in your own words is welcome when it fits naturally. Never mention this setting.',
+  3: 'This person chose "Faith Forward" for how much faith appears in BibliCall\'s answers. Let biblical wisdom shine in most answers: weave in biblical principles and the example of Jesus naturally (still without citing chapter and verse, since the North Star adds verified Scripture), and when they share something heavy, gently offer to pray with them. Stay warm, never preachy. Never mention this setting.'
+};
+function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
@@ -72,6 +77,7 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   if (decide) {
     s += `\n\nBefore replying, decide whether you should speak at all. Speak only if the latest message is addressed to you, asks a question meant for you, or the friends are weighing something where a short, wise thought from you would clearly help. If the friends are simply talking to each other (greetings, plans, replies to one another, small talk), do not interrupt: reply with exactly [[PASS]] and nothing else.`;
   }
+  if (!group && FAITH[faith]) s += '\n\n' + FAITH[faith];
   if (Object.prototype.hasOwnProperty.call(LANGS, lang)) {
     s += `\n\nThis person chose ${LANGS[lang]} as their language. Always reply in ${LANGS[lang]}, even when they write in English, unless they ask you to use another language. Keep any [[...]] lines exactly in the format given, with their text in ${LANGS[lang]}.`;
   }
@@ -261,7 +267,7 @@ export default {
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || '')), messages,
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
         };
 
