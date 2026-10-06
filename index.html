@@ -450,8 +450,8 @@
   html[data-sky="night"] body.chatting .menubtn{background:rgba(26,40,80,.9);border-color:#3a4c7c}
   html[data-sky="night"] .logo,html[data-sky="night"] #dockLogo{filter:brightness(0) invert(1) sepia(.25) brightness(.97)}
   html[data-sky="night"] .logowrap .tm{color:#f1e4d3}
-  html[data-sky="night"] .composer textarea,html[data-sky="night"] .ns,html[data-sky="night"] .msg.user,html[data-sky="night"] .roombar{color:#2c2117}
-  html[data-sky="night"] .ns .why,html[data-sky="night"] .remchip{color:#4d5f7a}
+  html[data-sky="night"] .composer textarea,html[data-sky="night"] .msg.user,html[data-sky="night"] .roombar{color:#2c2117}
+  html[data-sky="night"] .remchip{color:#4d5f7a}
   html[data-sky="night"] .composer textarea::placeholder{color:#5d6f8a}
   html[data-sky="night"] .callbtn,html[data-sky="night"] .ns-offer,html[data-sky="night"] .memoffer button{background:var(--card)}
   /* ---- Listen button under each answer ---- */
@@ -619,6 +619,19 @@
   .emaildaily input{width:18px;height:18px;accent-color:var(--earth)}
   html.photo .emaildaily{color:#eef2fb;text-shadow:0 1px 2px rgba(0,0,0,.55)}
   body.firstvisit .callbar,body.firstvisit .emailstep{display:none !important}
+
+  /* North Star reads as part of the same conversation: no card, same background and text as BibliCall's answers. */
+  .ns,.ns.compact{background:transparent;border:0;border-radius:0;padding:2px 0 0;box-shadow:none;color:var(--ink)}
+  .ns blockquote,.ns-mini blockquote{color:inherit}
+  .ns .verse{border-top:0;padding-top:4px}
+  html[data-sky="night"] .ns,html.photo .ns{color:#f3f6fd;text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 18px rgba(0,0,0,.35)}
+  html[data-sky="night"] .ns h2,html.photo .ns h2,html[data-sky="night"] .ns .ref b,html.photo .ns .ref b,
+  html[data-sky="night"] .ns-mini .ns-star,html.photo .ns-mini .ns-star,html[data-sky="night"] .ns .readch,html.photo .ns .readch{color:#fff}
+  html[data-sky="night"] .ns .ok,html.photo .ns .ok{color:#b9e8c1}
+  html[data-sky="night"] .ns .why,html.photo .ns .why,html[data-sky="night"] .ns.loading,html.photo .ns.loading{color:rgba(243,246,253,.85)}
+  html[data-sky="night"] .ns .reflect,html.photo .ns .reflect{border-left-color:rgba(255,255,255,.7)}
+  html[data-sky="night"] .ns button,html.photo .ns button{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:none}
+  html[data-sky="night"] .ns .ns-share,html.photo .ns .ns-share{background:#fff;color:#2c2117;border-color:#fff}
 </style>
 </head>
 <body>
