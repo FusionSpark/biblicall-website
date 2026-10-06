@@ -1483,7 +1483,7 @@
     const fIdx = room ? -1 : conversation.findIndex((m) => m.faithInv > 1);
     if (fIdx >= 0 && fIdx === conversation.length - 1) {
       const m = conversation[fIdx], box = document.createElement('div'); box.className = 'invoffer';
-      box.innerHTML = '<p>' + (m.faithInv === 2 ? 'Would you like BibliCall to share Scripture\u2019s perspective when something meaningful comes up?' : 'Would you like Scripture\u2019s perspective with every answer, and an offer to pray when life is heavy?') + ' You can change this anytime in Personalize.</p><div class="row"><button type="button" class="yes">Yes, include it more</button><button type="button" class="no">Not now</button></div>';
+      box.innerHTML = '<p>' + (m.faithInv === 2 ? 'Would you like BibliCall to share Scripture\u2019s perspective when something meaningful comes up?' : 'Would you like Scripture\u2019s perspective with every answer?') + '</p><div class="row"><button type="button" class="yes">Yes</button><button type="button" class="no">Not now</button></div>';
       box.querySelector('.yes').addEventListener('click', () => { setFaith(m.faithInv); stat('faith_up'); m.faithInv = 0; toast('Done. You can change this anytime in Personalize.'); renderThread(); });
       box.querySelector('.no').addEventListener('click', () => { m.faithInv = 0; renderThread(); });
       threadBox.appendChild(box); lastRow = box;
@@ -1746,7 +1746,9 @@
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       else if (!ack) conversation[turn].nsOffer = true;
       if (!ack && (faithLvl >= 2 || faithAsk(question)) && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
-      if (!ack && faithLvl < 3 && Date.now() - (+lsGet('bc_faith_inv_t', 0)) > 21 * 86400000 && ((+lsGet('bc_ns_taps', 0)) >= 3 || faithAsk(question))) {
+      // Invite only after the person has opened the North Star themselves 3 times, never in their first week, and at most once every 3 weeks.
+      if (!lsGet('bc_first_day', 0)) lsSet('bc_first_day', Date.now());
+      if (!ack && faithLvl < 3 && Date.now() - (+lsGet('bc_first_day', Date.now())) > 7 * 86400000 && Date.now() - (+lsGet('bc_faith_inv_t', 0)) > 21 * 86400000 && (+lsGet('bc_ns_taps', 0)) >= 3) {
         conversation[turn].faithInv = faithLvl + 1; lsSet('bc_faith_inv_t', Date.now()); lsSet('bc_ns_taps', 0); stat('faith_invite');
       }
       if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
