@@ -287,6 +287,14 @@ export async function accountOp(env, body, helpers) {
 
   // Waitlist: saved here, and (if the NOTIFY_EMAIL secret is set) emailed to the owner. Keeps any personal address out of the public page.
   // Anonymous usage counters (no names, no content): one number per event per day.
+  // Weekly active people and how many come back: one anonymous ping per device per day (a scrambled random device number, never a name).
+  if (op === 'active') {
+    const did = String(body.did || ''); if (!/^[A-Za-z0-9_-]{16,40}$/.test(did)) return { ok: false };
+    const h = (await hashHex('active:' + did)).slice(0, 16), day = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10);
+    await call(D, { op: 'map.put', key: 'act:' + day + ':' + h, value: 1 });
+    if (!(await call(D, { op: 'map.get', key: 'fst:' + h }))) { await call(D, { op: 'map.put', key: 'fst:' + h, value: day }); await call(D, { op: 'map.put', key: 'new:' + day + ':' + h, value: 1 }); }
+    return { ok: true };
+  }
   if (op === 'stat') {
     const ev = String(body.ev || '');
     const OK = ['visit', 'visit_new', 'question', 'northstar', 'listen', 'music', 'share', 'shared_open', 'shared_ask', 'fb_up', 'fb_down', 'call', 'invite_offer', 'invite_yes', 'read_chapter', 'pray', 'reminder', 'goal', 'goal_done', 'push_on', 'own_photo', 'own_photo_shared', 'save_pdf', 'save_docx', 'goal_reminder', 'pay_open', 'pay_reminder', 'payee_add', 'monday_connect', 'monday_sync', 'share_week', 'week_open', 'cheer', 'prayer_add', 'prayer_answered', 'read_plan', 'group_create', 'group_join', 'group_open', 'group_invite'];

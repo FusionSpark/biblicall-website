@@ -128,7 +128,23 @@ async function sendStats(env, D) {
   const rows = await call(D, { op: 'list', prefix: 'st:', start: 'st:' + days[0], limit: 2000 });
   const tot = {}; rows.forEach(([k, v]) => { const [, d, ev] = k.split(':'); if (days.includes(d)) tot[ev] = (tot[ev] || 0) + v; });
   const subs = (await call(D, { op: 'list', prefix: 'dn:', limit: 5000 })).length;
-  const html = '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117;font-size:16px"><h2 style="color:#4a2f26">BibliCall: last 7 days</h2><p>' + days[0] + ' to ' + days[6] + '</p><table cellpadding="6" style="border-collapse:collapse">' +
+  // People: active this week, new, and how many of last week's newcomers came back.
+  const prev = []; for (let i = 14; i >= 8; i--) prev.push(new Date(Date.now() - i * 86400000 - 6 * 3600000).toISOString().slice(0, 10));
+  const keysOf = async (prefix) => (await call(D, { op: 'list', prefix, limit: 5000 })).map(([k]) => k.slice(prefix.length));
+  const weekDays = {}, union = (arr) => { const s = new Set(); arr.forEach((a) => a.forEach((x) => s.add(x))); return s; };
+  const thisAct = []; for (const d of days) { const k = await keysOf('act:' + d + ':'); thisAct.push(k); k.forEach((x) => { weekDays[x] = (weekDays[x] || 0) + 1; }); }
+  const prevAct = []; for (const d of prev) prevAct.push(await keysOf('act:' + d + ':'));
+  const newThis = union(await Promise.all(days.map((d) => keysOf('new:' + d + ':')))), newPrev = union(await Promise.all(prev.map((d) => keysOf('new:' + d + ':'))));
+  const wau = union(thisAct), wauPrev = union(prevAct);
+  const back = [...newPrev].filter((x) => wau.has(x)).length, rate = newPrev.size ? Math.round(100 * back / newPrev.size) : null;
+  const twoPlus = Object.values(weekDays).filter((n) => n >= 2).length, perDay = Math.round(thisAct.reduce((a, b) => a + b.length, 0) / 7);
+  const big = (label, value, note) => '<tr><td style="padding:8px 0;border-bottom:1px solid #eee">' + label + (note ? '<br><span style="color:#6b5948;font-size:13px">' + note + '</span>' : '') + '</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-weight:800;font-size:20px;color:#4a2f26">' + value + '</td></tr>';
+  const people = '<h3 style="color:#4a2f26;margin:18px 0 6px">People</h3><table cellpadding="0" cellspacing="0" style="width:100%;max-width:520px;border-collapse:collapse">' +
+    big('People who used BibliCall this week', wau.size, 'Last week: ' + wauPrev.size) +
+    big('Came back after their first week', rate == null ? '\u2014' : rate + '%', newPrev.size ? back + ' of the ' + newPrev.size + ' people who first came the week before' : 'Shows once there is a full week of newcomers') +
+    big('New people this week', newThis.size) + big('Used it on 2 or more days', twoPlus) + big('Average people per day', perDay) + '</table>' +
+    '<p style="color:#6b5948;font-size:13px">Goal to watch: 40% or more coming back after their first week.</p><h3 style="color:#4a2f26;margin:18px 0 6px">Activity</h3>';
+  const html = '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117;font-size:16px"><h2 style="color:#4a2f26">BibliCall: last 7 days</h2><p>' + days[0] + ' to ' + days[6] + '</p>' + people + '<table cellpadding="6" style="border-collapse:collapse">' +
     LABELS.map(([k, l]) => '<tr><td style="border-bottom:1px solid #eee">' + l + '</td><td style="border-bottom:1px solid #eee;text-align:right;font-weight:700">' + (tot[k] || 0) + '</td></tr>').join('') +
     '<tr><td>Daily North Star subscribers (total)</td><td style="text-align:right;font-weight:700">' + subs + '</td></tr></table>' +
     '<p style="color:#6b5948;font-size:13px">Counts only: BibliCall does not record who asked what.</p></div>';

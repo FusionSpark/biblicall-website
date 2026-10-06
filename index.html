@@ -3247,6 +3247,12 @@
     } catch (e) {} finally { syncing = false; }
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPull(); });
+  // One anonymous check-in per day so the family can see how many people use BibliCall and come back (no name, no content).
+  function activePing() {
+    const d = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10); if (lsGet('bc_active_day', '') === d) return;
+    lsSet('bc_active_day', d); fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'active', did: DEVICE }), keepalive: true }).catch(() => {});
+  }
+  activePing(); document.addEventListener('visibilitychange', () => { if (!document.hidden) activePing(); });
   function drawSync() {
     const box = el('div', 'plan');
     box.appendChild(el('h4', 'bg-sub', '🔄 Sync across my devices'));
