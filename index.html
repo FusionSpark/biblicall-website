@@ -156,8 +156,8 @@
   .ns .why{margin:0;font-size:17px;color:var(--muted)}
   .ns .reflect{margin:0;border-left:3px solid var(--earth);padding-left:12px;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-size:20.5px}
   .ns.loading{color:var(--muted);font-style:italic}
-  .ns-offer{display:inline-flex;align-items:center;gap:6px;margin:4px 0 20px;padding:6px 12px;border:1px solid var(--line);
-    border-radius:999px;background:transparent;color:var(--earth);font-family:inherit;font-size:15.5px;font-weight:600;cursor:pointer}
+  .ns-offer{display:inline-flex;align-items:center;justify-content:center;margin:2px 0 18px;width:34px;height:34px;padding:0;border:1px solid var(--line);
+    border-radius:999px;background:transparent;color:var(--earth);font-family:inherit;font-size:17px;line-height:1;cursor:pointer;opacity:.85}
   .ns-offer:hover{background:var(--card)}
   .ns-offer:disabled{opacity:.6;cursor:default}
   .ns-note{margin:-12px 0 20px;font-size:15.5px;color:var(--muted)}
@@ -457,7 +457,7 @@
   .ns .ok{font-size:16px;font-weight:700}
   .ns .why{font-size:19px;line-height:1.5;font-weight:500}
   .ns .reflect{font-size:21.5px;font-weight:600;line-height:1.5}
-  .ns-offer,.ns-note,.memoffer,.memoffer button{font-size:18px}
+  .ns-note,.memoffer,.memoffer button{font-size:18px}
   .emailstep p,body.chatting .composer-dock .emailstep p{font-size:18px;font-weight:500}
   .emailnote,.attnote,.savednote{font-size:17px;font-weight:600}
   .who{font-size:17px;font-weight:700}
@@ -1167,7 +1167,7 @@
   // Faith in my answers: 1 Everyday Wisdom, 2 Gentle Guidance (default), 3 Faith Forward. Faith is never zero, only quieter;
   // the person chooses, and BibliCall may invite (once in a while) to move up, never on its own.
   let faithLvl = (() => { const v = +lsGet('bc_faith', 2); return [1, 2, 3].includes(v) ? v : 2; })();
-  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Wise, values-shaped answers. Scripture only when you tap \u201c\u2726 Show North Star.\u201d'], [2, 'Gentle Guidance', 'A North Star for meaningful moments: decisions, relationships, work struggles, hard times.'], [3, 'Faith Forward', 'A North Star with every answer, plus prayer and Scripture woven in.']];
+  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Wise, values-shaped answers. Scripture only when you tap the \u2726 North Star.'], [2, 'Gentle Guidance', 'A North Star for meaningful moments: decisions, relationships, work struggles, hard times.'], [3, 'Faith Forward', 'A North Star with every answer, plus prayer and Scripture woven in.']];
   function setFaith(v) { if (![1, 2, 3].includes(v)) return; faithLvl = v; lsSet('bc_faith', v); stat('faith_set_' + v); }
   window.BC_FAITH = { get: () => faithLvl, set: setFaith };
   const FAITH_WORDS = /\b(god|jesus|christ|bible|biblical|scripture|verse|pray|praying|prayer|church|faith|holy spirit|lord|psalms?|gospel|sermon|pastor|salvation|heaven)\b/i;
@@ -1466,7 +1466,9 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'ns-offer';
-        btn.textContent = '\u2726 Show North Star';
+        btn.innerHTML = '<span aria-hidden="true">\u2726</span>';
+        btn.title = 'North Star \u2014 the wisdom behind this answer';
+        btn.setAttribute('aria-label', 'Show the North Star for this answer');
         btn.addEventListener('click', () => { lsSet('bc_ns_taps', (+lsGet('bc_ns_taps', 0)) + 1); showNorthStar(m, btn); });
         threadBox.appendChild(btn);
         lastRow = btn;
@@ -1759,7 +1761,9 @@
       renderThread();
       const ns = await nsPromise;
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
-      else if (!ack) conversation[turn].nsOffer = true;
+      // The person sets the pace: a small \u2726 appears only now and then (or when a moment seems meaningful), never pushed.
+      // The North Star button above the chat box is always there when they want it.
+      else if (!ack && (hardMoment(question) || faithAsk(question) || Math.random() < 0.35)) conversation[turn].nsOffer = true;
       if (!ack && (faithLvl >= 2 || faithAsk(question)) && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
       // Invite only after the person has opened the North Star themselves 3 times, never in their first week, and at most once every 3 weeks.
       if (!lsGet('bc_first_day', 0)) lsSet('bc_first_day', Date.now());
