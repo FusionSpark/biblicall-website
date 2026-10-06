@@ -312,6 +312,9 @@
   .plan-remadd input{flex:1 1 100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:16px;background:#fff;color:#2c2117}
   .plan-remadd input[type=datetime-local]{flex:1 1 60%}
   .plan-remadd button{flex:none;padding:10px 16px;border:0;border-radius:10px;background:var(--earth);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .ns-end{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .ns-end .ns-more{margin:0}
+  .ns-end .pray,.ns-tools .pray{margin:0}
   .pray{margin:2px 0 16px;padding:0 14px;height:36px;border-radius:999px;border:1.5px solid var(--earth);background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
   .callwin h2{font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:26.5px;color:var(--earth-deep);margin:0 0 6px}
   .callwin p{margin:0 0 14px;font-size:18px;line-height:1.45;color:var(--muted)}
@@ -1417,12 +1420,6 @@
             row.appendChild(fb);
           });
         }
-        if (m.pray === 1 && !room) {
-          const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'pray'; pb.textContent = '\uD83D\uDE4F Pray with me';
-          pb.title = 'A short prayer for this situation';
-          pb.addEventListener('click', () => { m.pray = 2; stat('pray'); q.value = 'Please pray with me about this.'; sendBtn.click(); });
-          row.appendChild(pb);
-        }
         threadBox.appendChild(row);
         lastRow = row;
         if (m.acts && m.acts.length) { const ab = drawActs(m); threadBox.appendChild(ab); lastRow = ab; }
@@ -1438,7 +1435,10 @@
             '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">\u2713 ' + escapeHtml(v.tr || 'KJV') + '</span></div></div></div>';
           const mo = document.createElement('button'); mo.type = 'button'; mo.className = 'ns-more'; mo.textContent = 'More';
           mo.addEventListener('click', () => { m.nsOpen = true; stat('ns_more'); renderThread(); });
-          panel.appendChild(mo);
+          const nr = document.createElement('div'); nr.className = 'ns-end';
+          // Prayer is offered only at the end of the North Star, so the person decides after reading it.
+          if (m.pray === 1 && !room) nr.appendChild(prayBtn(m));
+          nr.appendChild(mo); panel.appendChild(nr);
         }
         else {
           panel.innerHTML = northStarHtml(m.ns);
@@ -1451,6 +1451,7 @@
           im.title = 'A picture of this verse over the current photo, with a code that opens it on BibliCall';
           im.addEventListener('click', () => shareMoment(m.ns, im));
           tools.append(sh, im);
+          if (m.pray === 1 && !room) tools.appendChild(prayBtn(m));
           if (dailyOfferFor(m)) {
             const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'ns-daily'; dl.textContent = '\u2709 Get a North Star every morning';
             const nn = document.createElement('button'); nn.type = 'button'; nn.className = 'ns-notnow'; nn.textContent = 'Not now';
@@ -1688,6 +1689,12 @@
     if (speaking && speaking.token === token) stopSpeaking();
   }
 
+  function prayBtn(m) {
+    const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'pray'; pb.textContent = '\uD83D\uDE4F Pray with me';
+    pb.title = 'A short prayer for this situation';
+    pb.addEventListener('click', () => { m.pray = 2; stat('pray'); q.value = 'Please pray with me about this.'; sendBtn.click(); });
+    return pb;
+  }
   async function showNorthStar(m, btn) {
     btn.disabled = true;
     m.nsOffer = false; m.nsNote = ''; m.ns = 'loading';
