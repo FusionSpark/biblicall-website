@@ -123,6 +123,31 @@ const LABELS = [['level_1', 'Faith level: Everyday Wisdom (people-days)'], ['lev
   ['listen', 'Listen (voice) taps'], ['music', 'Music turned on'], ['share', 'Verses shared'], ['shared_open', 'Shared verses opened by friends'], ['shared_ask', 'Friends who then asked a question'], ['fb_up', '👍 Helpful'], ['fb_down', '👎 Not helpful'],
   ['waitlist', 'Waitlist signups'], ['daily_sub', 'Daily North Star signups'], ['account', 'Accounts created'], ['call', 'Invite window opened'], ['invite_offer', 'Invite suggested in a chat'], ['invite_yes', 'Invite suggestion accepted'], ['read_chapter', 'Chapters opened from a verse'], ['pray', 'Pray with me taps'], ['push_on', 'Phones that turned on reminders'], ['reminder', 'Reminders set'], ['goal', 'Weekly goals added'], ['goal_done', 'Weekly goals completed'], ['share_week', 'Weeks shared'], ['week_open', 'Shared weeks opened'], ['cheer', 'Encouragements sent'], ['save_pdf', 'Saved as PDF'], ['save_docx', 'Saved as Word'], ['prayer_add', 'Prayers added to journals'], ['prayer_answered', 'Prayers marked answered'], ['read_plan', 'Reading-plan chapters read'], ['group_create', 'Family / group weeks started'], ['group_join', 'People who joined a group week'], ['daily_sent', 'Daily emails sent']];
 
+// Costs: what the AI, voice and speech cost BibliCall this week, per question and per person (anonymous).
+async function costSection(D, days, big) {
+  try {
+    const tot = {};
+    (await call(D, { op: 'list', prefix: 'cost:', start: 'cost:' + days[0], limit: 2000 })).forEach(([k, v]) => { const [, d, kind] = k.split(':'); if (days.includes(d)) tot[kind] = (tot[kind] || 0) + v; });
+    const per = {};
+    for (const d of days) (await call(D, { op: 'list', prefix: 'cu:' + d + ':', limit: 5000 })).forEach(([k, v]) => { const h = k.split(':')[2]; per[h] = (per[h] || 0) + v; });
+    const all = (tot.ask || 0) + (tot.ns || 0) + (tot.voice || 0) + (tot.stt || 0);
+    if (!all) return '<h3 style="color:#4a2f26;margin:18px 0 6px">Costs</h3><p style="color:#6b5948;font-size:14px">Cost tracking started; numbers appear once people use BibliCall this week.</p>';
+    const $ = (micro) => '$' + (micro / 1e6).toFixed(micro < 1e5 ? 3 : 2);
+    const vals = Object.values(per).sort((a, b) => b - a), n = vals.length;
+    const avg = n ? vals.reduce((a, b) => a + b, 0) / n : 0;
+    const topN = Math.max(1, Math.ceil(n * 0.1)), topAvg = n ? vals.slice(0, topN).reduce((a, b) => a + b, 0) / topN : 0;
+    const month = (x) => x * 30 / 7;
+    const cacheShare = tot.tokens_in ? Math.round(100 * (tot.cache_read || 0) / tot.tokens_in) : 0;
+    return '<h3 style="color:#4a2f26;margin:18px 0 6px">Costs</h3><table cellpadding="0" cellspacing="0" style="width:100%;max-width:520px;border-collapse:collapse">' +
+      big('Total cost this week', $(all), 'Answers ' + $(tot.ask || 0) + ' \u00b7 North Star ' + $(tot.ns || 0) + ' \u00b7 Voice ' + $(tot.voice || 0) + ' \u00b7 Speaking ' + $(tot.stt || 0)) +
+      big('Cost per question', tot.n_ask ? $((tot.ask || 0) / tot.n_ask) : '\u2014', (tot.n_ask || 0) + ' questions answered' + (tot.n_voice ? ' \u00b7 voice: ' + Math.round(tot.n_voice / 1000) + 'k characters read aloud' : '')) +
+      big('Average person, per month', $(month(avg)), n + ' people this week \u00b7 compare with the $20 plan') +
+      big('Busiest 10% of people, per month', $(month(topAvg)), 'Busiest single person: ' + $(month(vals[0] || 0)) + ' a month') +
+      big('Instructions re-read at the cached price', cacheShare + '%', 'Higher is cheaper') + '</table>' +
+      '<p style="color:#6b5948;font-size:13px">Monthly figures are this week \u00d7 30/7. Anthropic prices as of Oct 2026; voice at $0.03 per 1,000 characters.</p>';
+  } catch (e) { return ''; }
+}
+
 async function sendStats(env, D) {
   const days = []; for (let i = 7; i >= 1; i--) days.push(new Date(Date.now() - i * 86400000 - 6 * 3600000).toISOString().slice(0, 10));
   const rows = await call(D, { op: 'list', prefix: 'st:', start: 'st:' + days[0], limit: 2000 });
@@ -143,7 +168,7 @@ async function sendStats(env, D) {
     big('People who used BibliCall this week', wau.size, 'Last week: ' + wauPrev.size) +
     big('Came back after their first week', rate == null ? '\u2014' : rate + '%', newPrev.size ? back + ' of the ' + newPrev.size + ' people who first came the week before' : 'Shows once there is a full week of newcomers') +
     big('New people this week', newThis.size) + big('Used it on 2 or more days', twoPlus) + big('Average people per day', perDay) + '</table>' +
-    '<p style="color:#6b5948;font-size:13px">Goal to watch: 40% or more coming back after their first week.</p><h3 style="color:#4a2f26;margin:18px 0 6px">Activity</h3>';
+    '<p style="color:#6b5948;font-size:13px">Goal to watch: 40% or more coming back after their first week.</p>' + (await costSection(D, days, big)) + '<h3 style="color:#4a2f26;margin:18px 0 6px">Activity</h3>';
   const html = '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#2c2117;font-size:16px"><h2 style="color:#4a2f26">BibliCall: last 7 days</h2><p>' + days[0] + ' to ' + days[6] + '</p>' + people + '<table cellpadding="6" style="border-collapse:collapse">' +
     LABELS.map(([k, l]) => '<tr><td style="border-bottom:1px solid #eee">' + l + '</td><td style="border-bottom:1px solid #eee;text-align:right;font-weight:700">' + (tot[k] || 0) + '</td></tr>').join('') +
     '<tr><td>Daily North Star subscribers (total)</td><td style="text-align:right;font-weight:700">' + subs + '</td></tr></table>' +

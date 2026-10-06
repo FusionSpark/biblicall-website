@@ -58,6 +58,19 @@ const FAITH = {
   2: 'This person chose "Gentle Guidance" for how much faith appears in BibliCall\'s answers. For practical, technical, factual or creative requests, give a plain, excellent answer with no faith language. When something meaningful is at stake (decisions, relationships, work struggles, character, hardship), a short biblical principle in your own words is welcome when it fits naturally. Never mention this setting.',
   3: 'This person chose "Faith Forward" for how much faith appears in BibliCall\'s answers. Let biblical wisdom shine in most answers: weave in biblical principles and the example of Jesus naturally (still without citing chapter and verse, since the North Star adds verified Scripture), and when they share something heavy, gently offer to pray with them. Stay warm, never preachy. Never mention this setting.'
 };
+// Fixed assistant rules (reminders, goals, prayer, payments...). Kept in the cached block so every question re-reads them at the low cached price.
+const PLAN_RULES = `\n\nBibliCall can set reminders and weekly goals for this person, as a kind, encouraging personal assistant and mentor for work, family and faith.
+When they ask to be reminded, mention a task with a day or time (for example "I need to call the insurance company Thursday"), or name a goal for this week, offer to help, and at the very end of your reply add one line per item, exactly in this form:
+[[remind|YYYY-MM-DDTHH:MM|short reminder text]]   (their local time; if they gave only a day, choose a sensible time such as 09:00)
+or, for a time from now ("in 20 minutes", "in 2 hours"): [[remind|+20m|short reminder text]] or [[remind|+2h|short reminder text]]
+[[goal|short goal for this week]]
+Anything they want to be reminded of, or that has a time, is ALWAYS a remind line, never a goal. Goal lines are only for things they hope to do over the week (like "walk three times"). The app turns these lines into buttons they tap to confirm, so say something like "Tap Remind me below" and never claim it is already set, and never mention the brackets. At most 3 such lines, and only when they would truly help.
+When they are facing a hard moment with a known date (an interview, a surgery, a difficult conversation), you may gently offer to check in afterward; only if they say yes, add a remind line whose text is a warm one-line check-in question, like "How did the interview go? I'm here if you want to talk."
+Picking up later: when they mention something specific coming up whose outcome they will know later (a meeting, interview, appointment, trip, game, hard conversation or big decision), also add one quiet line [[followup|a short, warm question to ask next time, e.g. How did the board meeting go?]], written in the language you are answering in. At most one per reply, never for general questions, and never mention it: the app keeps it privately so you can ask about it on their next visit.
+If they ask to plan their week, help them choose a few goals across work, family and faith, then offer them as goal lines.
+Prayer journal: when they ask you to pray for someone or something, or share a concern they are carrying to God (an illness, a decision, a loved one), you may offer to add it to their prayer journal with a line [[prayer|short prayer request, e.g. Sarah's surgery on Friday]]. At most one per reply.
+Payments: BibliCall never moves money itself. When they say they need to pay someone (an employee, a family member, a vendor), you may add [[pay|Name|amount|what it is for]] (amount as a number, or empty) so a button opens Venmo, PayPal, Cash App or their bank for them to approve; if there is a day, also add a remind line like "Pay Jack $300". Never ask for passwords, account or card numbers.
+Evening reflection: if they ask to reflect on their day, guide a short, gentle reflection: ask one question at a time (what went well, where they saw God at work, anything to let go of or be thankful for), listen warmly, and close with a brief prayer of thanks after two or three exchanges.`;
 function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
@@ -88,18 +101,7 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
     s += `\n\nThe BibliCall app reports what this person sees and hears on screen right now (from the app itself, not typed by them): ${ambience}\nIf they ask about the music, the song, the artist, the background picture or where it is, tell them from this, and feel free to share a little interesting background (the composer or piece, the place, or the space object), searching the web if it helps. Never claim you can't see or hear it: the app has told you. Don't bring it up unless they ask.`;
   }
   if (plan && !group) {
-    s += `\n\nBibliCall can set reminders and weekly goals for this person, as a kind, encouraging personal assistant and mentor for work, family and faith. Their local date and time right now: ${plan.local}.
-When they ask to be reminded, mention a task with a day or time (for example "I need to call the insurance company Thursday"), or name a goal for this week, offer to help, and at the very end of your reply add one line per item, exactly in this form:
-[[remind|YYYY-MM-DDTHH:MM|short reminder text]]   (their local time; if they gave only a day, choose a sensible time such as 09:00)
-or, for a time from now ("in 20 minutes", "in 2 hours"): [[remind|+20m|short reminder text]] or [[remind|+2h|short reminder text]]
-[[goal|short goal for this week]]
-Anything they want to be reminded of, or that has a time, is ALWAYS a remind line, never a goal. Goal lines are only for things they hope to do over the week (like "walk three times"). The app turns these lines into buttons they tap to confirm, so say something like "Tap Remind me below" and never claim it is already set, and never mention the brackets. At most 3 such lines, and only when they would truly help.
-When they are facing a hard moment with a known date (an interview, a surgery, a difficult conversation), you may gently offer to check in afterward; only if they say yes, add a remind line whose text is a warm one-line check-in question, like "How did the interview go? I'm here if you want to talk."
-Picking up later: when they mention something specific coming up whose outcome they will know later (a meeting, interview, appointment, trip, game, hard conversation or big decision), also add one quiet line [[followup|a short, warm question to ask next time, e.g. How did the board meeting go?]], written in the language you are answering in. At most one per reply, never for general questions, and never mention it: the app keeps it privately so you can ask about it on their next visit.
-If they ask to plan their week, help them choose a few goals across work, family and faith, then offer them as goal lines.
-Prayer journal: when they ask you to pray for someone or something, or share a concern they are carrying to God (an illness, a decision, a loved one), you may offer to add it to their prayer journal with a line [[prayer|short prayer request, e.g. Sarah's surgery on Friday]]. At most one per reply.
-Payments: BibliCall never moves money itself. When they say they need to pay someone (an employee, a family member, a vendor), you may add [[pay|Name|amount|what it is for]] (amount as a number, or empty) so a button opens Venmo, PayPal, Cash App or their bank for them to approve; if there is a day, also add a remind line like "Pay Jack $300". Never ask for passwords, account or card numbers.
-Evening reflection: if they ask to reflect on their day, guide a short, gentle reflection: ask one question at a time (what went well, where they saw God at work, anything to let go of or be thankful for), listen warmly, and close with a brief prayer of thanks after two or three exchanges.`;
+    s += `\n\nThis person's local date and time right now: ${plan.local}.`;
     if (plan.prayers) s += `\nOn their prayer list: ${plan.prayers}`;
     if (plan.reading) s += `\nTheir Bible reading plan: ${plan.reading}`;
     if (plan.goals) s += `\nTheir goals this week: ${plan.goals}`;
@@ -111,7 +113,7 @@ Evening reflection: if they ask to reflect on their day, guide a short, gentle r
   }
   // The fixed instructions are marked for prompt caching (re-sent instructions cost up to 90% less);
   // per-person extras (group call, memory) follow in their own block.
-  const blocks = [{ type: 'text', text: base, cache_control: { type: 'ephemeral' } }];
+  const blocks = [{ type: 'text', text: plan && !group ? base + PLAN_RULES : base, cache_control: { type: 'ephemeral' } }];
   if (s.trim()) blocks.push({ type: 'text', text: s.trim() });
   return blocks;
 }
@@ -123,7 +125,7 @@ export default {
     if (event.cron === '0 11 * * *') ctx.waitUntil(runDaily(env).then((r) => console.log('daily', JSON.stringify(r))));
     else ctx.waitUntil(runPlanner(env).then((r) => console.log('planner', JSON.stringify(r))));
   },
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     const allowed = ORIGINS.includes(origin);
     const cors = {
@@ -204,6 +206,7 @@ export default {
         const VOICES = ['zeus', 'saturn', 'mars', 'pluto', 'jupiter', 'draco', 'orion'];
         const speaker = VOICES.includes(body.voice) ? body.voice : 'zeus';
         const audio = await env.AI.run('@cf/deepgram/aura-2-en', { text, speaker, encoding: 'mp3' });
+        ctx && ctx.waitUntil(recordCost(env, visitor, { voice: text.length * 30, n_voice: text.length }));
         return new Response(audio, { headers: { ...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
       } catch (err) {
         console.error('Speak error', err && err.message);
@@ -224,6 +227,7 @@ export default {
           const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
           out = await env.AI.run('@cf/openai/whisper', { audio: [...bytes] });
         }
+        ctx && ctx.waitUntil(recordCost(env, visitor, { stt: Math.max(50, Math.round(audio.length / 16000 / 60 * 500)), n_stt: 1 }));
         return json({ text: String((out && out.text) || '').trim() });
       } catch (err) {
         console.error('Transcribe error', err && err.message);
@@ -289,6 +293,8 @@ export default {
         console.error('Anthropic error', resp.status, data && data.error && data.error.type);
         return json({ error: 'Upstream error' }, 502);
       }
+      // What this answer cost BibliCall, in millionths of a dollar (no content is recorded).
+      ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data), n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
       // With web search the answer arrives in pieces split around citations; join them back into one text.
       const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/\n{3,}/g, '\n\n').trim();
       return json({ answer: text || "Sorry, I couldn't come up with an answer just now." });
@@ -299,6 +305,29 @@ export default {
   }
 };
 
+
+// ---- Cost tracking: totals per day, and per anonymous person (hashed), for the weekly email ----
+// Anthropic prices in $ per million tokens: [input, output, cache write, cache read]. Tokens x price = millionths of a dollar.
+const PRICES = [['claude-sonnet-5-5', [2, 10, 2.5, 0.2]], ['claude-haiku-4-5', [1, 5, 1.25, 0.1]], ['claude-sonnet-4-5', [3, 15, 3.75, 0.3]], ['claude-opus-5-5', [4, 20, 5, 0.2]]];
+function usageCost(data) {
+  const u = (data && data.usage) || {}, m = String((data && data.model) || '');
+  const pr = (PRICES.find(([k]) => m.indexOf(k) === 0) || PRICES[0])[1];
+  const searches = (u.server_tool_use && u.server_tool_use.web_search_requests) || 0;
+  return Math.round((u.input_tokens || 0) * pr[0] + (u.output_tokens || 0) * pr[1] + (u.cache_creation_input_tokens || 0) * pr[2] + (u.cache_read_input_tokens || 0) * pr[3] + searches * 10000);
+}
+async function recordCost(env, who, parts) {
+  try {
+    const D = env.DIRECTORY.get(env.DIRECTORY.idFromName('main'));
+    const day = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10);
+    const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('cost:' + who));
+    const h = [...new Uint8Array(dig)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const inc = (key, n) => D.fetch('https://do/', { method: 'POST', body: JSON.stringify({ op: 'inc', key, n }) });
+    const money = (parts.ask || 0) + (parts.ns || 0) + (parts.voice || 0) + (parts.stt || 0);
+    const jobs = Object.entries(parts).filter(([, n]) => n > 0).map(([k, n]) => inc('cost:' + day + ':' + k, n));
+    if (money > 0) jobs.push(inc('cu:' + day + ':' + h, money));
+    await Promise.all(jobs);
+  } catch (e) { console.error('cost', e && e.message); }
+}
 
 // ---- Fair-use counters: one tiny Durable Object per visitor (or call) per day ----
 function cleanPlan(p) {
