@@ -1430,7 +1430,7 @@
         if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
         else if (!m.nsOpen) {
           // One short verse is enough for inspiration; "More" opens the teaching, other verses and sharing.
-          const v = m.ns.verses[0]; panel.classList.add('compact');
+          const vs = m.ns.verses, wc = (x) => String(x.text).split(/\s+/).length, one = (x) => !/[\u2013-]/.test(String(x.label)); const v = vs.find((x) => one(x) && wc(x) <= 30) || vs.slice().sort((x, y) => wc(x) - wc(y))[0]; panel.classList.add('compact');
           panel.innerHTML = '<div class="ns-mini"><span class="ns-star" aria-hidden="true">\u2726</span><div><blockquote>\u201c' + escapeHtml(v.text) + '\u201d</blockquote>' +
             '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">\u2713 ' + escapeHtml(v.tr || 'KJV') + '</span></div></div></div>';
           const mo = document.createElement('button'); mo.type = 'button'; mo.className = 'ns-more'; mo.textContent = 'More';
