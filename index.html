@@ -401,6 +401,20 @@
   /* ---- North Star button above the chat box ---- */
   .nsrow{display:flex;justify-content:flex-start;margin:0 0 8px}
   .nsrow[hidden]{display:none}
+  .nsrow{gap:8px;flex-wrap:wrap}
+  .nsbtn[hidden]{display:none}
+  .talkbtn.on{background:var(--earth);color:#fff;animation:micpulse 1.4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){.talkbtn.on{animation:none}}
+  .pickup{max-width:560px;margin:0 auto 18px;padding:16px 18px 14px;border-radius:18px;background:rgba(255,255,255,.92);color:#2c2117;box-shadow:0 8px 28px rgba(10,20,40,.18);text-align:left}
+  .pickup[hidden],body.chatting .pickup{display:none}
+  .pk-k{margin:0 0 4px;font-size:14px;font-weight:700;letter-spacing:.04em;color:var(--earth)}
+  .pk-q{margin:0 0 12px;font-size:20px;line-height:1.35}
+  .pk-b{display:flex;gap:8px;flex-wrap:wrap}
+  .pk-b button{padding:7px 16px;border-radius:999px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;border:1.5px solid var(--earth);background:transparent;color:var(--earth)}
+  .pk-b .pk-go{background:var(--earth);color:#fff}
+  .dr-tabs button[hidden]{display:none !important}
+  .dr-tabs .dr-moretabs{grid-column:1/-1;justify-content:center;border-style:dashed !important;color:var(--muted) !important;font-weight:600}
+
   .nsbtn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px 7px 10px;border-radius:999px;border:1.5px solid var(--earth);
     background:var(--card);color:var(--earth);font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,47,38,.12)}
   .nsbtn svg{width:20px;height:20px;flex:none}
@@ -918,7 +932,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="apps"><span class="ti" aria-hidden="true">🔗</span>Sync apps</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="apps"><span class="ti" aria-hidden="true">🔗</span>Sync apps</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button><button type="button" class="dr-moretabs" id="drMoreTabs" hidden>＋ More tools</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -933,10 +947,11 @@
     <h1 class="sr-only">BibliCall</h1>
     <p class="intro">Ask anything. Find your North Star.</p>
     <div class="svcard" id="svCard" hidden></div>
+    <div class="pickup" id="pickup" hidden aria-live="polite"></div>
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="BibliCall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
-      <div class="nsrow" id="nsRow" hidden><button type="button" class="nsbtn" id="nsBtn" title="Bring the North Star into this conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>North Star</button></div>
+      <div class="nsrow" id="nsRow" hidden><button type="button" class="nsbtn" id="nsBtn" title="Bring the North Star into this conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>North Star</button><button type="button" class="nsbtn talkbtn" id="talkBtn" hidden title="Talk with BibliCall out loud, hands-free"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg><span>Talk</span></button></div>
       <div class="attachrow" id="attachRow" hidden aria-live="polite"></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to BibliCall's memory">Remember</button>
@@ -1430,7 +1445,7 @@
         if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
         else if (!m.nsOpen) {
           // One short verse is enough for inspiration; "More" opens the teaching, other verses and sharing.
-          const vs = m.ns.verses, wc = (x) => String(x.text).split(/\s+/).length, one = (x) => !/[\u2013-]/.test(String(x.label)); const v = vs.find((x) => one(x) && wc(x) <= 30) || vs.slice().sort((x, y) => wc(x) - wc(y))[0]; panel.classList.add('compact');
+          const v = nsPick(m.ns); panel.classList.add('compact');
           panel.innerHTML = '<div class="ns-mini"><span class="ns-star" aria-hidden="true">\u2726</span><div><blockquote>\u201c' + escapeHtml(v.text) + '\u201d</blockquote>' +
             '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">\u2713 ' + escapeHtml(v.tr || 'KJV') + '</span></div></div></div>';
           const mo = document.createElement('button'); mo.type = 'button'; mo.className = 'ns-more'; mo.textContent = 'More';
@@ -1558,8 +1573,11 @@
   // The North Star button above the chat box: brings a North Star into the conversation for the latest answer, any time.
   const nsRow = document.getElementById('nsRow');
   const nsBtn = document.getElementById('nsBtn');
+  const talkBtn = document.getElementById('talkBtn');
   function updateNsRow() {
-    nsRow.hidden = !conversation.some((m) => m.role === 'assistant' && !m.loading);
+    const has = conversation.some((m) => m.role === 'assistant' && !m.loading);
+    const tb = document.getElementById('talkBtn');
+    nsBtn.hidden = !has; nsRow.hidden = !has && (!tb || tb.hidden);
   }
   nsBtn.addEventListener('click', async () => {
     const last = [...conversation].reverse().find((m) => m.role === 'assistant' && !m.loading);
@@ -1680,7 +1698,7 @@
         // The answer is done: read the North Star too, waiting for it if it's still on its way.
         for (let waited = 0; m.ns === 'loading' && waited < 30000 && speaking && speaking.token === token; waited += 400) await new Promise((r) => setTimeout(r, 400));
         nsRead = true;
-        if (m.ns && m.ns !== 'loading') queue.push(...chunkText(northStarText(m.ns), 1700));
+        if (m.ns && m.ns !== 'loading') { const v = nsPick(m.ns); queue.push(...chunkText(m.nsOpen ? northStarText(m.ns) : 'North Star. ' + v.text + ' ' + v.label + '.', 1700)); }
         continue;
       }
       const text = queue.shift();
@@ -1689,6 +1707,11 @@
     if (speaking && speaking.token === token) stopSpeaking();
   }
 
+  // The one short verse shown (and read aloud) unless the person taps More.
+  function nsPick(ns) {
+    const vs = ns.verses, wc = (x) => String(x.text).split(/\s+/).length, one = (x) => !/[\u2013-]/.test(String(x.label));
+    return vs.find((x) => one(x) && wc(x) <= 30) || vs.slice().sort((x, y) => wc(x) - wc(y))[0];
+  }
   function prayBtn(m) {
     const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'pray'; pb.textContent = '\uD83D\uDE4F Pray with me';
     pb.title = 'A short prayer for this situation';
@@ -1763,6 +1786,7 @@
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
       const ex = extractActs(data.answer);
+      if (ex.followup) lsSet('bc_followup', { q: ex.followup, t: Date.now() });
       conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined };
       scrollToStart(conversation[turn]);
       renderThread();
@@ -1797,6 +1821,7 @@
     q.focus();
     emailStep.classList.add('show');
     lastQuestion = question;
+    if (talkMode) talkAfter(conversation[turn]);
   }
   // ---- Local storage helpers (this device only) ----
   function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
@@ -1813,6 +1838,8 @@
   window.BC_STAT = stat;
   // Photo credit fades while the page is scrolled, so it never sits on top of the text.
   addEventListener('scroll', () => document.body.classList.toggle('scrolled', scrollY > 30), { passive: true });
+  // Existing people keep every tab; new people start simple and more tools appear as they need them.
+  if (!lsGet('bc_tabs_v', 0)) { lsSet('bc_tabs_v', 1); if (lsGet('bc_seen', false)) lsSet('bc_all_tabs', true); }
   (function countVisit() {
     const d = new Date().toISOString().slice(0, 10);
     if (lsGet('bc_visit_day', '') === d) return;
@@ -1929,9 +1956,10 @@
   }
   // BibliCall can suggest reminders and goals at the end of an answer; they become buttons the person taps to confirm.
   function extractActs(text) {
-    const acts = [];
-    const out = String(text).replace(/\[\[(remind|goal|prayer|pay)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
+    const acts = []; let followup = '';
+    const out = String(text).replace(/\[\[(remind|goal|prayer|pay|followup)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
       k = k.toLowerCase();
+      if (k === 'followup') { followup = rest.trim().slice(0, 160); return ''; }
       if (k === 'prayer') { const t = rest.trim(); if (t) acts.push({ k: 'prayer', text: t.slice(0, 200) }); return ''; }
       if (k === 'pay') { const [nm, amt, ...nt] = rest.split('|'); if (nm && nm.trim()) acts.push({ k: 'pay', name: nm.trim().slice(0, 40), amount: (String(amt || '').match(/[\d.]+/) || [''])[0], note: nt.join(' ').trim().slice(0, 80) }); return ''; }
       if (k === 'goal') { const t = rest.trim(); if (t) acts.push({ k: 'goal', text: t.slice(0, 140) }); return ''; }
@@ -1941,7 +1969,7 @@
       if (m) { const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); if (at > Date.now() - 60000) acts.push({ k: 'remind', at, text: m[6].trim().slice(0, 160) }); }
       return '';
     }).replace(/\n{3,}/g, '\n\n').trim();
-    return { text: out, acts: acts.slice(0, 3) };
+    return { text: out, acts: acts.slice(0, 3), followup };
   }
   function drawActs(m) {
     const box = el('div', 'acts');
@@ -2846,6 +2874,7 @@
 
   function apiMessages(justSaved) {
     const msgs = conversation.filter((m) => !m.loading).map(({ role, content }) => ({ role, content }));
+    if (msgs[0] && msgs[0].role === 'assistant') msgs.unshift({ role: 'user', content: '(I opened BibliCall again, picking up from my last visit.)' });
     if (justSaved) {
       const last = msgs[msgs.length - 1];
       if (last && last.role === 'user') last.content += '\n\n(I just saved this to my BibliCall memory, so you will remember it in future conversations. Acknowledge it warmly and briefly.)';
@@ -3136,9 +3165,24 @@
     return box;
   }
   window.BC_STYLE_REDRAW = () => { if (!drawer.hidden && drTab === 'style') drawDrawer(); };
+  // First five minutes: Chats, Week, Personalize and Me. Other tabs appear as the person needs them, or all at once with "More tools".
+  const CORE_TABS = ['convos', 'plan', 'style', 'account'];
+  function tabUnlocked(t) {
+    if (CORE_TABS.includes(t) || lsGet('bc_all_tabs', false) || (lsGet('bc_tabs', []) || []).includes(t)) return true;
+    const days = +lsGet('bc_days', 0);
+    if (t === 'prayer') return faithLvl >= 3 || days >= 3 || (lsGet('bc_prayers', []) || []).length > 0;
+    if (t === 'memory') return memory.length > 0 || days >= 3;
+    if (t === 'files') return days >= 5 || convos.length >= 5;
+    if (t === 'apps') return days >= 7 || !!lsGet('bc_monday', null);
+    if (t === 'pay') return (lsGet('bc_payees', []) || []).length > 0;
+    return true;
+  }
+  function unlockTab(t) { const u = lsGet('bc_tabs', []) || []; if (!u.includes(t)) { u.push(t); lsSet('bc_tabs', u); } }
   function drawDrawer() {
     if (drawer.hidden) return;
-    drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === drTab));
+    let locked = 0;
+    drawer.querySelectorAll('.dr-tabs button[data-tab]').forEach((b) => { b.classList.toggle('on', b.dataset.tab === drTab); b.hidden = !tabUnlocked(b.dataset.tab) && b.dataset.tab !== drTab; if (b.hidden) locked++; });
+    document.getElementById('drMoreTabs').hidden = !locked;
     drBody.innerHTML = '';
     const fine = document.getElementById('drFine');
     if (fine) fine.textContent = acct ? 'Signed in: your memory and kept (\u2605) conversations are saved to your BibliCall account. Other conversations stay on this device.' : 'Saved only on this device. Create a free account (Me tab) to keep memory and chosen conversations forever.';
@@ -3202,7 +3246,7 @@
     const b = document.getElementById('drDailyBtn');
     if (b && !b.dataset.wired) { b.dataset.wired = 1; b.addEventListener('click', () => dailyForm(box, b)); }
   }
-  function openDrawer(tab) { if (tab) drTab = tab; drawer.hidden = false; drawerBack.hidden = false; drawDailyMenu(); drawDrawer(); }
+  function openDrawer(tab) { if (tab) { drTab = tab; unlockTab(tab); } drawer.hidden = false; drawerBack.hidden = false; drawDailyMenu(); drawDrawer(); }
   function closeDrawer() { drawer.hidden = true; drawerBack.hidden = true; }
   document.getElementById('menuBtn').addEventListener('click', () => openDrawer());
   // Opened from a reminder notification: go to that conversation, or to My week.
@@ -3222,7 +3266,27 @@
   document.getElementById('drawerClose').addEventListener('click', closeDrawer);
   drawerBack.addEventListener('click', closeDrawer);
   document.getElementById('newChat').addEventListener('click', newConvo);
-  drawer.querySelectorAll('.dr-tabs button').forEach((b) => b.addEventListener('click', () => { drTab = b.dataset.tab; drawDrawer(); }));
+  drawer.querySelectorAll('.dr-tabs button[data-tab]').forEach((b) => b.addEventListener('click', () => { drTab = b.dataset.tab; drawDrawer(); }));
+  document.getElementById('drMoreTabs').addEventListener('click', () => { lsSet('bc_all_tabs', true); stat('tabs_all'); drawDrawer(); });
+  // Pick up where we left off: one quiet question about something the person mentioned last time.
+  (function pickUp() {
+    const f = lsGet('bc_followup', null), box = document.getElementById('pickup');
+    if (!f || !f.q || !box) return;
+    const age = Date.now() - f.t;
+    if (age > 14 * 86400000) { lsSet('bc_followup', null); return; }
+    if (age < 4 * 3600000 || /[?&](verse|week|open|plan|reflect|join|room|g)=/.test(location.search)) return;
+    box.innerHTML = '<p class="pk-k">\u2726 Picking up from last time</p><p class="pk-q"></p><div class="pk-b"><button type="button" class="pk-go">Tell BibliCall</button><button type="button" class="pk-x">Not now</button></div>';
+    box.querySelector('.pk-q').textContent = f.q;
+    box.hidden = false; stat('pickup_show');
+    const done = () => { lsSet('bc_followup', null); box.hidden = true; };
+    box.querySelector('.pk-x').addEventListener('click', () => { done(); stat('pickup_no'); });
+    box.querySelector('.pk-go').addEventListener('click', () => {
+      done(); stat('pickup_yes');
+      conversation = [{ role: 'assistant', content: f.q }];
+      document.body.classList.add('chatting'); document.body.classList.remove('firstvisit');
+      threadBox.classList.add('show'); renderThread(); updateNsRow(); q.focus();
+    });
+  })();
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) closeDrawer(); });
 
   // ---- Accounts: memory and kept conversations saved forever, on every device ----
@@ -3317,7 +3381,7 @@
   // One anonymous check-in per day so the family can see how many people use BibliCall and come back (no name, no content).
   function activePing() {
     const d = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 10); if (lsGet('bc_active_day', '') === d) return;
-    lsSet('bc_active_day', d); stat('level_' + faithLvl); fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'active', did: DEVICE }), keepalive: true }).catch(() => {});
+    lsSet('bc_active_day', d); lsSet('bc_days', (+lsGet('bc_days', 0)) + 1); stat('level_' + faithLvl); fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'account', op: 'active', did: DEVICE }), keepalive: true }).catch(() => {});
   }
   activePing(); document.addEventListener('visibilitychange', () => { if (!document.hidden) activePing(); });
   function drawSync() {
@@ -3549,6 +3613,7 @@
     };
     recog.onend = () => {
       micOff();
+      if (talkMode) { if (heard && q.value.trim()) reveal(); else talkEnd(); return; }
       if (!heard && canRecord && !useRecorder) { useRecorder = true; toast('Tap the mic again and speak. BibliCall will listen another way.'); }
       q.focus();
     };
@@ -3577,7 +3642,8 @@
     rec.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
     rec.onstop = finishRecording;
     rec.start(250);
-    micOn('Listening… tap the mic when you’re done');
+    micOn(talkMode ? 'Listening… just speak' : 'Listening… tap the mic when you’re done');
+    const t0 = Date.now();
     recTimer = setTimeout(stopRecording, 60000);
     // Stop by itself after about 2 seconds of quiet once you've started talking.
     try {
@@ -3591,6 +3657,7 @@
         const now = Date.now();
         if (peak > 10) { spoke = true; quietSince = 0; }
         else if (spoke) { if (!quietSince) quietSince = now; else if (now - quietSince > 2000) stopRecording(); }
+        else if (talkMode && now - t0 > 10000) stopRecording();
       }, 150);
     } catch (e) {}
   }
@@ -3606,7 +3673,7 @@
     rec = null; recStream = null;
     const blob = new Blob(recChunks, { type });
     recChunks = [];
-    if (blob.size < 2000) { micOff(); if (sendAfter) { sendAfter = false; reveal(); } return; }
+    if (blob.size < 2000) { micOff(); if (talkMode) { sendAfter = false; talkEnd(); return; } if (sendAfter) { sendAfter = false; reveal(); } return; }
     q.placeholder = 'Turning your words into text…';
     micBtn.classList.remove('listening'); micBtn.disabled = true;
     try {
@@ -3620,7 +3687,7 @@
       toast(e && /today/.test(e.message) ? e.message : 'Couldn’t turn that into text. Please try again.');
     } finally {
       micBtn.disabled = false; micOff();
-      if (sendAfter) { sendAfter = false; reveal(); } else q.focus();
+      if (sendAfter) { sendAfter = false; if (talkMode && !q.value.trim()) talkEnd(); else reveal(); } else q.focus();
     }
   }
   function stopListening() {
@@ -3645,6 +3712,42 @@
   }
 
   sendBtn.addEventListener('click', reveal);
+
+  // ---- Talk: a hands-free spoken conversation. BibliCall listens, answers out loud, then listens again. ----
+  var talkMode = false;
+  function talkSet(on) {
+    talkMode = on; talkBtn.classList.toggle('on', on);
+    talkBtn.querySelector('span').textContent = on ? 'End talk' : 'Talk';
+    talkBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  function talkEnd(msg) {
+    if (!talkMode) return;
+    talkSet(false); stopListening();
+    toast(msg || 'Talk paused. Tap Talk whenever you want to continue.');
+  }
+  function talkListen() {
+    if (!talkMode) return;
+    baseText = ''; q.value = ''; q.dispatchEvent(new Event('input'));
+    if (useRecorder) { sendAfter = true; startRecording(); return; }
+    try { recog.start(); } catch (e) { if (canRecord) { useRecorder = true; sendAfter = true; startRecording(); } else talkEnd(); }
+  }
+  async function talkAfter(m) {
+    if (!talkMode) return;
+    if (!m || m.role !== 'assistant' || !m.content) { talkEnd(); return; }
+    await listen(m);
+    if (talkMode) setTimeout(talkListen, 450);
+  }
+  if (SpeechRec || canRecord) { talkBtn.hidden = false; updateNsRow(); }
+  talkBtn.addEventListener('click', () => {
+    if (talkMode) { talkSet(false); stopListening(); stopSpeaking(); return; }
+    if (room && room.live) { toast('Talk works in your own conversations, not in a live call.'); return; }
+    // Unlock the speaker on iPhone within this tap, so answers can be read aloud later.
+    if (!player) { player = new Audio(); player.preservesPitch = false; player.webkitPreservesPitch = false; player.mozPreservesPitch = false; }
+    try { player.src = SILENT; player.play().catch(() => {}); } catch (e) {}
+    stopSpeaking(); talkSet(true); stat('talk');
+    toast('Speak now. BibliCall will answer out loud, then listen again.');
+    talkListen();
+  });
 
   // ---- Call: invite friends into this conversation by text ----
   document.getElementById('dockLogo').src = document.querySelector('.logo').src;
