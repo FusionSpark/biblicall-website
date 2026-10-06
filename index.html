@@ -292,6 +292,12 @@
   .faith-lvl b{font-size:16.5px}
   .faith-lvl small{font-size:14px;color:#5b6b78;margin-top:2px;line-height:1.35}
   .faith-lvl.on{border-color:#664336;background:#f6eee8}
+  .ns.compact{padding:12px 14px 10px}
+  .ns-mini{display:flex;gap:10px;align-items:flex-start}
+  .ns-mini .ns-star{color:var(--earth);font-size:18px;line-height:1.4}
+  .ns-mini blockquote{margin:0;font-size:18px;line-height:1.45;font-weight:600;border:0;padding:0}
+  .ns-mini .ref{margin-top:4px;font-size:15px;display:flex;gap:8px;align-items:center}
+  .ns-more{display:block;margin:6px 0 0 auto;padding:4px 14px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--earth);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -1178,7 +1184,7 @@
     return 'You are the North Star layer of BibliCall, an AI assistant guided by biblical wisdom. Do NOT answer the question itself; another part of the app does that.\n\n' +
       ctx + 'The user\'s latest message:\n"""' + question.slice(0, 2000) + '"""\n\n' + rule +
       'In 2 to 4 sentences, teach how biblical wisdom speaks to this exact situation, warm and never preachy. ' +
-      'Then choose 1 or 2 Bible passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision), each a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the Bible text and discarded if it does not match. If the person seems to be in crisis or deep pain (thoughts of suicide or self-harm, abuse, grief), choose only gentle passages of comfort, hope and God\'s nearness, never verses of judgment or duty, and make the question very gentle. Do not quote the verse text.\n\n' +
+      'Then choose 1 or 2 Bible passages that truly fit (a third only for a weighty moment such as grief or a life-changing decision). The FIRST passage is shown on its own as a short line of inspiration, so make it a single, short, memorable verse (ideally under 25 words, never a range); any others may be a single verse or a range of at most 4 verses, written like "Proverbs 3:5-6" or "1 Corinthians 13:4". Only cite references you are certain exist; each is checked against the Bible text and discarded if it does not match. If the person seems to be in crisis or deep pain (thoughts of suicide or self-harm, abuse, grief), choose only gentle passages of comfort, hope and God\'s nearness, never verses of judgment or duty, and make the question very gentle. Do not quote the verse text.\n\n' +
       (langKey !== 'en' && LANG_NAME_EN[langKey] ? 'Write the northStar, every why and the reflect question in ' + LANG_NAME_EN[langKey] + ' (keep each ref as an English Bible reference like "John 3:16"). ' : '') +
       'Then reply with ONLY this JSON and nothing else:\n{"northStar": "2-4 sentences", "verses": [{"ref": "Book C:V", "why": "one sentence on why it applies"}], "reflect": "one short question for the user to ponder"}';
   }
@@ -1425,6 +1431,15 @@
         const panel = document.createElement('aside');
         panel.className = 'ns' + (m.ns === 'loading' ? ' loading' : '');
         if (m.ns === 'loading') panel.textContent = 'Finding the North Star for this answer\u2026';
+        else if (!m.nsOpen) {
+          // One short verse is enough for inspiration; "More" opens the teaching, other verses and sharing.
+          const v = m.ns.verses[0]; panel.classList.add('compact');
+          panel.innerHTML = '<div class="ns-mini"><span class="ns-star" aria-hidden="true">\u2726</span><div><blockquote>\u201c' + escapeHtml(v.text) + '\u201d</blockquote>' +
+            '<div class="ref"><b>' + escapeHtml(v.label) + '</b><span class="ok">\u2713 ' + escapeHtml(v.tr || 'KJV') + '</span></div></div></div>';
+          const mo = document.createElement('button'); mo.type = 'button'; mo.className = 'ns-more'; mo.textContent = 'More';
+          mo.addEventListener('click', () => { m.nsOpen = true; stat('ns_more'); renderThread(); });
+          panel.appendChild(mo);
+        }
         else {
           panel.innerHTML = northStarHtml(m.ns);
           panel.querySelectorAll('.readch').forEach((b) => b.addEventListener('click', () => openChapter(b.dataset.ref, b.dataset.tr)));
