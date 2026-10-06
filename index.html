@@ -633,6 +633,19 @@
   html[data-sky="night"] .ns button,html.photo .ns button{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:none}
   html[data-sky="night"] .ns .ns-share,html.photo .ns .ns-share{background:#fff;color:#2c2117;border-color:#fff}
   .ns .readch{background:none !important;border:0 !important;padding:0 !important}
+
+  /* Calm, organic rule: offers, reminders and "picking up" flow in the conversation, never as white cards. */
+  .invoffer,.act,.pickup{background:transparent;border:0;border-radius:0;box-shadow:none;color:var(--ink)}
+  .invoffer{padding:2px 0}
+  .act{padding:2px 0}
+  .pickup{padding:0 4px;text-align:center}
+  .pickup .pk-b{justify-content:center}
+  .pk-q{font-size:22px;font-weight:600}
+  html[data-sky="night"] .invoffer,html.photo .invoffer,html[data-sky="night"] .act,html.photo .act,html[data-sky="night"] .pickup,html.photo .pickup{color:#f3f6fd;text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 18px rgba(0,0,0,.35)}
+  html[data-sky="night"] .pk-k,html.photo .pk-k{color:#fff}
+  html[data-sky="night"] .invoffer button,html.photo .invoffer button,html[data-sky="night"] .pk-b button,html.photo .pk-b button,
+  html[data-sky="night"] .act-btn,html.photo .act-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:none}
+  html[data-sky="night"] .act-link,html.photo .act-link,html[data-sky="night"] .act-done,html.photo .act-done{color:#fff}
 </style>
 </head>
 <body>
