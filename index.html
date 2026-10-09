@@ -995,7 +995,7 @@
 
     <div class="composer-dock" id="composerDock">
       <div class="dockbrand"><span class="logowrap"><img id="dockLogo" alt="BibliCall"><span class="tm" aria-hidden="true">&trade;</span></span></div>
-      <div class="nsrow" id="nsRow" hidden><button type="button" class="nsbtn" id="nsBtn" title="Bring the North Star into this conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>North Star</button><button type="button" class="nsbtn talkbtn" id="talkBtn" hidden title="Talk with BibliCall out loud, hands-free"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg><span>Talk</span></button></div>
+      <div class="nsrow" id="nsRow" hidden><button type="button" class="nsbtn" id="nsBtn" title="Bring the North Star into this conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4 L14 12 L12 20 L10 12 Z" fill="currentColor"/></svg>North Star</button><button type="button" class="nsbtn talkbtn" id="talkBtn" hidden title="Talk with BibliCall out loud, hands-free"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg><span>Talk</span></button><button type="button" class="nsbtn invbtn" id="invBtn" hidden data-call aria-haspopup="dialog" title="Invite a friend into this conversation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg><span>Invite a friend</span></button></div>
       <div class="attachrow" id="attachRow" hidden aria-live="polite"></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to BibliCall's memory">Remember</button>
@@ -1235,6 +1235,9 @@
   // Moments when talking it through with a friend could help: loneliness, wanting someone to talk to, praying or studying together.
   const WANTS_COMPANY = /\b(talk(ing)?|speak(ing)?|vent(ing)?) (to|with) (someone|somebody|anyone|anybody|a friend|my friends?|people|a person|someone who)|\b(lonely|loneliness|so alone|all alone|feel(ing)? (so )?alone|isolated|no one to talk|nobody to talk|no one to turn|have no one|no friends|no one understands|nobody understands|no one cares|nobody cares|no one listens|nobody listens)\b|\bwish (i|someone|somebody) (could|had|would|was|were)\b.*\b(talk|someone|somebody|friend|here|with me|listen)|\b(need|want) (someone|somebody|a friend)\b|\bpray (with|together)|\b(study|read)(ing)? (the bible |scripture |this )?(together|with (my|a) )|\bbible study\b|\b(share|show|send) (this|it) (with|to) (my |a )?(friends?|wife|husband|spouse|mom|mother|dad|father|son|daughter|kids|children|family|sister|brother|group|pastor)/i;
   function wantsCompany(text) { return WANTS_COMPANY.test(String(text)); }
+  // Mentions inviting or including someone: show the "Invite a friend" button above the chat box.
+  const INVITE_INTENT = /\b(invite|add|bring|include|loop)\b[^.?!]{0,30}\b(friends?|wife|husband|spouse|mom|mother|dad|father|son|daughter|kids|sister|brother|family|co-?workers?|colleagues?|team|assistant|partner|pastor|someone|somebody|people|him|her|them)\b|\bmy (best |close |good )?friends?\b/i;
+  function wantsInvite(text) { return INVITE_INTENT.test(String(text)) || wantsCompany(text); }
   // Hard moments where a short prayer can help (grief, worry, illness, a big decision, a broken relationship).
   const HARD_MOMENT = /\b(griev|grief|mourn|passed away|died|dying|death of|funeral|lost my|miscarri|cancer|tumou?r|diagnos|surgery|hospital|chemo|sick|illness|ill\b|pain|hurting|hurt\b|heartbr|broken ?heart|anxi|worr|afraid|scared|fear|panic|stress|overwhelm|depress|hopeless|despair|exhausted|burn(ed|t)? out|struggl|suffer|lonely|alone|divorc|separat|affair|betray|cheat|fight(ing)? with|estranged|addict|relapse|laid off|lost my job|fired|unemploy|debt|bankrupt|foreclos|evict|can'?t pay|interview|exam\b|big decision|hard decision|don'?t know what to do|crossroads|pray)/i;
   function hardMoment(text) { return HARD_MOMENT.test(String(text)); }
@@ -1656,8 +1659,9 @@
   const talkBtn = document.getElementById('talkBtn');
   function updateNsRow() {
     const has = conversation.some((m) => m.role === 'assistant' && !m.loading);
-    const tb = document.getElementById('talkBtn');
-    nsBtn.hidden = !has; nsRow.hidden = !has && (!tb || tb.hidden);
+    const tb = document.getElementById('talkBtn'), ib = document.getElementById('invBtn');
+    ib.hidden = !!room || !conversation.some((m) => m.invPill);
+    nsBtn.hidden = !has; nsRow.hidden = !has && (!tb || tb.hidden) && ib.hidden;
   }
   nsBtn.addEventListener('click', async () => {
     const last = [...conversation].reverse().find((m) => m.role === 'assistant' && !m.loading);
@@ -1882,6 +1886,7 @@
         conversation[turn].faithInv = faithLvl + 1; lsSet('bc_faith_inv_t', Date.now()); lsSet('bc_ns_taps', 0); stat('faith_invite');
       }
       if (!ack && wantsCompany(question) && !conversation.some((m) => m.invOffer)) { conversation[turn].invOffer = 1; stat('invite_offer'); }
+      if (!ack && wantsInvite(question) && !conversation.some((m) => m.invPill)) { conversation[turn].invPill = 1; stat('invite_pill'); }
       if (!wantsRemember && !ack && personalFact(question) && !memory.some((x) => x.text === memText(question))) {
         if (lsGet('bc_autorem', false)) { if (addMemory(question)) toast('\u2713 Saved to memory'); }
         else if (!conversation.some((m) => m.memOffer)) conversation[turn].memOffer = memText(question);
