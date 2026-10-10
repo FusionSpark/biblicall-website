@@ -3472,8 +3472,8 @@
     }
     sec('Welcome bell');
     box.appendChild(el('p', 'acct-fine', 'A bell rings when a friend joins your conversation. Tap one to hear it.'));
-    const bellNow = !lsGet('bc_chime', true) ? 'off' : lsGet('bc_bell', 'handbell');
-    chips([['handbell', 'Handbell (two soft notes)'], ['liberty', 'Liberty Bell (deep bong)'], ['off', 'Off']], bellNow, (v) => {
+    const bellNow = !lsGet('bc_chime', true) ? 'off' : lsGet('bc_bell', 'biblicall');
+    chips([['biblicall', 'BibliCall bell'], ['handbell', 'Soft handbell'], ['liberty', 'Liberty Bell (deep)'], ['off', 'Off']], bellNow, (v) => {
       if (v === 'off') { lsSet('bc_chime', false); return; }
       lsSet('bc_chime', true); lsSet('bc_bell', v); playChime(true, v);
     });
@@ -4186,9 +4186,9 @@
   // Phones only allow sound after a first touch: quietly get the bell ready on the first tap.
   document.addEventListener('pointerdown', () => { try { const a = bellEl(); a.src = SILENT; a.play().then(() => a.pause()).catch(() => {}); } catch (e) {} }, { once: true, passive: true });
   function playChime(force, which) {
-    const kind = which || lsGet('bc_bell', 'handbell');
+    const kind = which || lsGet('bc_bell', 'biblicall');
     if (!force && (!lsGet('bc_chime', true) || kind === 'off')) return;
-    try { const a = bellEl(); a.pause(); a.src = 'sounds/bell-' + (kind === 'liberty' ? 'liberty' : 'handbell') + '.mp3'; a.volume = 1; a.play().catch(() => {}); } catch (e) {}
+    try { const a = bellEl(); a.pause(); a.src = 'sounds/bell-' + (['liberty', 'handbell'].includes(kind) ? kind : 'biblicall') + '.mp3'; a.volume = 1; a.play().catch(() => {}); } catch (e) {}
   }
 
   // ---- Live call rooms (biblicall-rooms worker) ----
