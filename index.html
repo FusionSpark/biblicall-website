@@ -688,6 +688,21 @@
   .yt-note{margin-top:8px;font-size:15px}
   .yt-frame:has(.yt-limit){aspect-ratio:auto;min-height:260px;background:transparent;box-shadow:none}
   .yt-limit{text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+  /* A song playing inside the conversation, under the answer that mentioned it. */
+  .convo{position:relative}
+  .song-inline{width:100%;max-width:560px;display:flex;flex-direction:column;gap:6px}
+  .song-slot{width:100%;aspect-ratio:16/9;min-height:200px;border-radius:14px;background:rgba(0,0,0,.35)}
+  .song-cap{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:16px;line-height:1.4;color:var(--ink)}
+  .song-ct a{color:inherit;font-weight:700}
+  .song-x{flex:none;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:inherit;font-size:20px;line-height:1;cursor:pointer}
+  .song-credit{font-size:13.5px;opacity:.85;color:var(--ink)}
+  .song-credit a{color:inherit;font-weight:700}
+  html[data-sky="night"] .song-cap,html.photo .song-cap,html[data-sky="night"] .song-credit,html.photo .song-credit{color:#f3f6fd;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+  html[data-sky="night"] .song-x,html.photo .song-x{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.14);color:#fff}
+  .yt-inline{position:absolute;z-index:3;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .yt-inline[hidden]{display:none}
+  .yt-inline iframe{width:100%;height:100%;border:0;display:block}
 </style>
 </head>
 <body>
@@ -1057,6 +1072,7 @@
     <p class="shared-banner" id="sharedBanner">A friend invited you into this BibliCall conversation. Read along, then keep it going below.</p>
     <div class="roombar" id="roomBar"></div>
     <div class="thread" id="thread"></div>
+    <div class="yt-inline" id="ytInline" hidden></div>
     </div>
   </div>
 </div>
@@ -1537,7 +1553,7 @@
         threadBox.appendChild(row);
         lastRow = row;
         if (m.acts && m.acts.length) { const ab = drawActs(m); threadBox.appendChild(ab); lastRow = ab; }
-        if (m.songs && m.songs.length) { const sb = drawSongs(m.songs); threadBox.appendChild(sb); lastRow = sb; }
+        if (m.songs && m.songs.length) { const sb = drawSongs(m.songs, m); threadBox.appendChild(sb); lastRow = sb; }
       }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
@@ -1630,6 +1646,7 @@
       box.querySelector('.no').addEventListener('click', () => { m.invOffer = 2; renderThread(); });
       threadBox.appendChild(box); lastRow = box;
     }
+    positionInline();
     schedulePersist();
     updateNsRow();
     if (room && room.thinking) {
@@ -2097,18 +2114,86 @@
     return { text: out, acts: acts.slice(0, 3), followup, songs };
   }
   // ---- Music from YouTube: songs mentioned in conversation play inside BibliCall, in YouTube's own player ----
-  function drawSongs(list) {
+  // A song plays right in the conversation, under the answer that mentioned it. The YouTube player lives in one
+  // persistent frame laid over a placeholder in the thread, so new messages never interrupt the music.
+  let nowSong = null; // { m, i, sg, status: 'loading' | 'ok' | 'none', v }
+  function drawSongs(list, m) {
     const box = el('div', 'songs');
-    list.forEach((sg) => {
+    list.forEach((sg, i) => {
+      if (m && nowSong && nowSong.m === m && nowSong.i === i) { box.appendChild(drawNowPlaying()); return; }
       const b = el('button', 'song-btn'); b.type = 'button';
       b.innerHTML = '<span class="song-play" aria-hidden="true">\u25B6</span><span class="song-t"></span><span class="song-yt">YouTube</span>';
       b.querySelector('.song-t').textContent = '\u201c' + sg.title + '\u201d' + (sg.artist ? ' \u00b7 ' + sg.artist : '');
       b.setAttribute('aria-label', 'Play ' + sg.title + (sg.artist ? ' by ' + sg.artist : '') + ' from YouTube');
-      b.addEventListener('click', () => openSong(sg));
+      b.addEventListener('click', () => (m ? playInline(m, i, sg) : openSong(sg)));
       box.appendChild(b);
     });
     return box;
   }
+  function drawNowPlaying() {
+    const n = nowSong, wrap = el('div', 'song-inline');
+    const x = el('button', 'song-x', '\u00d7'); x.type = 'button'; x.setAttribute('aria-label', 'Close the song'); x.addEventListener('click', closeInline);
+    if (n.status === 'ok') {
+      wrap.appendChild(el('div', 'song-slot'));
+      const cap = el('div', 'song-cap');
+      const t = el('span', 'song-ct'); t.innerHTML = '<b>' + escapeHtml(n.v.title) + '</b>' + (n.v.author ? ' \u00b7 ' + escapeHtml(n.v.author) : '');
+      cap.appendChild(t); cap.appendChild(x);
+      const cr = el('span', 'song-credit'); cr.innerHTML = 'Music shared from YouTube. BibliCall doesn\u2019t host it. <a href="https://www.youtube.com/watch?v=' + encodeURIComponent(n.v.id) + '" target="_blank" rel="noopener">Open in YouTube</a>';
+      wrap.appendChild(cap); wrap.appendChild(cr);
+      if (n.v.limit && n.v.used >= n.v.limit - 5) { const left = Math.max(0, n.v.limit - n.v.used); wrap.appendChild(el('span', 'song-credit', left ? left + ' of your ' + n.v.limit + ' songs left this month.' : 'That was your last song this month. BibliCall Plus includes many more.')); }
+    } else {
+      const row = el('div', 'song-cap');
+      const t = el('span', 'song-ct'); row.appendChild(t); row.appendChild(x); wrap.appendChild(row);
+      if (n.status === 'loading') t.textContent = 'Finding \u201c' + n.sg.title + '\u201d on YouTube\u2026';
+      else { t.textContent = 'BibliCall couldn\u2019t find a version of \u201c' + n.sg.title + '\u201d that can play here. '; const a = el('a', null, 'Search on YouTube'); a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(n.sg.title + ' ' + (n.sg.artist || '')); a.target = '_blank'; a.rel = 'noopener'; t.appendChild(a); }
+    }
+    return wrap;
+  }
+  function positionInline() {
+    const ytInline = document.getElementById('ytInline');
+    if (!nowSong || nowSong.status !== 'ok') { if (ytInline) ytInline.hidden = true; return; }
+    const slot = threadBox.querySelector('.song-slot');
+    if (!slot || !conversation.includes(nowSong.m)) { closeInline(); return; }
+    const box = convoEl.getBoundingClientRect(), r = slot.getBoundingClientRect();
+    ytInline.style.top = (r.top - box.top + convoEl.scrollTop) + 'px';
+    ytInline.style.left = (r.left - box.left + convoEl.scrollLeft) + 'px';
+    ytInline.style.width = r.width + 'px'; ytInline.style.height = r.height + 'px';
+    ytInline.hidden = false;
+  }
+  function closeInline() {
+    if (!nowSong) return;
+    const ytInline = document.getElementById('ytInline');
+    nowSong = null; ytInline.innerHTML = ''; ytInline.hidden = true;
+    if (songWasMusic && window.BC_MUSIC) window.BC_MUSIC.start(); songWasMusic = false;
+    renderThread();
+  }
+  async function playInline(m, i, sg) {
+    const ytInline = document.getElementById('ytInline');
+    if (nowSong) { nowSong = null; ytInline.innerHTML = ''; }
+    nowSong = { m, i, sg, status: 'loading' };
+    try { const st = window.BC_MUSIC && window.BC_MUSIC.state(); if (st && st.on) { songWasMusic = true; window.BC_MUSIC.stop(); } } catch (e) {}
+    if (speaking) stopSpeaking();
+    renderThread();
+    let v = null;
+    try {
+      const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'song', title: sg.title, artist: sg.artist, did: DEVICE }) });
+      v = await r.json();
+    } catch (e) {}
+    if (!nowSong || nowSong.m !== m || nowSong.i !== i) return;
+    if (v && v.error === 'song_limit') {
+      nowSong = null; renderThread();
+      const w = document.getElementById('ytWin'); w.hidden = false; songLimit(w.querySelector('.yt-frame'), w.querySelector('.yt-cap'), v);
+      return;
+    }
+    if (!v || !v.id) { nowSong.status = 'none'; renderThread(); return; }
+    stat('song_play');
+    nowSong.status = 'ok'; nowSong.v = v;
+    ytInline.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(v.title) + ' (YouTube)" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+    const rec = (lsGet('bc_songs', []) || []).filter((x) => x.id !== v.id); rec.unshift({ id: v.id, title: v.title, author: v.author, q: sg }); lsSet('bc_songs', rec.slice(0, 20));
+    renderThread();
+  }
+  window.addEventListener('resize', () => positionInline());
+  if (window.ResizeObserver) new ResizeObserver(() => positionInline()).observe(threadBox);
   let songWasMusic = false;
   function closeSong() {
     const w = document.getElementById('ytWin'); if (!w || w.hidden) return;
