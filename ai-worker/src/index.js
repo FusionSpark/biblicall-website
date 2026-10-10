@@ -345,8 +345,18 @@ export default {
         console.error('Anthropic error', resp.status, data && data.error && data.error.type);
         return json({ error: 'Upstream error' }, 502);
       }
+      // A long web search can pause mid-answer; continue it (up to twice) so the person never gets an empty reply.
+      let extraCost = 0;
+      for (let k = 0; k < 2 && data.stop_reason === 'pause_turn'; k++) {
+        extraCost += usageCost(data);
+        const cont = await call({ ...payload, messages: [...payload.messages, { role: 'assistant', content: data.content }] });
+        const d2 = await cont.json();
+        if (!cont.ok) break;
+        d2.content = [...(data.content || []), ...(d2.content || [])];
+        data = d2;
+      }
       // What this answer cost BibliCall, in millionths of a dollar (no content is recorded).
-      ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data), n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
+      ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data) + extraCost, n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
       // With web search the answer arrives in pieces split around citations; join them back into one text.
       const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/<\/?cite[^>]*>/gi, '').replace(/\n{3,}/g, '\n\n').trim();
       return json({ answer: text || "Sorry, I couldn't come up with an answer just now." });
