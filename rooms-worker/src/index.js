@@ -5,7 +5,7 @@ const MAX_KEEP = 120;          // messages kept per room
 const AI_TURNS = 20;           // messages sent to the AI as context
 const IDLE_MS = 30 * 86400000; // delete rooms after 30 idle days
 const PASS = '[[PASS]]';
-const ADDRESSED = /(^|[^a-z])@?biblicall\b/i;
+const ADDRESSED = /(^|[^a-z])@?(bibli ?call|bible ?call|bibli)\b/i;
 // Photos shared in a call: up to 3 per message, resized by the browser before sending.
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_B64 = 450000;
@@ -148,6 +148,16 @@ export class Room extends DurableObject {
       return;
     }
 
+    if (d.type === 'playing') {
+      // A friend started a song from YouTube: remember it (and the last few), so BibliCall always knows what's playing.
+      const song = { title: clean(d.title, 160), author: clean(d.author, 80), by: me.name, t: Date.now() };
+      if (!song.title) return;
+      const list = ((await this.ctx.storage.get('songs')) || []).filter((x) => x.title !== song.title);
+      list.unshift(song);
+      await this.ctx.storage.put('songs', list.slice(0, 6));
+      return;
+    }
+
     if (d.type === 'seed') {
       // The person who opens the call brings their conversation so far. Only accepted into an empty room.
       if ((await this.ctx.storage.get('seq')) || !Array.isArray(d.msgs)) return;
@@ -195,8 +205,8 @@ export class Room extends DurableObject {
       const names = new Set(recent.filter((m) => m.role === 'user').map((m) => m.name));
       const group = this.ctx.getWebSockets().length > 1 || names.size > 1;
       const mustAnswer = !group || addressed;
-      // Quick chatter between friends ("lol", "amen", "see you Tuesday") never needs BibliCall: skip the check entirely.
-      if (group && !addressed && isChatter(lastUser.content)) return;
+      // With friends together, BibliCall listens quietly and only speaks when someone calls on it by name.
+      if (group && !addressed) return;
       if (mustAnswer) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
 
       const turns = [];
@@ -222,7 +232,10 @@ export class Room extends DurableObject {
         }
       }
       let answer;
-      try { answer = await this.ai(turns, { group, decide: group && !addressed, attachments: attachments.length ? attachments : undefined }); }
+      const songs = (await this.ctx.storage.get('songs')) || [];
+      const ago = (t) => { const m = Math.max(1, Math.round((Date.now() - t) / 60000)); return m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+      const ambience = songs.length ? 'Songs played in this live call from YouTube, most recent first (the first is very likely still playing): ' + songs.map((x) => '"' + x.title + '"' + (x.author ? ' (' + x.author + ')' : '') + ', started by ' + x.by + ' ' + ago(x.t)).join('; ') + '. When anyone asks about "this song" or "the song", it is the most recent one.' : undefined;
+      try { answer = await this.ai(turns, { group, decide: false, ambience, attachments: attachments.length ? attachments : undefined }); }
       catch (e) { answer = mustAnswer ? "BibliCall couldn't answer that just now. Please try again in a moment." : PASS; }
       if (!answer || answer.includes(PASS)) return; // stays quiet, keeps listening
       if (!showed) { this.broadcast({ type: 'thinking', on: true }); showed = true; }

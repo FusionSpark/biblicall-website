@@ -1991,8 +1991,12 @@
   function ambience() {
     try {
       const parts = [];
+      // The YouTube song playing in this conversation (or the last one played), so BibliCall always knows it.
+      const recent = (lsGet('bc_songs', []) || [])[0];
+      if (typeof nowSong !== 'undefined' && nowSong && nowSong.status === 'ok') parts.push('A song is playing right now in this conversation, from YouTube in the BibliCall player: "' + nowSong.v.title + '"' + (nowSong.v.author ? ' (YouTube channel: ' + nowSong.v.author + ')' : '') + '. Treat it as the song "they" mean when they ask about "this song" or "the song".');
+      else if (recent && recent.t && Date.now() - recent.t < 3 * 3600000) parts.push('The most recent song played in BibliCall (from YouTube, ' + Math.max(1, Math.round((Date.now() - recent.t) / 60000)) + ' minutes ago): "' + recent.title + '"' + (recent.author ? ' (' + recent.author + ')' : '') + '.');
       if (window.BC_BG) parts.push(window.BC_BG.describe());
-      if (window.BC_MUSIC) parts.push(window.BC_MUSIC.describe() || 'No music is playing.');
+      if (window.BC_MUSIC) parts.push(window.BC_MUSIC.describe() || 'No background music is playing.');
       return parts.filter(Boolean).join(' ');
     } catch (e) { return ''; }
   }
@@ -2189,7 +2193,8 @@
     stat('song_play');
     nowSong.status = 'ok'; nowSong.v = v;
     ytInline.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(v.title) + ' (YouTube)" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
-    const rec = (lsGet('bc_songs', []) || []).filter((x) => x.id !== v.id); rec.unshift({ id: v.id, title: v.title, author: v.author, q: sg }); lsSet('bc_songs', rec.slice(0, 20));
+    const rec = (lsGet('bc_songs', []) || []).filter((x) => x.id !== v.id); rec.unshift({ id: v.id, title: v.title, author: v.author, q: sg, t: Date.now() }); lsSet('bc_songs', rec.slice(0, 20));
+    if (room && room.live) roomSend({ type: 'playing', title: v.title, author: v.author });
     renderThread();
   }
   window.addEventListener('resize', () => positionInline());
