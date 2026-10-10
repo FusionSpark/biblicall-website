@@ -17,6 +17,8 @@ const NS_MODEL = 'claude-haiku-4-5-20251001';
 const FALLBACK_MODEL = 'claude-sonnet-4-5';
 // Fair use per visitor per day (by network address until BibliCall has accounts), and per live call per day.
 const DAILY = { ask: 60, roomAsk: 400, speakChars: 20000, transcribe: 120 };
+// Songs from YouTube each month. Free now; BibliCall Plus (when payments open) gets the larger allowance.
+const SONGS_PER_MONTH = { free: 30, plus: 500 };
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 4000;
 // Uploaded files: at most 5 per request, about 24 MB of file data in total.
@@ -225,8 +227,16 @@ export default {
       const key = 'song:' + (title + '|' + artist).toLowerCase().replace(/[^a-z0-9|]+/g, ' ').trim();
       const D = env.DIRECTORY.get(env.DIRECTORY.idFromName('main'));
       const dcall = async (b) => (await D.fetch('https://do/', { method: 'POST', body: JSON.stringify(b) })).json();
+      // Monthly song allowance per person (signed-in account, else this device). Songs that can't be found don't count.
+      const month = new Date(Date.now() - 6 * 3600000).toISOString().slice(0, 7);
+      const who = visitor.indexOf('u:') === 0 ? visitor : (/^[A-Za-z0-9_-]{16,40}$/.test(String(body.did || '')) ? 'd:' + body.did : visitor);
+      const wd = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('songs:' + who));
+      const mk = 'sm:' + month + ':' + [...new Uint8Array(wd)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const used = (await dcall({ op: 'map.get', key: mk })) || 0, limit = SONGS_PER_MONTH.free;
+      if (used >= limit) return json({ error: 'song_limit', used, limit }, 402);
+      const played = async (v) => { await dcall({ op: 'inc', key: mk }); return json({ ...v, used: used + 1, limit }); };
       const hit = await dcall({ op: 'map.get', key });
-      if (hit && hit.id) return json(hit);
+      if (hit && hit.id) return played(hit);
       if (!(await underQuota(env, visitor, 'song', 1, 40))) return json({ error: "You've found a lot of music today. More tomorrow." }, 429);
       const oembed = async (id) => {
         const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
@@ -245,7 +255,7 @@ export default {
         const ids = [...new Set([...text.matchAll(/(?:youtube\.com\/(?:watch\?(?:[^\s]*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/g)].map((m) => m[1]))].slice(0, 3);
         for (const id of ids) {
           const ok = await oembed(id);
-          if (ok) { ok.q = title + (artist ? ' \u2014 ' + artist : ''); await dcall({ op: 'map.put', key, value: ok }); return json(ok); }
+          if (ok) { ok.q = title + (artist ? ' \u2014 ' + artist : ''); await dcall({ op: 'map.put', key, value: ok }); return played(ok); }
         }
         return json({ error: 'not_found' }, 404);
       } catch (e) {
