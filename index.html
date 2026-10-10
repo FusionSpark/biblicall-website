@@ -711,6 +711,10 @@
   .invchip .invs{font-weight:500;font-size:13px;opacity:.85}
   .invchip.waiting{color:#b8433a;background:rgba(184,67,58,.08)}
   .invchip.here{color:#2f7d4a;background:rgba(47,125,74,.09)}
+
+  .invhead{margin-top:8px;font-size:13.5px;font-weight:700;letter-spacing:.02em;color:var(--muted)}
+  .invadd{border:1.5px solid #b8433a;color:#b8433a;background:rgba(184,67,58,.08);border-radius:999px;padding:4px 12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  .invnote{font-size:13.5px;color:var(--muted);align-self:center}
 </style>
 </head>
 <body>
@@ -1096,6 +1100,7 @@
   <p id="callIntro">Enter a friend's cell number or email and we'll open a text or email with a BibliCall link. When they tap it, they join this conversation live, and everyone sees new messages as they happen. Invite as many friends as you like.</p>
   <div class="namerow"><label for="callName">Your name (so friends know who invited them)</label><input type="text" id="callName" autocomplete="given-name" maxlength="40" placeholder="First name"></div>
   <form id="callForm" class="row" novalidate>
+    <input type="text" id="callFriend" autocomplete="off" maxlength="30" placeholder="Friend's first name" aria-label="Friend's first name" style="max-width:38%">
     <input type="text" id="callPhone" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cell # or email" aria-label="Friend's cell phone number or email address">
     <button type="submit" class="primary">Send invite</button>
   </form>
@@ -4204,7 +4209,12 @@
       callStatus.textContent = isEmail ? 'Please check the email address, like friend@email.com.' : 'Please enter a full cell number, like (555) 123-4567, or an email address.';
       return;
     }
-    const body = inviteText(await inviteLink());
+    const fEl = document.getElementById('callFriend');
+    let fName = (fEl.value || '').trim().split(/\s+/)[0] || '';
+    if (fName) fName = fName[0].toUpperCase() + fName.slice(1).toLowerCase();
+    const body = (fName ? 'Hi ' + fName + '! ' : '') + inviteText(await inviteLink());
+    roomSend({ type: 'invited', name: fName, last4: (phone || '').slice(-4) || (email ? email.split('@')[0].slice(0, 4) : '') });
+    fEl.value = '';
     if (email) {
       window.location.href = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent('Join my call on BibliCall') + '&body=' + encodeURIComponent(body);
       const li = document.createElement('li');
@@ -4217,7 +4227,6 @@
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     window.location.href = 'sms:' + phone + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
     invited++;
-    roomSend({ type: 'invited', name: '', last4: phone.slice(-4) });
     const li = document.createElement('li');
     li.textContent = '✓ Invite ready for ' + prettyPhone(phone);
     callList.prepend(li);
@@ -4308,7 +4317,15 @@
     roomBar.querySelector('.people').textContent = who;
     // Invitations: a sealed envelope while the friend is on the way, an open envelope once they're here.
     const inv = room.invites || [];
+    const waiting = inv.filter((x) => !x.joined).length;
+    if (!inv.length) {
+      const hint = el('div', 'invrow');
+      const b = el('button', 'invadd', '\u2709 Invite a friend'); b.type = 'button'; b.addEventListener('click', openInvite);
+      hint.appendChild(b); hint.appendChild(el('span', 'invnote', 'Invited friends will show here until they join.'));
+      roomBar.appendChild(hint);
+    }
     if (inv.length) {
+      roomBar.appendChild(el('div', 'invhead', waiting ? 'Waiting on ' + waiting + (waiting === 1 ? ' friend' : ' friends') : 'Everyone you invited is here'));
       const row = el('div', 'invrow');
       inv.forEach((x) => {
         const here = !!x.joined, label = x.name || ('Friend \u2026' + x.last4);
@@ -4390,6 +4407,7 @@
     };
   }
   function openRoom(id, opts) {
+    document.body.classList.add('chatting'); threadBox.classList.add('show');
     try { localStorage.setItem('bc_session', JSON.stringify({ room: id, conv: convId, t: Date.now() })); } catch (e) {}
     room = { id, people: [], live: false, thinking: false, seed: opts && opts.seed, askName: opts && opts.askName, onReady: opts && opts.onReady };
     const u = new URL(location.href); u.searchParams.set('room', id); u.hash = '';
