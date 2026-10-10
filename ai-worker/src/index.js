@@ -346,7 +346,7 @@ export default {
       // What this answer cost BibliCall, in millionths of a dollar (no content is recorded).
       ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data), n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
       // With web search the answer arrives in pieces split around citations; join them back into one text.
-      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/\n{3,}/g, '\n\n').trim();
+      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/<\/?cite[^>]*>/gi, '').replace(/\n{3,}/g, '\n\n').trim();
       return json({ answer: text || "Sorry, I couldn't come up with an answer just now." });
     } catch (err) {
       console.error('Worker error', err && err.message);
