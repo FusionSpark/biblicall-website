@@ -712,7 +712,8 @@
   .invchip.waiting{color:#b8433a;background:rgba(184,67,58,.08)}
   .invchip.here{color:#2f7d4a;background:rgba(47,125,74,.09)}
 
-  .invhead{margin-top:8px;font-size:13.5px;font-weight:700;letter-spacing:.02em;color:var(--muted)}
+  .invhead{margin-top:8px;font-size:16px;font-weight:700;color:var(--ink);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+  .invwait{color:#b8433a;font-weight:700}
   .invadd{border:1.5px solid #b8433a;color:#b8433a;background:rgba(184,67,58,.08);border-radius:999px;padding:4px 12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
   .invnote{font-size:13.5px;color:var(--muted);align-self:center}
 </style>
@@ -4325,7 +4326,12 @@
       roomBar.appendChild(hint);
     }
     if (inv.length) {
-      roomBar.appendChild(el('div', 'invhead', waiting ? 'Waiting on ' + waiting + (waiting === 1 ? ' friend' : ' friends') : 'Everyone you invited is here'));
+      const head = el('div', 'invhead');
+      if (waiting) {
+        head.appendChild(document.createTextNode('Waiting on '));
+        inv.filter((x) => !x.joined).forEach((x) => { const n = el('span', 'invwait'); n.textContent = '\u27A4 ' + (x.name || ('Friend \u2026' + x.last4)); head.appendChild(n); });
+      } else head.textContent = '\u2713 Everyone you invited is here';
+      roomBar.appendChild(head);
       const row = el('div', 'invrow');
       inv.forEach((x) => {
         const here = !!x.joined, label = x.name || ('Friend \u2026' + x.last4);
