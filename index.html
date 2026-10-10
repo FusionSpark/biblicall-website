@@ -1872,6 +1872,9 @@
       toast('Tap \u00d7 next to anything BibliCall should forget.');
       return;
     }
+    // "Bibli, invite Jack at 630-555-1234": Bibli prepares the invite right away.
+    const inv = sending.length ? null : parseInvite(question);
+    if (inv) { q.value = ''; q.style.height = 'auto'; inviteByVoice(inv); return; }
     const wantsRemember = remOn || /^\s*remember\b/i.test(question);
     if (wantsRemember) {
       const item = addMemory(stripRemember(question));
@@ -4125,6 +4128,36 @@
   function inviteText(link) {
     const who = myName();
     return (who ? who + ' invited you to' : 'Join me in') + " a live call on BibliCall, an AI assistant guided by biblical wisdom. Just say \u201cBibli\u201d when you want to ask it something. Tap to join the conversation: " + link;
+  }
+  function parseInvite(t) {
+    t = String(t);
+    if (!/\b(invite|add|bring|text|include|send (an |the )?invit)/i.test(t)) return null;
+    const em = t.match(/\b(invite|add|bring|include|send)\b[^@]{0,40}?([^\s@,;:]+@[^\s@,;]+\.[A-Za-z]{2,})/i);
+    const ph = t.match(/(\+?1?[\s.(-]*\d{3}[\s.)-]*\d{3}[\s.-]*\d{4})(?!\d)/);
+    const phone = ph ? normalizePhone(ph[1]) : null, email = em ? em[2] : null;
+    if (!phone && !email) return null;
+    // The friend's name: the word right after "invite" (skipping "my friend", "my brother"...).
+    const nm = t.match(/\b(?:invite|add|bring|include|text)\s+(?:in\s+)?(?:my\s+(?:best\s+|good\s+)?(?:friend|buddy|brother|sister|wife|husband|son|daughter|dad|father|mom|mother|co-?worker|colleague|boss|pastor)\s+)?([A-Za-z][A-Za-z'\u2019-]{1,20})/i);
+    let name = nm ? nm[1] : '';
+    if (/^(at|to|on|him|her|them|my|a|the|this|number|phone|cell|me)$/i.test(name) || /\d/.test(name)) name = '';
+    if (name) name = name[0].toUpperCase() + name.slice(1).toLowerCase();
+    return { name, phone, email };
+  }
+  async function inviteByVoice(inv) {
+    stat('invite_voice');
+    if (typeof talkMode !== 'undefined' && talkMode) talkSet(false);
+    const who = inv.name || 'your friend';
+    toast('Getting the invite ready for ' + who + '\u2026');
+    const link = await inviteLink();
+    const body = (inv.name ? 'Hi ' + inv.name + '! ' : '') + inviteText(link);
+    if (inv.email && !inv.phone) {
+      window.location.href = 'mailto:' + encodeURIComponent(inv.email) + '?subject=' + encodeURIComponent('Join my conversation on BibliCall') + '&body=' + encodeURIComponent(body);
+    } else {
+      const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      window.location.href = 'sms:' + inv.phone + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
+    }
+    invited++;
+    setTimeout(() => toast('\u2713 Invite for ' + who + ' is ready. Tap Send in ' + (inv.email && !inv.phone ? 'Mail' : 'Messages') + '.'), 400);
   }
   function normalizePhone(v) {
     const plus = v.trim().startsWith('+');
