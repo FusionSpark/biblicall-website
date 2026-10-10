@@ -716,6 +716,10 @@
   .invwait{color:#b8433a;font-weight:700}
   .invadd{border:1.5px solid #b8433a;color:#b8433a;background:rgba(184,67,58,.08);border-radius:999px;padding:4px 12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
   .invnote{font-size:13.5px;color:var(--muted);align-self:center}
+
+  .invme{margin-top:6px;font-size:14px;color:var(--muted);display:flex;gap:6px;align-items:center}
+  .invme b{color:var(--ink)}
+  .invchg{border:0;background:none;padding:0;font-family:inherit;font-size:14px;color:var(--earth);text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1884,6 +1888,15 @@
       q.value = ''; q.style.height = 'auto';
       openDrawer('memory');
       toast('Tap \u00d7 next to anything BibliCall should forget.');
+      return;
+    }
+    // "Bibli, call me Scott" / "my name is Scott": the name friends see in calls and invites.
+    const nmSet = sending.length ? null : question.match(/^\s*(?:hey\s+)?(?:bibli(?:call)?[,!.]?\s+)?(?:please\s+)?(?:call me|my name is|my first name is)\s+([A-Za-z][A-Za-z'\u2019-]{1,20})\s*[.!]?\s*$/i);
+    if (nmSet) {
+      const nn = nmSet[1][0].toUpperCase() + nmSet[1].slice(1);
+      setMyName(nn); q.value = ''; q.style.height = 'auto';
+      toast('\u2713 Got it. Friends will see you as ' + nn + '.');
+      if (room) drawRoomBar();
       return;
     }
     // "Bibli, invite Jack at 630-555-1234": Bibli prepares the invite right away.
@@ -4141,7 +4154,7 @@
   }
   function inviteText(link) {
     const who = myName();
-    return (who ? who + ' invited you to' : 'Join me in') + " a live call on BibliCall, an AI assistant guided by biblical wisdom. Just say \u201cBibli\u201d when you want to ask it something. Tap to join the conversation: " + link;
+    return (who ? who + ' invited you to' : 'Join me in') + " a live conversation on BibliCall. Just say \u201cBibli\u201d when you want to ask it something. Tap to join the conversation: " + link;
   }
   function parseInvite(t) {
     t = String(t);
@@ -4316,6 +4329,14 @@
       (room.askName ? '<form class="namef"><input type="text" maxlength="40" placeholder="Your first name" aria-label="Your first name" autocomplete="given-name"><button type="submit">Save name</button></form>' : '') +
       (room.err ? '<p class="err"></p>' : '');
     roomBar.querySelector('.people').textContent = who;
+    if (myName() && !room.askName) {
+      const me = el('div', 'invme');
+      me.appendChild(document.createTextNode('You appear as '));
+      const b = el('b', null, myName()); me.appendChild(b);
+      const ch = el('button', 'invchg', 'Change'); ch.type = 'button';
+      ch.addEventListener('click', () => { room.askName = true; drawRoomBar(); const i = roomBar.querySelector('.namef input'); if (i) { i.value = myName(); i.focus(); i.select(); } });
+      me.appendChild(ch); roomBar.appendChild(me);
+    }
     // Invitations: a sealed envelope while the friend is on the way, an open envelope once they're here.
     const inv = room.invites || [];
     const waiting = inv.filter((x) => !x.joined).length;
