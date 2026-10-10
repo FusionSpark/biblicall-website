@@ -2081,7 +2081,7 @@
   // BibliCall can suggest reminders and goals at the end of an answer; they become buttons the person taps to confirm.
   function extractActs(text) {
     const acts = [], songs = []; let followup = '';
-    const out = String(text).replace(/\[\[(remind|goal|prayer|pay|followup|song)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
+    const out = String(text).replace(/\[\[\s*(remind|goal|prayer|pay|followup|song)\s*\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
       k = k.toLowerCase();
       if (k === 'followup') { followup = rest.trim().slice(0, 160); return ''; }
       if (k === 'song') { const [t, a] = rest.split('|'); if (t && t.trim() && songs.length < 3) songs.push({ title: t.trim().slice(0, 100), artist: String(a || '').trim().slice(0, 80) }); return ''; }
@@ -2093,7 +2093,7 @@
       const m = rest.match(/^\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\s*\|\s*(.+)$/);
       if (m) { const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); if (at > Date.now() - 60000) acts.push({ k: 'remind', at, text: m[6].trim().slice(0, 160) }); }
       return '';
-    }).replace(/\n{3,}/g, '\n\n').trim();
+    }).replace(/\[\[\s*[a-z]+\s*\|[^\]\n]*\]\]/gi, '').replace(/\n{3,}/g, '\n\n').trim();
     return { text: out, acts: acts.slice(0, 3), followup, songs };
   }
   // ---- Music from YouTube: songs mentioned in conversation play inside BibliCall, in YouTube's own player ----
@@ -3169,6 +3169,23 @@
     threadBox.classList.add('show');
     renderThread();
   }
+  // Keep everyone on the newest BibliCall: if a newer version is live, reload quietly at a calm moment and reopen the same conversation.
+  (function stayFresh() {
+    const loaded = new Date(document.lastModified).getTime();
+    const calm = () => !q.value.trim() && !room && !(typeof talkMode !== 'undefined' && talkMode) && !speaking && document.getElementById('ytWin').hidden && !pendingFiles.length;
+    async function check() {
+      try {
+        const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
+        const fresh = new Date(r.headers.get('last-modified') || 0).getTime();
+        if (!fresh || !loaded || fresh - loaded < 5000 || !calm()) return;
+        try { if (convId) sessionStorage.setItem('bc_reopen', convId); } catch (e) {}
+        location.reload();
+      } catch (e) {}
+    }
+    try { const re = sessionStorage.getItem('bc_reopen'); if (re) { sessionStorage.removeItem('bc_reopen'); setTimeout(() => { if (convos.some((c) => c.id === re)) openConvo(re); }, 300); } } catch (e) {}
+    setTimeout(check, 1500);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  })();
   function newConvo() {
     closeDrawer();
     if (room) leaveRoom();
