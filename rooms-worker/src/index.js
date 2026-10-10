@@ -139,6 +139,12 @@ export class Room extends DurableObject {
       if (typeof d.uid === 'string' && /^[A-Za-z0-9_-]{8,32}$/.test(d.uid)) me.id = d.uid;
       ws.serializeAttachment(me);
       this.presence();
+      // Once someone gives their first name, their earlier messages show it too (instead of "Guest").
+      if (me.name !== 'Guest') {
+        const map = await this.ctx.storage.list({ prefix: 'm:' }), puts = {};
+        for (const [k, m] of map) if (m && m.role === 'user' && m.from === me.id && m.name !== me.name) { m.name = me.name; puts[k] = m; }
+        if (Object.keys(puts).length) { await this.ctx.storage.put(puts); this.broadcast({ type: 'rename', from: me.id, name: me.name }); }
+      }
       return;
     }
 

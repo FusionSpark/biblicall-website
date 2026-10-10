@@ -1830,6 +1830,12 @@
       setRem(false);
       toast(item ? 'Saved to memory' : 'Already in memory');
     }
+    if (room && room.live && !myName()) {
+      room.askName = true; drawRoomBar();
+      const ni = roomBar.querySelector('.namef input'); if (ni) ni.focus();
+      toast('Add your first name so everyone knows who\u2019s talking.');
+      return;
+    }
     if (room && room.live) {
       const images = sending.map((f) => ({ media_type: f.media_type, data: f.data }));
       if (!roomSend({ type: 'ask', content: q.value.trim(), images: images.length ? images : undefined })) { roomError('Reconnecting to the call. Try again in a moment.'); return; }
@@ -3960,7 +3966,12 @@
     if (!/^[A-Za-z0-9_-]{8,32}$/.test(id)) { id = newRoomId().slice(0, 16); try { localStorage.setItem('bc_uid', id); } catch (e) {} }
     return id;
   }
-  function myName() { try { return localStorage.getItem('bc_name') || ''; } catch (e) { return ''; } }
+  // First name shown to friends in a live call: the name they gave, or the first name on their BibliCall account.
+  function myName() {
+    let n = ''; try { n = localStorage.getItem('bc_name') || ''; } catch (e) {}
+    if (!n) { try { const a = JSON.parse(localStorage.getItem('bc_acct') || 'null'); n = a && a.name ? String(a.name).trim().split(/\s+/)[0] : ''; } catch (e) {} }
+    return n.slice(0, 40);
+  }
   function setMyName(v) {
     v = String(v || '').trim().slice(0, 40);
     try { localStorage.setItem('bc_name', v); } catch (e) {}
@@ -3995,7 +4006,7 @@
     const who = others.length ? 'with ' + (others.length > 4 ? others.slice(0, 4).join(', ') + ' and ' + (others.length - 4) + ' more' : others.join(', ')) : 'waiting for friends to join';
     roomBar.innerHTML = '<div class="top"><span class="live"><span class="dot' + (room.live ? '' : ' off') + '"></span>' + (room.live ? 'Live call' : 'Connecting…') + '</span>' +
       '<span class="people"></span><button type="button" class="leave">Leave call</button></div>' +
-      (room.askName ? '<form class="namef"><input type="text" maxlength="40" placeholder="Your first name" aria-label="Your name"><button type="submit">Join</button></form>' : '') +
+      (room.askName ? '<form class="namef"><input type="text" maxlength="40" placeholder="Your first name" aria-label="Your first name" autocomplete="given-name"><button type="submit">Save name</button></form>' : '') +
       (room.err ? '<p class="err"></p>' : '');
     roomBar.querySelector('.people').textContent = who;
     if (room.err) roomBar.querySelector('.err').textContent = room.err;
@@ -4036,6 +4047,8 @@
         conversation.push(m);
         document.body.classList.add('chatting'); threadBox.classList.add('show');
         renderThread();
+      } else if (d.type === 'rename') {
+        conversation.forEach((m) => { if (m.role === 'user' && m.from === d.from) m.name = d.name; }); renderThread();
       } else if (d.type === 'presence') {
         room.people = d.people || []; drawRoomBar(); setPlaceholder();
       } else if (d.type === 'thinking') {
@@ -4069,7 +4082,7 @@
     });
     return new Promise((res) => {
       const t = setTimeout(() => { leaveRoom(); res(null); }, 6000);
-      openRoom(newRoomId(), { seed, onReady: (id) => { clearTimeout(t); res(id); } });
+      openRoom(newRoomId(), { seed, askName: !myName(), onReady: (id) => { clearTimeout(t); res(id); } });
     });
   }
   function leaveRoom() {
