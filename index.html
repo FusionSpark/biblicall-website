@@ -659,6 +659,24 @@
   .of-note{margin:8px 0 0;font-size:15.5px;min-height:0}
   .of-note:empty{display:none}
   html[data-sky="night"] .of-line,html.photo .of-line,html[data-sky="night"] .of-note,html.photo .of-note{color:#f3f6fd;text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 18px rgba(0,0,0,.35)}
+
+  /* Music from YouTube: play buttons flow in the conversation; the video opens in a calm frame inside BibliCall. */
+  .songs{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:2px 0 18px}
+  .song-btn{display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:8px 14px 8px 8px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;font-size:16.5px;font-weight:600;cursor:pointer;text-align:left}
+  .song-play{display:inline-flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--earth);color:#fff;font-size:12px;padding-left:2px}
+  .song-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .song-yt{flex:none;font-size:12.5px;font-weight:600;opacity:.75}
+  html[data-sky="night"] .song-btn,html.photo .song-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+  .ytwin{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,10,24,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .ytwin[hidden]{display:none}
+  .yt-box{position:relative;width:100%;max-width:760px}
+  .yt-x{position:absolute;top:-46px;right:0;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);background:rgba(255,255,255,.14);color:#fff;font-size:24px;line-height:1;cursor:pointer}
+  .yt-frame{position:relative;width:100%;aspect-ratio:16/9;min-height:200px;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 18px 50px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+  .yt-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .yt-wait{color:#e9eefb;font-size:17px;text-align:center;padding:0 20px}
+  .yt-cap{display:flex;flex-direction:column;gap:4px;margin-top:12px;color:#f3f6fd;font-size:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .yt-cap a{color:#fff;font-weight:700}
+  .yt-credit{font-size:13.5px;opacity:.85}
 </style>
 </head>
 <body>
@@ -980,6 +998,7 @@
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="ytwin" id="ytWin" hidden role="dialog" aria-label="Music from YouTube"><div class="yt-box"><button type="button" class="yt-x" aria-label="Close">&times;</button><div class="yt-frame"></div><div class="yt-cap"></div></div></div>
 <div class="installtip" id="installTip" hidden><img src="apple-touch-icon.png" alt=""><span id="installText"></span><button type="button" class="go" id="installGo" hidden>Install</button><button type="button" class="x" id="installX" aria-label="Dismiss">&times;</button></div>
 
 <div class="center">
@@ -1507,6 +1526,7 @@
         threadBox.appendChild(row);
         lastRow = row;
         if (m.acts && m.acts.length) { const ab = drawActs(m); threadBox.appendChild(ab); lastRow = ab; }
+        if (m.songs && m.songs.length) { const sb = drawSongs(m.songs); threadBox.appendChild(sb); lastRow = sb; }
       }
       if (m.role === 'assistant' && m.ns) {
         const panel = document.createElement('aside');
@@ -1877,7 +1897,7 @@
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
       const ex = extractActs(data.answer);
       if (ex.followup) lsSet('bc_followup', { q: ex.followup, t: Date.now() });
-      conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined };
+      conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined, songs: ex.songs.length ? ex.songs : undefined };
       scrollToStart(conversation[turn]);
       renderThread();
       const ns = await nsPromise;
@@ -2049,10 +2069,11 @@
   }
   // BibliCall can suggest reminders and goals at the end of an answer; they become buttons the person taps to confirm.
   function extractActs(text) {
-    const acts = []; let followup = '';
-    const out = String(text).replace(/\[\[(remind|goal|prayer|pay|followup)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
+    const acts = [], songs = []; let followup = '';
+    const out = String(text).replace(/\[\[(remind|goal|prayer|pay|followup|song)\|([^\]\n]{1,220})\]\]/gi, (all, k, rest) => {
       k = k.toLowerCase();
       if (k === 'followup') { followup = rest.trim().slice(0, 160); return ''; }
+      if (k === 'song') { const [t, a] = rest.split('|'); if (t && t.trim() && songs.length < 3) songs.push({ title: t.trim().slice(0, 100), artist: String(a || '').trim().slice(0, 80) }); return ''; }
       if (k === 'prayer') { const t = rest.trim(); if (t) acts.push({ k: 'prayer', text: t.slice(0, 200) }); return ''; }
       if (k === 'pay') { const [nm, amt, ...nt] = rest.split('|'); if (nm && nm.trim()) acts.push({ k: 'pay', name: nm.trim().slice(0, 40), amount: (String(amt || '').match(/[\d.]+/) || [''])[0], note: nt.join(' ').trim().slice(0, 80) }); return ''; }
       if (k === 'goal') { const t = rest.trim(); if (t) acts.push({ k: 'goal', text: t.slice(0, 140) }); return ''; }
@@ -2062,8 +2083,57 @@
       if (m) { const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); if (at > Date.now() - 60000) acts.push({ k: 'remind', at, text: m[6].trim().slice(0, 160) }); }
       return '';
     }).replace(/\n{3,}/g, '\n\n').trim();
-    return { text: out, acts: acts.slice(0, 3), followup };
+    return { text: out, acts: acts.slice(0, 3), followup, songs };
   }
+  // ---- Music from YouTube: songs mentioned in conversation play inside BibliCall, in YouTube's own player ----
+  function drawSongs(list) {
+    const box = el('div', 'songs');
+    list.forEach((sg) => {
+      const b = el('button', 'song-btn'); b.type = 'button';
+      b.innerHTML = '<span class="song-play" aria-hidden="true">\u25B6</span><span class="song-t"></span><span class="song-yt">YouTube</span>';
+      b.querySelector('.song-t').textContent = '\u201c' + sg.title + '\u201d' + (sg.artist ? ' \u00b7 ' + sg.artist : '');
+      b.setAttribute('aria-label', 'Play ' + sg.title + (sg.artist ? ' by ' + sg.artist : '') + ' from YouTube');
+      b.addEventListener('click', () => openSong(sg));
+      box.appendChild(b);
+    });
+    return box;
+  }
+  let songWasMusic = false;
+  function closeSong() {
+    const w = document.getElementById('ytWin'); if (!w || w.hidden) return;
+    w.hidden = true; w.querySelector('.yt-frame').innerHTML = '';
+    if (songWasMusic && window.BC_MUSIC) window.BC_MUSIC.start(); songWasMusic = false;
+  }
+  async function openSong(sg) {
+    const w = document.getElementById('ytWin'), frame = w.querySelector('.yt-frame'), cap = w.querySelector('.yt-cap');
+    frame.innerHTML = '<p class="yt-wait">Finding \u201c' + escapeHtml(sg.title) + '\u201d on YouTube\u2026</p>'; cap.innerHTML = '';
+    w.hidden = false;
+    // Quiet BibliCall's own music while a song plays.
+    try { const st = window.BC_MUSIC && window.BC_MUSIC.state(); songWasMusic = !!(st && st.on); if (songWasMusic) window.BC_MUSIC.stop(); } catch (e) {}
+    if (speaking) stopSpeaking();
+    let v = null;
+    try {
+      const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'song', title: sg.title, artist: sg.artist }) });
+      v = await r.json();
+    } catch (e) {}
+    if (w.hidden) return;
+    if (!v || !v.id) {
+      const qq = encodeURIComponent(sg.title + ' ' + (sg.artist || ''));
+      frame.innerHTML = '<p class="yt-wait">' + escapeHtml((v && v.error && v.error !== 'not_found') ? v.error : 'BibliCall couldn\u2019t find a version of this song that can play here.') + '</p>';
+      cap.innerHTML = '<a href="https://www.youtube.com/results?search_query=' + qq + '" target="_blank" rel="noopener">Search for it on YouTube</a>';
+      return;
+    }
+    stat('song_play');
+    frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(v.title) + ' (YouTube)" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+    cap.innerHTML = '<span><b>' + escapeHtml(v.title) + '</b>' + (v.author ? ' \u00b7 ' + escapeHtml(v.author) : '') + '</span><span class="yt-credit">Music shared from YouTube. BibliCall doesn\u2019t host it. <a href="https://www.youtube.com/watch?v=' + encodeURIComponent(v.id) + '" target="_blank" rel="noopener">Open in YouTube</a></span>';
+    const rec = (lsGet('bc_songs', []) || []).filter((x) => x.id !== v.id); rec.unshift({ id: v.id, title: v.title, author: v.author, q: sg }); lsSet('bc_songs', rec.slice(0, 20));
+  }
+  (function songWin() {
+    const w = document.getElementById('ytWin');
+    w.querySelector('.yt-x').addEventListener('click', closeSong);
+    w.addEventListener('click', (e) => { if (e.target === w) closeSong(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSong(); });
+  })();
   function drawActs(m) {
     const box = el('div', 'acts');
     m.acts.forEach((a) => {
@@ -2811,6 +2881,12 @@
   function drawApps() {
     const box = el('div', 'plan apps');
     box.appendChild(el('p', 'acct-fine', 'Connect the apps you already use, so your BibliCall to-do list and calendar show up where you work.'));
+    const yt = el('div', 'grp');
+    yt.appendChild(el('b', 'grp-title', '\u266B Music from YouTube'));
+    yt.appendChild(el('p', 'acct-fine', 'Just mention a song or artist in conversation, like \u201cWhat do you think of One Tree Hill by U2?\u201d Tap play and it opens right here, in YouTube\u2019s own player. BibliCall only shares it; the music is from YouTube.'));
+    const recent = lsGet('bc_songs', []) || [];
+    if (recent.length) { yt.appendChild(el('p', 'wk-sub', 'Recently played')); yt.appendChild(drawSongs(recent.slice(0, 8).map((x) => ({ title: (x.q && x.q.title) || x.title, artist: (x.q && x.q.artist) || x.author })))); }
+    box.appendChild(yt);
     const card = el('div', 'grp');
     card.appendChild(el('b', 'grp-title', 'Monday.com'));
     if (!MON || !MON.name) {
@@ -3012,6 +3088,7 @@
       if (m.files) o.files = m.files;
       if (m.imgs) o.imgs = m.imgs;
       if (m.ns && m.ns !== 'loading') o.ns = m.ns;
+      if (m.songs) o.songs = m.songs;
       return o;
     });
     const first = msgs.find((m) => m.role === 'user');
@@ -3990,6 +4067,7 @@
     }
     if (out.role === 'assistant') {
       out.q = prevUser || ''; out.hist = [];
+      const ex = extractActs(out.content); out.content = ex.text; if (ex.songs.length) out.songs = ex.songs;
       if (x.ns && Array.isArray(x.ns.verses)) {
         const verses = x.ns.verses.map((v) => { const hit = lookupVerse(v && v.ref); return hit ? { ...hit, why: String(v.why || '') } : null; }).filter(Boolean).slice(0, 3);
         if (verses.length) out.ns = { teach: String(x.ns.teach || ''), verses, reflect: String(x.ns.reflect || '') };

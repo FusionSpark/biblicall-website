@@ -80,6 +80,8 @@ When a question touches decisions, character, relationships, work, money, or har
 
 When someone is hurting (grief, fear, shame, abuse, thoughts of suicide or self-harm), lead with gentle care before anything else: never lecture, never use scripture as a rebuke, and remind them that God is near to the brokenhearted. If there is any sign of danger to themselves or others, ask gently whether they are safe, give the 988 Suicide & Crisis Lifeline (call or text 988 in the US) or local emergency help, and encourage them to reach a trusted person or pastor. Never suggest that faith requires someone to stay where they are being abused. BibliCall has an Invite Friends feature: the person can bring a friend or family member into this same conversation, live, by text link. If they say they feel alone, wish they had someone to talk to, or want to pray, study or talk this through with someone, you may gently mention once that they can invite a friend to join them here (the button appears just below your answer, and it is also in the menu). Never let this replace care, and in any crisis still give the crisis help above first.
 
+Music: when the person mentions, asks about, or wants to hear a specific song, hymn or piece of music (for example "what do you think of One Tree Hill by U2?"), or when you recommend specific songs, add at the very end of your reply one line per song, exactly like [[song|Song title|Artist]] (at most 3). The app turns each into a play button that opens the YouTube video right inside BibliCall, so you may say "Tap play below to listen". Never mention the brackets, and never write YouTube links yourself.
+
 BibliCall can bring friends into a conversation: if they want to invite or include someone (a friend, family member or co-worker), tell them warmly to tap "Invite a friend" just above the chat box (it is also at the top of the menu, "Invite to a live conversation"); the friend gets a link and joins this conversation live. Never say you can't invite people.
 
 When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
@@ -216,6 +218,42 @@ export default {
       }
     }
 
+    // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
+    if (body.mode === 'song') {
+      const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
+      if (!title) return json({ error: 'Which song?' }, 400);
+      const key = 'song:' + (title + '|' + artist).toLowerCase().replace(/[^a-z0-9|]+/g, ' ').trim();
+      const D = env.DIRECTORY.get(env.DIRECTORY.idFromName('main'));
+      const dcall = async (b) => (await D.fetch('https://do/', { method: 'POST', body: JSON.stringify(b) })).json();
+      const hit = await dcall({ op: 'map.get', key });
+      if (hit && hit.id) return json(hit);
+      if (!(await underQuota(env, visitor, 'song', 1, 40))) return json({ error: "You've found a lot of music today. More tomorrow." }, 429);
+      const oembed = async (id) => {
+        const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        return j ? { id, title: String(j.title || title).slice(0, 160), author: String(j.author_name || '').slice(0, 80) } : null;
+      };
+      try {
+        const pl = { model: MODEL, max_tokens: 300, system: 'You find official YouTube videos for songs. Search the web, then reply with only YouTube watch URLs (best first, up to 3), one per line, nothing else. Prefer the official music video or the official audio from the artist\'s channel or label.',
+          messages: [{ role: 'user', content: 'Song: ' + title + (artist ? '\nArtist: ' + artist : '') }], tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }] };
+        const r = await fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(pl) });
+        const data = await r.json();
+        if (!r.ok) throw new Error('search');
+        ctx && ctx.waitUntil(recordCost(env, visitor, { song: usageCost(data), n_song: 1 }));
+        const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+        const ids = [...new Set([...text.matchAll(/(?:youtube\.com\/(?:watch\?(?:[^\s]*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/g)].map((m) => m[1]))].slice(0, 3);
+        for (const id of ids) {
+          const ok = await oembed(id);
+          if (ok) { ok.q = title + (artist ? ' \u2014 ' + artist : ''); await dcall({ op: 'map.put', key, value: ok }); return json(ok); }
+        }
+        return json({ error: 'not_found' }, 404);
+      } catch (e) {
+        console.error('Song error', e && e.message);
+        return json({ error: 'not_found' }, 404);
+      }
+    }
+
     // Speech to text for the microphone button (Workers AI Whisper).
     if (body.mode === 'transcribe') {
       const audio = typeof body.audio === 'string' ? body.audio : '';
@@ -324,7 +362,7 @@ async function recordCost(env, who, parts) {
     const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('cost:' + who));
     const h = [...new Uint8Array(dig)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
     const inc = (key, n) => D.fetch('https://do/', { method: 'POST', body: JSON.stringify({ op: 'inc', key, n }) });
-    const money = (parts.ask || 0) + (parts.ns || 0) + (parts.voice || 0) + (parts.stt || 0);
+    const money = (parts.ask || 0) + (parts.ns || 0) + (parts.voice || 0) + (parts.stt || 0) + (parts.song || 0);
     const jobs = Object.entries(parts).filter(([, n]) => n > 0).map(([k, n]) => inc('cost:' + day + ':' + k, n));
     if (money > 0) jobs.push(inc('cu:' + day + ':' + h, money));
     await Promise.all(jobs);
