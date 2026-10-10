@@ -1044,7 +1044,7 @@
       <div class="attachrow" id="attachRow" hidden aria-live="polite"></div>
       <div class="composer">
         <button type="button" class="remchip" id="remChip" aria-pressed="false" title="Save your next message to BibliCall's memory">Remember</button>
-        <textarea id="q" rows="1" placeholder="Ask BibliCall anything…"></textarea>
+        <textarea id="q" rows="1" placeholder="Ask Bibli anything…"></textarea>
         <button class="attach" id="attachBtn" type="button" aria-label="Upload a file or photo" title="Upload a file or photo (PDF, Word, text, image)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
         </button>
@@ -3188,8 +3188,8 @@
   function setPlaceholder() {
     const inGroup = typeof room !== 'undefined' && room && room.people && room.people.length > 1;
     q.placeholder = remOn ? (narrow.matches ? 'Type it here\u2026' : 'What should BibliCall remember?')
-      : inGroup ? (narrow.matches ? 'Say \u201cBibliCall\u201d to ask\u2026' : 'Message the call\u2026 say \u201cBibliCall\u201d to ask')
-      : (UI_TEXT[langKey] ? UI_TEXT[langKey][1] : (narrow.matches ? 'Ask anything\u2026' : 'Ask BibliCall anything\u2026'));
+      : inGroup ? (narrow.matches ? 'Say \u201cBibli\u201d to ask\u2026' : 'Message the call\u2026 say \u201cBibli\u201d to ask')
+      : (UI_TEXT[langKey] ? UI_TEXT[langKey][1] : (narrow.matches ? 'Ask Bibli anything\u2026' : 'Ask Bibli anything\u2026'));
   }
   function setRem(on) {
     remOn = on;
@@ -3921,7 +3921,7 @@
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
   let useRecorder = canRecord && (isIOS || !SpeechRec);
   let recog = null, listening = false, baseText = '', heard = false;
-  const IDLE_PH = () => { try { setPlaceholder(); } catch (e) { q.placeholder = 'Ask BibliCall anything…'; } };
+  const IDLE_PH = () => { try { setPlaceholder(); } catch (e) { q.placeholder = 'Ask Bibli anything…'; } };
   function micOn(text) { listening = true; micBtn.classList.add('listening'); micBtn.setAttribute('aria-label', 'Stop listening'); q.placeholder = text; }
   function micOff() { listening = false; micBtn.classList.remove('listening'); micBtn.setAttribute('aria-label', 'Speak your question'); IDLE_PH(); }
   function addSpoken(text) {
@@ -4124,7 +4124,7 @@
   }
   function inviteText(link) {
     const who = myName();
-    return (who ? who + ' invited you to' : 'Join me in') + " a live call on BibliCall, an AI assistant guided by biblical wisdom. Tap to join the conversation: " + link;
+    return (who ? who + ' invited you to' : 'Join me in') + " a live call on BibliCall, an AI assistant guided by biblical wisdom. Just say \u201cBibli\u201d when you want to ask it something. Tap to join the conversation: " + link;
   }
   function normalizePhone(v) {
     const plus = v.trim().startsWith('+');
