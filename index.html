@@ -3470,6 +3470,11 @@
       }
       box.appendChild(el('p', 'acct-fine', 'While BibliCall speaks, the music softens and keeps playing underneath; it pauses while the microphone listens. Music by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0; public-domain classical recordings from Musopen; and the U.S. Air Force Band (public domain).'));
     }
+    sec('Welcome bell');
+    box.appendChild(el('p', 'acct-fine', 'A soft two-note handbell rings when a friend joins your conversation.'));
+    const bellOn = lsGet('bc_chime', true);
+    chips([['on', 'On'], ['off', 'Off']], bellOn ? 'on' : 'off', (v) => { lsSet('bc_chime', v === 'on'); if (v === 'on') playChime(true); });
+    const hear = el('button', 'acct-link', '\u{1F514} Hear it'); hear.type = 'button'; hear.addEventListener('click', () => playChime(true)); box.appendChild(hear);
     box.appendChild(el('p', 'acct-fine', 'Your choices are saved on this device.'));
     return box;
   }
@@ -4173,6 +4178,36 @@
     });
   }
 
+  // ---- Welcome bell: two soft handbell strikes rising a fifth (G to D), like a small chapel bell, made live in the browser ----
+  let chimeCtx = null;
+  function chimeAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    if (!chimeCtx) chimeCtx = new AC();
+    if (chimeCtx.state === 'suspended') chimeCtx.resume().catch(() => {});
+    return chimeCtx;
+  }
+  // Phones only allow sound after a first touch: get the bell ready on the first tap.
+  document.addEventListener('pointerdown', () => { try { chimeAudio(); } catch (e) {} }, { once: true, passive: true });
+  function bellStrike(ctx, t0, f, vol) {
+    const out = ctx.createGain(); out.gain.value = vol; out.connect(ctx.destination);
+    // Bell partials: hum, strike, minor-third tierce, fifth, octave nominal, and a faint shimmer above.
+    [[0.5, 0.35, 3.4], [1, 1, 2.8], [1.2, 0.42, 1.9], [1.5, 0.28, 1.6], [2, 0.5, 1.5], [2.51, 0.16, 0.9], [3.01, 0.1, 0.7]].forEach(([r, a, d]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f * r;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(a, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + d + 0.05);
+    });
+  }
+  function playChime(force) {
+    if (!force && !lsGet('bc_chime', true)) return;
+    try {
+      const ctx = chimeAudio(); if (!ctx) return;
+      const t = ctx.currentTime + 0.05;
+      bellStrike(ctx, t, 783.99, 0.085);        // G5
+      bellStrike(ctx, t + 0.34, 1174.66, 0.065); // D6
+    } catch (e) {}
+  }
+
   // ---- Live call rooms (biblicall-rooms worker) ----
   var room = null;
   const roomBar = document.getElementById('roomBar');
@@ -4267,7 +4302,18 @@
       } else if (d.type === 'rename') {
         conversation.forEach((m) => { if (m.role === 'user' && m.from === d.from) m.name = d.name; }); renderThread();
       } else if (d.type === 'presence') {
-        room.people = d.people || []; drawRoomBar(); setPlaceholder();
+        const people = d.people || [];
+        // A friend just arrived: ring the welcome bell (not for people already here when I joined).
+        if (room.known) {
+          const fresh = people.filter((p) => p.id !== room.you && !room.known.has(p.id));
+          if (fresh.length) {
+            playChime();
+            const names = fresh.map((p) => p.name).filter((n) => n && n !== 'Guest');
+            toast((names.length ? names.join(' and ') : 'A friend') + ' joined the conversation');
+          }
+        }
+        room.known = new Set(people.map((p) => p.id));
+        room.people = people; drawRoomBar(); setPlaceholder();
       } else if (d.type === 'thinking') {
         room.thinking = !!d.on; renderThread();
       } else if (d.type === 'error') {
