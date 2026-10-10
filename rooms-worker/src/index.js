@@ -243,7 +243,9 @@ export class Room extends DurableObject {
       const question = lastUser.content;
 
       // Solo: answer and North Star in parallel. Group: only look for a North Star once BibliCall decides to speak.
-      const nsEarly = !group && !isAck(question) ? this.northStar(question, ctx) : null;
+      // UNIVERSAL RULE: Scripture only when someone asks for it directly.
+      const asksFaith = /\b(god|jesus|christ|bible|biblical|scripture|verse|pray|prayer|faith|lord|psalms?|gospel)\b/i.test(question);
+      const nsEarly = asksFaith && !isAck(question) ? this.northStar(question, ctx) : null;
       // Photos from the latest message that had any (within the recent turns) go to the AI with the conversation.
       const attachments = [];
       const withPhotos = [...recent].reverse().slice(0, 6).find((m) => m.role === 'user' && m.images && m.images.length);
@@ -262,7 +264,7 @@ export class Room extends DurableObject {
       catch (e) { answer = mustAnswer ? "BibliCall couldn't answer that just now. Please try again in a moment." : PASS; }
       if (!answer || answer.includes(PASS)) return; // stays quiet, keeps listening
       if (!showed) { this.broadcast({ type: 'thinking', on: true }); showed = true; }
-      const ns = nsEarly ? await nsEarly : (group && !isAck(question) ? await this.northStar(question, ctx) : null);
+      const ns = nsEarly ? await nsEarly : null;
       await this.add({ role: 'assistant', content: answer, from: 'ai', name: 'BibliCall', ns: ns || undefined, offer: !ns && !isAck(question) });
     } finally {
       this.busy = false;

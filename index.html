@@ -1318,7 +1318,7 @@
   // Faith in my answers: 1 Everyday Wisdom, 2 Gentle Guidance (default), 3 Faith Forward. Faith is never zero, only quieter;
   // the person chooses, and BibliCall may invite (once in a while) to move up, never on its own.
   let faithLvl = (() => { const v = +lsGet('bc_faith', 2); return [1, 2, 3].includes(v) ? v : 2; })();
-  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Wise, values-shaped answers. Scripture only when you tap the \u2726 North Star.'], [2, 'Gentle Guidance', 'A North Star for meaningful moments: decisions, relationships, work struggles, hard times.'], [3, 'Faith Forward', 'A North Star with every answer, plus prayer and Scripture woven in.']];
+  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Plain, wise answers. Scripture only when you ask for it or tap North Star.'], [2, 'Gentle Guidance', 'Plain answers, with a small \u2726 now and then for meaningful moments. Tap it when you want a verse.'], [3, 'Faith Forward', 'A small \u2726 after every answer, ready whenever you want Scripture. Prayer when you ask.']];
   function setFaith(v) { if (![1, 2, 3].includes(v)) return; faithLvl = v; lsSet('bc_faith', v); stat('faith_set_' + v); }
   window.BC_FAITH = { get: () => faithLvl, set: setFaith };
   const FAITH_WORDS = /\b(god|jesus|christ|bible|biblical|scripture|verse|pray|praying|prayer|church|faith|holy spirit|lord|psalms?|gospel|sermon|pastor|salvation|heaven)\b/i;
@@ -1943,7 +1943,8 @@
     const turn = conversation.length - 1;
     const history = conversation.slice(0, -2).map(({ role, content }) => ({ role, content }));
     const ack = isAck(question);
-    const nsPromise = ack || (faithLvl === 1 && !faithAsk(question)) ? Promise.resolve(null) : fetchNorthStar(question, history, false);
+    // UNIVERSAL RULE: no Scripture or North Star unless the person asks for it directly (or taps \u2726 / North Star).
+    const nsPromise = !ack && faithAsk(question) ? fetchNorthStar(question, history, true) : Promise.resolve(null);
 
     try {
       const res = await fetch(WORKER_URL, {
@@ -1962,7 +1963,7 @@
       if (ns) { conversation[turn].ns = ns; stat('northstar'); }
       // The person sets the pace: a small \u2726 appears only now and then (or when a moment seems meaningful), never pushed.
       // The North Star button above the chat box is always there when they want it.
-      else if (!ack && (hardMoment(question) || faithAsk(question) || Math.random() < 0.35)) conversation[turn].nsOffer = true;
+      else if (!ack && (faithLvl === 3 || (faithLvl === 2 && (hardMoment(question) || Math.random() < 0.3)))) conversation[turn].nsOffer = true;
       if (!ack && (faithLvl >= 2 || faithAsk(question)) && hardMoment(question) && !/\bpray\b.*\b(with me|for me|about)|^\s*please pray/i.test(question)) conversation[turn].pray = 1;
       // Invite only after the person has opened the North Star themselves 3 times, never in their first week, and at most once every 3 weeks.
       if (!lsGet('bc_first_day', 0)) lsSet('bc_first_day', Date.now());
