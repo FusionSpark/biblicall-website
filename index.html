@@ -1957,6 +1957,8 @@
       const ex = extractActs(data.answer);
       if (ex.followup) lsSet('bc_followup', { q: ex.followup, t: Date.now() });
       conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined, songs: ex.songs.length ? ex.songs : undefined };
+      if ((autoPlayNext || /^\s*(?:hey\s+)?(?:bibli(?:call)?[,!.]?\s+)?(?:please\s+)?play\b/i.test(question)) && ex.songs.length) { const mm = conversation[turn]; setTimeout(() => playInline(mm, 0, mm.songs[0]), 300); }
+      autoPlayNext = false;
       scrollToStart(conversation[turn]);
       renderThread();
       const ns = await nsPromise;
@@ -2151,7 +2153,8 @@
   // ---- Music from YouTube: songs mentioned in conversation play inside BibliCall, in YouTube's own player ----
   // A song plays right in the conversation, under the answer that mentioned it. The YouTube player lives in one
   // persistent frame laid over a placeholder in the thread, so new messages never interrupt the music.
-  let nowSong = null; // { m, i, sg, status: 'loading' | 'ok' | 'none', v }
+  let nowSong = null;
+  var autoPlayNext = false; // { m, i, sg, status: 'loading' | 'ok' | 'none', v }
   function drawSongs(list, m) {
     const box = el('div', 'songs');
     list.forEach((sg, i) => {
@@ -3039,6 +3042,14 @@
   function drawApps() {
     const box = el('div', 'plan apps');
     box.appendChild(el('p', 'acct-fine', 'Connect the apps you already use, so your BibliCall to-do list and calendar show up where you work.'));
+    const siri = el('div', 'grp');
+    siri.appendChild(el('b', 'grp-title', '\u{1F399}\uFE0F \u201cHey Siri, Bibli\u201d'));
+    siri.appendChild(el('p', 'acct-fine', 'Hold the side button (or say \u201cHey Siri, Bibli\u201d), then say anything, like \u201cplay Satisfaction by the Rolling Stones.\u201d BibliCall opens and answers. Set it up once in the Shortcuts app:'));
+    const so = el('ol', 'apps-steps');
+    ['Open the Shortcuts app and tap + (new shortcut).', 'Add the action \u201cDictate Text.\u201d', 'Add the action \u201cURL\u201d and type: https://biblicall.com/?ask= then tap \u201cDictated Text\u201d from the suggestions so it comes right after the = sign.', 'Add the action \u201cOpen URLs.\u201d', 'Name the shortcut \u201cBibli\u201d and tap Done.'].forEach((t) => so.appendChild(el('li', null, t)));
+    siri.appendChild(so);
+    siri.appendChild(el('p', 'acct-fine', 'iPhone 15 Pro or newer: you can also set the Action button to run \u201cBibli.\u201d'));
+    box.appendChild(siri);
     const yt = el('div', 'grp');
     yt.appendChild(el('b', 'grp-title', '\u266B Music from YouTube'));
     yt.appendChild(el('p', 'acct-fine', 'Just mention a song or artist in conversation, like \u201cWhat do you think of One Tree Hill by U2?\u201d Tap play and it opens right here, in YouTube\u2019s own player. BibliCall only shares it; the music is from YouTube.'));
@@ -4468,9 +4479,23 @@
     drawRoomBar(); renderThread();
   }
   // Opening BibliCall again (even after the phone closed it): return to the conversation or live call you were in.
+  // "Hey Siri, Bibli": an iPhone Shortcut opens biblicall.com/?ask=<what you said>. Bibli answers it in a fresh conversation,
+  // and for "play ..." requests the song opens right in the conversation.
+  (function askFromSiri() {
+    const sp = new URLSearchParams(location.search), said = (sp.get('ask') || '').trim().slice(0, 1500);
+    if (!said) return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    stat('siri_ask');
+    setTimeout(() => {
+      try { newConvo(); } catch (e) {}
+      if (/^\s*(?:hey\s+|ok\s+)?(?:bibli(?:call)?[,!.]?\s+)?(?:please\s+)?play\b/i.test(said)) autoPlayNext = true;
+      q.value = said; q.dispatchEvent(new Event('input'));
+      sendBtn.click();
+    }, 700);
+  })();
   (function resumeSession() {
     const sp = new URLSearchParams(location.search);
-    if (['room', 'verse', 'week', 'open', 'plan', 'reflect', 'join', 'g'].some((k) => sp.has(k))) return;
+    if (['room', 'verse', 'week', 'open', 'plan', 'reflect', 'join', 'g', 'ask'].some((k) => sp.has(k))) return;
     let s = null; try { s = JSON.parse(localStorage.getItem('bc_session') || 'null'); } catch (e) {}
     if (!s || !s.t || Date.now() - s.t > 12 * 3600000) return;
     try { if (sessionStorage.getItem('bc_reopen')) return; } catch (e) {}
