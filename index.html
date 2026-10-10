@@ -3216,6 +3216,7 @@
     const first = msgs.find((m) => m.role === 'user');
     if (!first) return;
     if (!convId) convId = 'c' + Date.now().toString(36);
+    saveSession();
     const prev = convos.find((c) => c.id === convId);
     const kept = !!(prev && prev.kept);
     const rec = { id: convId, title: first.content.replace(/\s+/g, ' ').slice(0, 70), t: Date.now(), msgs: msgs.slice(kept ? -200 : -60), room: room ? room.id : (prev && prev.room) || null, kept: kept || undefined };
@@ -3271,7 +3272,18 @@
     setTimeout(check, 1500);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   })();
+  // Remember where you were (this conversation, or the live call with friends), so stepping away never loses it.
+  function saveSession() {
+    try { localStorage.setItem('bc_session', JSON.stringify(room ? { room: room.id, conv: convId, t: Date.now() } : { conv: convId, t: Date.now() })); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (convId || room) saveSession(); try { localStorage.setItem('bc_draft', q.value || ''); } catch (e) {} return; }
+    // Back in BibliCall: reconnect to the live call right away instead of waiting.
+    if (room && !room.left && (!room.ws || room.ws.readyState > 1)) { room.tries = 0; connectRoom(); }
+  });
+  window.addEventListener('pagehide', () => { if (convId || room) saveSession(); try { localStorage.setItem('bc_draft', q.value || ''); } catch (e) {} });
   function newConvo() {
+    try { localStorage.removeItem('bc_session'); localStorage.removeItem('bc_draft'); } catch (e) {}
     closeDrawer();
     if (room) leaveRoom();
     convId = null;
@@ -4312,6 +4324,7 @@
     };
   }
   function openRoom(id, opts) {
+    try { localStorage.setItem('bc_session', JSON.stringify({ room: id, conv: convId, t: Date.now() })); } catch (e) {}
     room = { id, people: [], live: false, thinking: false, seed: opts && opts.seed, askName: opts && opts.askName, onReady: opts && opts.onReady };
     const u = new URL(location.href); u.searchParams.set('room', id); u.hash = '';
     history.replaceState(null, '', u.pathname + u.search);
@@ -4334,6 +4347,7 @@
   function leaveRoom() {
     if (!room) return;
     room.left = true;
+    try { localStorage.setItem('bc_session', JSON.stringify({ conv: convId, t: Date.now() })); } catch (e) {}
     try { room.ws && room.ws.close(1000); } catch (e) {}
     room = null;
     try { setPlaceholder(); } catch (e) {}
@@ -4341,6 +4355,23 @@
     history.replaceState(null, '', u.pathname + u.search);
     drawRoomBar(); renderThread();
   }
+  // Opening BibliCall again (even after the phone closed it): return to the conversation or live call you were in.
+  (function resumeSession() {
+    const sp = new URLSearchParams(location.search);
+    if (['room', 'verse', 'week', 'open', 'plan', 'reflect', 'join', 'g'].some((k) => sp.has(k))) return;
+    let s = null; try { s = JSON.parse(localStorage.getItem('bc_session') || 'null'); } catch (e) {}
+    if (!s || !s.t || Date.now() - s.t > 12 * 3600000) return;
+    try { if (sessionStorage.getItem('bc_reopen')) return; } catch (e) {}
+    setTimeout(() => {
+      if (s.room && ROOMS_WS && /^[A-Za-z0-9_-]{12,40}$/.test(s.room)) {
+        document.body.classList.add('chatting'); threadBox.classList.add('show');
+        openRoom(s.room, { askName: !myName() });
+      } else if (s.conv && convos.some((c) => c.id === s.conv)) openConvo(s.conv);
+      else return;
+      let d = ''; try { d = localStorage.getItem('bc_draft') || ''; } catch (e) {}
+      if (d && !q.value) { q.value = d; q.dispatchEvent(new Event('input')); }
+    }, 250);
+  })();
   (function joinFromLink() {
     const id = new URLSearchParams(location.search).get('room');
     if (!ROOMS_WS || !id || !/^[A-Za-z0-9_-]{12,40}$/.test(id)) return;
