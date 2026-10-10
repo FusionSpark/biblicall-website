@@ -703,6 +703,14 @@
   .yt-inline{position:absolute;z-index:3;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   .yt-inline[hidden]{display:none}
   .yt-inline iframe{width:100%;height:100%;border:0;display:block}
+
+  /* Invitation status in a live call: sealed envelope = invited and on the way; open envelope = here. */
+  .invrow{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:8px}
+  .invchip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 7px;border-radius:999px;font-size:15px;font-weight:600;border:1.5px solid currentColor}
+  .invchip .env{width:20px;height:20px;flex:none}
+  .invchip .invs{font-weight:500;font-size:13px;opacity:.85}
+  .invchip.waiting{color:#b8433a;background:rgba(184,67,58,.08)}
+  .invchip.here{color:#2f7d4a;background:rgba(47,125,74,.09)}
 </style>
 </head>
 <body>
@@ -4157,6 +4165,7 @@
       window.location.href = 'sms:' + inv.phone + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
     }
     invited++;
+    roomSend({ type: 'invited', name: inv.name || '', last4: (inv.phone || '').slice(-4) });
     setTimeout(() => toast('\u2713 Invite for ' + who + ' is ready. Tap Send in ' + (inv.email && !inv.phone ? 'Mail' : 'Messages') + '.'), 400);
   }
   function normalizePhone(v) {
@@ -4208,6 +4217,7 @@
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     window.location.href = 'sms:' + phone + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
     invited++;
+    roomSend({ type: 'invited', name: '', last4: phone.slice(-4) });
     const li = document.createElement('li');
     li.textContent = '✓ Invite ready for ' + prettyPhone(phone);
     callList.prepend(li);
@@ -4283,6 +4293,8 @@
     }
     return out;
   }
+  const ENV_SEALED = '<svg class="env" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="2" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.8"/><path d="M3 6.5l9 7 9-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13.2" r="1.7" fill="currentColor"/></svg>';
+  const ENV_OPEN = '<svg class="env" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 10.5L12 3.5l9.5 7" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="2.5" y="10.5" width="19" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 11.5l9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 7.6l2.2 2.1 4.4-4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function drawRoomBar() {
     document.body.classList.toggle('inroom', !!room);
     if (!room) { roomBar.classList.remove('show'); roomBar.innerHTML = ''; return; }
@@ -4294,6 +4306,20 @@
       (room.askName ? '<form class="namef"><input type="text" maxlength="40" placeholder="Your first name" aria-label="Your first name" autocomplete="given-name"><button type="submit">Save name</button></form>' : '') +
       (room.err ? '<p class="err"></p>' : '');
     roomBar.querySelector('.people').textContent = who;
+    // Invitations: a sealed envelope while the friend is on the way, an open envelope once they're here.
+    const inv = room.invites || [];
+    if (inv.length) {
+      const row = el('div', 'invrow');
+      inv.forEach((x) => {
+        const here = !!x.joined, label = x.name || ('Friend \u2026' + x.last4);
+        const chip = el('span', 'invchip ' + (here ? 'here' : 'waiting'));
+        chip.innerHTML = (here ? ENV_OPEN : ENV_SEALED) + '<span class="invn"></span><span class="invs">' + (here ? 'here' : 'invited') + '</span>';
+        chip.querySelector('.invn').textContent = label;
+        chip.title = here ? label + ' accepted your invitation and is in the conversation' : label + ' was invited and hasn\u2019t joined yet';
+        row.appendChild(chip);
+      });
+      roomBar.appendChild(row);
+    }
     if (room.err) roomBar.querySelector('.err').textContent = room.err;
     roomBar.querySelector('.leave').addEventListener('click', leaveRoom);
     const nf = roomBar.querySelector('.namef');
@@ -4309,7 +4335,7 @@
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.type === 'welcome') {
         await loadBible();
-        room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking;
+        room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking; room.invites = d.invites || [];
         if (room.seed && (!d.msgs || !d.msgs.length) && room.seed.length) {
           conversation = []; // the seeded messages stream back from the room
           roomSend({ type: 'seed', msgs: room.seed });
@@ -4332,6 +4358,8 @@
         conversation.push(m);
         document.body.classList.add('chatting'); threadBox.classList.add('show');
         renderThread();
+      } else if (d.type === 'invites') {
+        room.invites = d.list || []; drawRoomBar();
       } else if (d.type === 'rename') {
         conversation.forEach((m) => { if (m.role === 'user' && m.from === d.from) m.name = d.name; }); renderThread();
       } else if (d.type === 'presence') {

@@ -86,7 +86,7 @@ export class Room extends DurableObject {
     this.ctx.acceptWebSocket(server);
     const me = { id: crypto.randomUUID().slice(0, 8), name: 'Guest', last: 0 };
     server.serializeAttachment(me);
-    server.send(JSON.stringify({ type: 'welcome', you: me.id, msgs: await this.messages(), thinking: this.busy }));
+    server.send(JSON.stringify({ type: 'welcome', you: me.id, msgs: await this.messages(), thinking: this.busy, invites: (await this.ctx.storage.get('invites')) || [] }));
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -137,14 +137,37 @@ export class Room extends DurableObject {
       me.name = clean(d.name, 40) || 'Guest';
       // A stable id per device, so "you" stays the same after a refresh or reconnect.
       if (typeof d.uid === 'string' && /^[A-Za-z0-9_-]{8,32}$/.test(d.uid)) me.id = d.uid;
+      const wasNamed = me.named;
+      if (me.name !== 'Guest') me.named = true;
       ws.serializeAttachment(me);
       this.presence();
+      // Someone who was invited just arrived: their envelope opens for everyone.
+      if (me.name !== 'Guest' && !wasNamed) {
+        const list = (await this.ctx.storage.get('invites')) || [];
+        const key = me.name.toLowerCase().split(/\s+/)[0];
+        let hit = list.find((x) => !x.joined && x.name && x.name.toLowerCase() === key);
+        if (!hit && !list.some((x) => x.joined && x.uid === me.id)) hit = list.find((x) => !x.joined && !x.name);
+        if (hit && hit.by !== me.id) { hit.joined = Date.now(); hit.uid = me.id; if (!hit.name) hit.name = me.name; await this.ctx.storage.put('invites', list); this.broadcast({ type: 'invites', list }); }
+      }
       // Once someone gives their first name, their earlier messages show it too (instead of "Guest").
       if (me.name !== 'Guest') {
         const map = await this.ctx.storage.list({ prefix: 'm:' }), puts = {};
         for (const [k, m] of map) if (m && m.role === 'user' && m.from === me.id && m.name !== me.name) { m.name = me.name; puts[k] = m; }
         if (Object.keys(puts).length) { await this.ctx.storage.put(puts); this.broadcast({ type: 'rename', from: me.id, name: me.name }); }
       }
+      return;
+    }
+
+    if (d.type === 'invited') {
+      // Remember who was invited (first name, or the last 4 digits of the number), so everyone sees who's on the way.
+      const list = (await this.ctx.storage.get('invites')) || [];
+      const name = clean(d.name, 30), last4 = String(d.last4 || '').replace(/\D/g, '').slice(-4);
+      if (!name && !last4) return;
+      const same = list.find((x) => !x.joined && ((name && x.name === name) || (!name && x.last4 === last4)));
+      if (same) same.t = Date.now(); else list.push({ id: crypto.randomUUID().slice(0, 8), name, last4, by: me.id, byName: me.name, t: Date.now(), joined: 0 });
+      const keep = list.slice(-12);
+      await this.ctx.storage.put('invites', keep);
+      this.broadcast({ type: 'invites', list: keep });
       return;
     }
 
