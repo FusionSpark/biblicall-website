@@ -4399,6 +4399,9 @@
     ws.onmessage = async (ev) => {
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.type === 'welcome') {
+        // The call is open: hand back the link right away (the Bible text for verses can finish loading after).
+        const ready = room.onReady; room.onReady = null;
+        if (ready) ready(room.id);
         await loadBible();
         room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking; room.invites = d.invites || [];
         if (room.seed && (!d.msgs || !d.msgs.length) && room.seed.length) {
@@ -4481,7 +4484,7 @@
     });
     const playing = nowSong && nowSong.status === 'ok' ? { title: nowSong.v.title, author: nowSong.v.author } : null;
     return new Promise((res) => {
-      const t = setTimeout(() => { leaveRoom(); res(null); }, 6000);
+      const t = setTimeout(() => { leaveRoom(); res(null); }, 12000);
       openRoom(newRoomId(), { seed, askName: !myName(), onReady: (id) => { clearTimeout(t); if (playing) roomSend({ type: 'playing', title: playing.title, author: playing.author }); res(id); } });
     });
   }
