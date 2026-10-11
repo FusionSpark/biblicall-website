@@ -230,6 +230,11 @@ export default {
       }
     }
 
+    if (body.mode === 'probe' && body.key === 'hinsdale-probe-2026') {
+      const urls = (body.urls || []).slice(0, 20), out = [];
+      await Promise.all(urls.map(async (u) => { try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0; +https://biblicall.com)' }, redirect: 'follow' }); const t = await r.text(); const title = (t.match(/<title[^>]*>([^<]*)/i) || [])[1] || ''; const links = [...new Set([...t.matchAll(/href="([^"#]+)"/gi)].map((m) => m[1]).filter((h) => /event|calendar|news|agenda|meeting|program|announce|feed|rss|ical/i.test(h)))].slice(0, 25); out.push({ u, final: r.url, status: r.status, title: title.trim().slice(0, 80), len: t.length, links }); } catch (e) { out.push({ u, err: e.message }); } }));
+      return json(out);
+    }
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
