@@ -3312,7 +3312,7 @@
   // Keep everyone on the newest BibliCall: if a newer version is live, reload quietly at a calm moment and reopen the same conversation.
   (function stayFresh() {
     const loaded = new Date(document.lastModified).getTime();
-    const calm = () => !q.value.trim() && !room && !(typeof talkMode !== 'undefined' && talkMode) && !speaking && document.getElementById('ytWin').hidden && !pendingFiles.length;
+    const calm = () => !q.value.trim() && !room && !sendBtn.disabled && !conversation.some((m) => m.loading) && !(typeof nowSong !== 'undefined' && nowSong) && !(typeof talkMode !== 'undefined' && talkMode) && !speaking && document.getElementById('ytWin').hidden && !pendingFiles.length;
     async function check() {
       try {
         const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
