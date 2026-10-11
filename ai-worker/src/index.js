@@ -233,7 +233,6 @@ export default {
       }
     }
 
-    if (body.mode === 'localtest' && body.key === 'hinsdale-probe-2026') return json({ out: await localGuide({ town: 'hinsdale', topic: String(body.topic || 'all'), query: String(body.query || '') }) });
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
