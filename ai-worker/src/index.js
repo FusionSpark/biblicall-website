@@ -108,6 +108,10 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
   if (ambience) {
     s += `\n\nThe BibliCall app reports what this person sees and hears on screen right now (from the app itself, not typed by them): ${ambience}\nIf they ask about the music, the song, the artist, the background picture or where it is, tell them from this, and feel free to share a little interesting background (the composer or piece, the place, or the space object), searching the web if it helps. Never claim you can't see or hear it: the app has told you. Don't bring it up unless they ask.`;
   }
+  {
+    const now = new Date(), f = (tz) => now.toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    s += `\n\nThe exact time right now: ${f('America/New_York')} Eastern = ${f('America/Chicago')} Central = ${f('America/Los_Angeles')} Pacific (${now.toISOString()} UTC). Sports and TV start times are usually listed in Eastern time; convert carefully before saying whether something has started, and for any game or score use the live_scores tool instead of guessing from articles.`;
+  }
   if (plan && !group) {
     s += `\n\nThis person's local date and time right now: ${plan.local}.`;
     if (plan.prayers) s += `\nOn their prayer list: ${plan.prayers}`;
@@ -325,7 +329,7 @@ export default {
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
           model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0), messages,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL]
         };
 
     try {
@@ -346,13 +350,20 @@ export default {
         return json({ error: 'Upstream error' }, 502);
       }
       // A long web search can pause mid-answer; continue it (up to twice) so the person never gets an empty reply.
-      let extraCost = 0;
-      for (let k = 0; k < 2 && data.stop_reason === 'pause_turn'; k++) {
+      // Keep going while the answer pauses mid web search, or asks BibliCall's live-scores tool for real-time results.
+      let extraCost = 0, convo = [...payload.messages];
+      for (let k = 0; k < 4 && (data.stop_reason === 'pause_turn' || data.stop_reason === 'tool_use'); k++) {
         extraCost += usageCost(data);
-        const cont = await call({ ...payload, messages: [...payload.messages, { role: 'assistant', content: data.content }] });
+        convo = [...convo, { role: 'assistant', content: data.content }];
+        if (data.stop_reason === 'tool_use') {
+          const results = [];
+          for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: b.name === 'live_scores' ? await liveScores(b.input || {}) : 'Unknown tool' });
+          convo.push({ role: 'user', content: results });
+        }
+        const cont = await call({ ...payload, messages: convo });
         const d2 = await cont.json();
         if (!cont.ok) break;
-        d2.content = [...(data.content || []), ...(d2.content || [])];
+        if (data.stop_reason === 'pause_turn') d2.content = [...(data.content || []), ...(d2.content || [])];
         data = d2;
       }
       // What this answer cost BibliCall, in millionths of a dollar (no content is recorded).
@@ -367,6 +378,38 @@ export default {
   }
 };
 
+
+// ---- Live scores from ESPN's public scoreboard: real-time game status, so Bibli is never behind on a game in progress ----
+const LEAGUES = { mlb: 'baseball/mlb', nfl: 'football/nfl', ncaaf: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', ncaab: 'basketball/mens-college-basketball', ncaaw: 'basketball/womens-college-basketball', nhl: 'hockey/nhl', mls: 'soccer/usa.1', epl: 'soccer/eng.1', laliga: 'soccer/esp.1', ucl: 'soccer/uefa.champions', pga: 'golf/pga' };
+const LIVE_SCORES_TOOL = {
+  name: 'live_scores',
+  description: 'Real-time scores and game status (inning, quarter, period, time left, final), start times, series and TV for today (or a given date) from ESPN. ALWAYS use this for any question about a score, a game in progress, tonight\'s or today\'s game, or a result from the last few days; it is live, unlike web search results. Use web search only for other background.',
+  input_schema: { type: 'object', properties: { league: { type: 'string', enum: Object.keys(LEAGUES), description: 'mlb, nfl, ncaaf (college football), nba, wnba, ncaab (men\'s college basketball), ncaaw, nhl, mls, epl (Premier League), laliga, ucl (Champions League), pga' }, team: { type: 'string', description: 'Optional team name to filter, e.g. "White Sox"' }, date: { type: 'string', description: 'Optional YYYYMMDD; omit for today' } }, required: ['league'] }
+};
+async function liveScores(input) {
+  try {
+    const lg = LEAGUES[String(input.league || '').toLowerCase()];
+    if (!lg) return 'Unknown league.';
+    let url = 'https://site.api.espn.com/apis/site/v2/sports/' + lg + '/scoreboard';
+    if (/^\d{8}$/.test(String(input.date || ''))) url += '?dates=' + input.date;
+    const r = await fetch(url, { headers: { 'User-Agent': 'BibliCall/1.0' }, cf: { cacheTtl: 15 } });
+    if (!r.ok) return 'Live scores are unavailable right now.';
+    const j = await r.json();
+    const team = String(input.team || '').toLowerCase().trim();
+    const all = j.events || [];
+    const pick = team ? all.filter((e) => ((e.competitions && e.competitions[0] && e.competitions[0].competitors) || []).some((c) => [c.team && c.team.displayName, c.team && c.team.shortDisplayName, c.team && c.team.name, c.team && c.team.abbreviation].join(' ').toLowerCase().includes(team))) : all;
+    if (!pick.length) return team ? 'No ' + input.league + ' game found for "' + input.team + '" on that date. Games that day: ' + all.map((e) => e.name).slice(0, 12).join('; ') : 'No games found.';
+    return JSON.stringify({ checked_at_utc: new Date().toISOString(), games: pick.slice(0, 8).map((e) => {
+      const c = (e.competitions && e.competitions[0]) || {};
+      const sit = c.situation || {};
+      return { game: e.name, status: e.status && e.status.type && e.status.type.detail, state: e.status && e.status.type && e.status.type.state, start_utc: e.date,
+        teams: (c.competitors || []).map((t) => ({ team: t.team && t.team.displayName, home_away: t.homeAway, score: t.score, hits: t.hits, record: t.records && t.records[0] && t.records[0].summary })),
+        series: c.series && c.series.summary, note: (c.notes || []).map((n) => n.headline).join('; ') || undefined,
+        situation: c.situation ? { outs: sit.outs, balls: sit.balls, strikes: sit.strikes, onFirst: sit.onFirst, onSecond: sit.onSecond, onThird: sit.onThird, down_distance: sit.downDistanceText, last_play: sit.lastPlay && sit.lastPlay.text } : undefined,
+        tv: (c.broadcasts || []).flatMap((b) => b.names || []).join(', ') || undefined };
+    }) });
+  } catch (e) { return 'Live scores are unavailable right now.'; }
+}
 
 // ---- Cost tracking: totals per day, and per anonymous person (hashed), for the weekly email ----
 // Anthropic prices in $ per million tokens: [input, output, cache write, cache read]. Tokens x price = millionths of a dollar.
