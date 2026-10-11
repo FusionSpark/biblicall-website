@@ -90,7 +90,7 @@ ALWAYS UP TO THE MINUTE (universal rule): for anything that happens in the world
 
 BibliCall can bring friends into a conversation: if they want to invite or include someone (a friend, family member or co-worker), tell them warmly to tap "Invite a friend" just above the chat box (it is also at the top of the menu, "Invite to a live conversation"); the friend gets a link and joins this conversation live. Never say you can't invite people.
 
-When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
+When the person asks for a PDF, a Word document or an Excel spreadsheet, create it with the make_file tool so it arrives as a real attached file; never say you can't make files.\nWhen the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
 
 Be direct, warm, and practical. Keep responses focused and conversational, typically under 180 words unless the question genuinely requires more depth. Behind every question is a person trying to build something: a business, a family, a life. Help them build it well.`;
   let s = '';
@@ -372,11 +372,14 @@ export default {
       last.content[last.content.length - 1].cache_control = { type: 'ephemeral' };
     }
 
+    const lastText = (() => { const m = messages[messages.length - 1]; return typeof m.content === 'string' ? m.content : (m.content || []).filter((b) => b.type === 'text').map((b) => b.text).join(' '); })();
+    const wantsFile = !northStar && /\b(pdf|word\s*(doc|document|file)|docx|\.doc\b|excel|spreadsheet|xlsx|csv|document\s+file|file\s+i\s+can)\b/i.test(lastText || '');
+    const madeFiles = [];
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0, String(body.name || '').replace(/[^A-Za-z\u00C0-\u024F' -]/g, '').trim().slice(0, 30), TOWNS[String(body.town || '')] ? String(body.town) : ''), messages,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL, LOCAL_GUIDE_TOOL]
+          model: MODEL, max_tokens: wantsFile ? 8000 : files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0, String(body.name || '').replace(/[^A-Za-z\u00C0-\u024F' -]/g, '').trim().slice(0, 30), TOWNS[String(body.town || '')] ? String(body.town) : ''), messages,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL, LOCAL_GUIDE_TOOL, MAKE_FILE_TOOL]
         };
 
     try {
@@ -404,7 +407,7 @@ export default {
         convo = [...convo, { role: 'assistant', content: data.content }];
         if (data.stop_reason === 'tool_use') {
           const results = [];
-          for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: await runTool(b.name, b.input || {}) });
+          for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: b.name === 'make_file' ? keepFile(madeFiles, b.input) : await runTool(b.name, b.input || {}) });
           convo.push({ role: 'user', content: results });
         }
         const cont = await call({ ...payload, messages: convo });
@@ -420,7 +423,7 @@ export default {
           convo = [...convo, { role: 'assistant', content: data.content }];
           if (data.stop_reason === 'tool_use') {
             const results = [];
-            for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: await runTool(b.name, b.input || {}) });
+            for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: b.name === 'make_file' ? keepFile(madeFiles, b.input) : await runTool(b.name, b.input || {}) });
             convo.push({ role: 'user', content: results });
           }
           const fin = await call({ ...payload, messages: convo, tool_choice: { type: 'none' } });
@@ -432,7 +435,7 @@ export default {
       ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data) + extraCost, n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
       // With web search the answer arrives in pieces split around citations; join them back into one text.
       const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').replace(/<\/?cite[^>]*>/gi, '').replace(/\n{3,}/g, '\n\n').trim();
-      return json({ answer: text || "Sorry, I couldn't come up with an answer just now." });
+      return json({ answer: text || (madeFiles.length ? 'Here it is.' : "Sorry, I couldn't come up with an answer just now."), files: madeFiles.length ? madeFiles : undefined });
     } catch (err) {
       console.error('Worker error', err && err.message);
       return json({ error: 'Something went wrong' }, 500);
@@ -484,6 +487,19 @@ const WEATHER_TOOL = {
   description: 'Current weather and the next 3 days for any place, live. Use for any weather question.',
   input_schema: { type: 'object', properties: { place: { type: 'string', description: 'City or town, e.g. "Hinsdale, Illinois"' } }, required: ['place'] }
 };
+// A file Bibli made for the person: kept as a small spec; the app builds the real PDF, Word or Excel file on the phone.
+function keepFile(list, input) {
+  const f = input || {}, fmt = ['pdf', 'docx', 'xlsx'].includes(f.format) ? f.format : 'pdf';
+  const name = String(f.filename || f.title || 'BibliCall file').replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 80) || 'BibliCall file';
+  const spec = { format: fmt, filename: name, title: String(f.title || name).slice(0, 160) };
+  if (fmt === 'xlsx') spec.sheets = (Array.isArray(f.sheets) ? f.sheets : []).slice(0, 10).map((sh) => ({ name: String(sh.name || 'Sheet').slice(0, 31), rows: (Array.isArray(sh.rows) ? sh.rows : []).slice(0, 2000).map((r) => (Array.isArray(r) ? r : [r]).slice(0, 60)) }));
+  else spec.content = String(f.content || '').slice(0, 60000);
+  if (fmt === 'xlsx' && !spec.sheets.length) return 'The spreadsheet had no rows. Call make_file again with sheets and rows.';
+  if (fmt !== 'xlsx' && !spec.content.trim()) return 'The document was empty. Call make_file again with the full content.';
+  if (list.length >= 3) return 'Only three files per answer.';
+  list.push(spec);
+  return 'Done: "' + name + '.' + fmt + '" is attached to the conversation for the person to open, save or share. Now reply in one or two short sentences.';
+}
 async function runTool(name, input) {
   if (name === 'live_scores') return liveScores(input);
   if (name === 'latest_news') return latestNews(input);
@@ -682,6 +698,19 @@ Object.assign(TOWNS, {
 });
 const TOWN_KEYS = Object.keys(TOWNS);
 const TOPIC_GROUPS = { services: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('p_') === 0), sports: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('s_') === 0), faith: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('f_') === 0), schools: ['d86', 'hinsdale_central', 'hinsdale_south', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
+const MAKE_FILE_TOOL = {
+  name: 'make_file',
+  description: 'Create a real file that BibliCall attaches to the conversation so the person can open, save or share it: a PDF, a Word document (.docx) or an Excel spreadsheet (.xlsx). ALWAYS use this whenever the person asks for a PDF, a Word document, a document file, an Excel file or a spreadsheet (or a CSV, which becomes .xlsx). Never say you cannot create or attach files. Put the COMPLETE content in this call; afterwards reply with one or two short sentences (do not repeat the content).',
+  input_schema: { type: 'object', properties: {
+    format: { type: 'string', enum: ['pdf', 'docx', 'xlsx'] },
+    filename: { type: 'string', description: 'Short, clear file name without extension, e.g. "Hinsdale Weekend Plan"' },
+    title: { type: 'string', description: 'Title shown at the top of a PDF or Word document' },
+    content: { type: 'string', description: 'For pdf/docx: the full document in simple markdown: # and ## headings, - bullets, 1. numbered items, **bold**, and | pipe | tables |.' },
+    sheets: { type: 'array', description: 'For xlsx: one or more sheets.', items: { type: 'object', properties: {
+      name: { type: 'string' },
+      rows: { type: 'array', description: 'Rows of cells; the first row is the header. Use numbers as numbers. A cell may be a formula string starting with "=", e.g. "=SUM(B2:B10)".', items: { type: 'array', items: {} } } }, required: ['name', 'rows'] } } },
+    required: ['format', 'filename'] }
+};
 const LOCAL_GUIDE_TOOL = {
   name: 'local_guide',
   description: 'Live information straight from local community sources for Burr Ridge, Clarendon Hills, Downers Grove, Elmhurst, Hinsdale and Oak Brook, Illinois (pass town; generic topics events, news, schools, government, sports, services, nonprofits and faith work for every town). For Hinsdale: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 (Hinsdale Central High School and Hinsdale South High School, each with its own news, calendar and athletics) and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus sports and recreation open to the public (topic "sports": Hinsdale Parks & Recreation, Gateway Special Recreation for people with disabilities, Hinsdale Central athletics, Hinsdale Little League, Hinsdale Falcon Football, AYSO soccer, Hinsdale Swim Club, Hinsdale Central Hockey Club, Hinsdale Herd Lacrosse and Hinsdale South athletics; for scores and schedules of Chicago pro teams such as the Bears, Cubs, White Sox, Bulls, Blackhawks, Fire, Sky and Stars use live_scores and latest_news instead), plus public services (topic "services": the hospital, DuPage County Health Department, HCS Family Services, Downers Grove and Lyons townships for seniors, food pantries and assistance, Metra BNSF trains, the Forest Preserves and Fullersburg Woods, Graue Mill, and DuPage County elections and polling places; police, fire and road news come from the Village), plus the area\'s faith communities (topic "faith": every church in the Village directory and nearby synagogues, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this (topic "sports") for youth sports, leagues, sign-ups, tryouts, park programs or high school games around Hinsdale, ALWAYS use this (topic "services") for help, seniors, food pantries, health, trains, nature, voting or elections around Hinsdale, ALWAYS use this (topic "faith") when someone asks about churches, synagogues, mosques, temples or worship near Hinsdale, and ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',

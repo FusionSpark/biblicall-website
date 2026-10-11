@@ -303,6 +303,13 @@
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .made-files{display:flex;flex-direction:column;gap:10px;margin:4px 0 10px;max-width:520px}
+  .made-file{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card)}
+  .mf-name{font-weight:700;font-size:17px;color:var(--earth-deep);word-break:break-word}
+  .mf-kind{font-size:14px;color:var(--muted);margin:2px 0 8px}
+  .mf-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .mf-btns button{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:7px 16px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .mf-btns button+button{background:transparent;color:var(--earth)}
   .town-pick{display:flex;flex-direction:column;gap:8px;margin:10px 0 6px}
   .town-sel,.town-in{width:100%;font-family:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--earth);border-radius:12px;background:#fff;color:var(--ink)}
   .town-typed{display:flex;gap:8px;align-items:center}
@@ -1585,6 +1592,21 @@
         threadBox.appendChild(note);
         lastRow = note;
       }
+      if (m.role === 'assistant' && m.made && m.made.length) {
+        const box = document.createElement('div'); box.className = 'made-files';
+        m.made.forEach((spec) => {
+          const ic = spec.format === 'xlsx' ? '\u{1F4CA}' : spec.format === 'docx' ? '\u{1F4DD}' : '\u{1F4C4}';
+          const kind = spec.format === 'xlsx' ? 'Excel spreadsheet' : spec.format === 'docx' ? 'Word document' : 'PDF';
+          const card = document.createElement('div'); card.className = 'made-file';
+          const nm = document.createElement('div'); nm.className = 'mf-name'; nm.textContent = ic + ' ' + spec.filename + '.' + spec.format;
+          const sub = document.createElement('div'); sub.className = 'mf-kind'; sub.textContent = kind;
+          const btns = document.createElement('div'); btns.className = 'mf-btns';
+          if (spec.format === 'pdf') { const v = document.createElement('button'); v.type = 'button'; v.textContent = 'Open'; v.addEventListener('click', () => openMadeFile(spec, 'view')); btns.appendChild(v); }
+          const sv = document.createElement('button'); sv.type = 'button'; sv.textContent = 'Save or share'; sv.addEventListener('click', () => openMadeFile(spec, 'save')); btns.appendChild(sv);
+          card.append(nm, sub, btns); box.appendChild(card);
+        });
+        threadBox.appendChild(box); lastRow = box;
+      }
       if (m.role === 'assistant' && !m.loading && m.content && m.content !== 'Thinking…') {
         const lb = document.createElement('button');
         lb.type = 'button'; lb.className = 'listen';
@@ -1999,7 +2021,7 @@
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
       const ex = extractActs(data.answer);
       if (ex.followup) lsSet('bc_followup', { q: ex.followup, t: Date.now() });
-      conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined, songs: ex.songs.length ? ex.songs : undefined };
+      conversation[turn] = { role: 'assistant', content: ex.text, q: question, hist: history, acts: ex.acts.length ? ex.acts : undefined, songs: ex.songs.length ? ex.songs : undefined, made: Array.isArray(data.files) && data.files.length ? data.files : undefined };
       if ((autoPlayNext || /^\s*(?:hey\s+)?(?:bibli(?:call)?[,!.]?\s+)?(?:please\s+)?play\b/i.test(question)) && ex.songs.length) { const mm = conversation[turn]; setTimeout(() => playInline(mm, 0, mm.songs[0]), 300); }
       autoPlayNext = false;
       scrollToStart(conversation[turn]);
@@ -2803,6 +2825,7 @@
     String(text || '').replace(/\r/g, '').split('\n').forEach((ln) => {
       const t = ln.trim(); if (!t) return;
       let m;
+      if (/^\|.*\|$/.test(t)) { if (/^\|[\s:|-]+\|$/.test(t)) return; const cells = t.slice(1, -1).split('|').map((c) => c.trim().replace(/\*\*/g, '')); const prev = out[out.length - 1]; if (prev && prev.tbl) prev.tbl.push(cells); else out.push({ tbl: [cells] }); return; }
       if ((m = t.match(/^#{1,6}\s+(.+)/))) out.push({ h: m[1].replace(/\*\*/g, '') });
       else if ((m = t.match(/^[-*•]\s+(.+)/))) out.push({ li: m[1].replace(/\*\*/g, '') });
       else if ((m = t.match(/^(\d+)[.)]\s+(.+)/))) out.push({ li: m[2].replace(/\*\*/g, ''), n: m[1] });
@@ -2819,7 +2842,7 @@
     return b;
   }
   function fileName(title, ext) { return 'BibliCall - ' + String(title || 'Notes').replace(/[\\/:*?"<>|\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) + '.' + ext; }
-  async function makePdf(title, blocks) {
+  async function makePdf(title, blocks, fname) {
     const J = await loadLib('jspdf', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => window.jspdf && window.jspdf.jsPDF);
     const [reg, bold] = await pdfFonts();
     const doc = new J({ unit: 'pt', format: 'letter' });
@@ -2842,12 +2865,26 @@
       else if (b.li) write((b.n ? b.n + '. ' : '• ') + b.li, 11.5, 'normal', [44, 33, 23], 12, 3);
       else if (b.q) { write(b.q, 12, 'bold', [44, 33, 23], 14, 1); write(b.ref + '  ✓ verified', 10.5, 'normal', [52, 80, 106], 14, 6); }
       else if (b.p) write(b.p, 11.5, b.i ? 'bold' : 'normal', b.i ? [102, 67, 54] : [44, 33, 23], 0, 6);
+      else if (b.tbl) {
+        const cols = Math.max(...b.tbl.map((r) => r.length)), cw = maxW / cols;
+        b.tbl.forEach((r, ri) => {
+          doc.setFont('SS', ri ? 'normal' : 'bold'); doc.setFontSize(10.5);
+          const cells = Array.from({ length: cols }, (_, c) => doc.splitTextToSize(String(r[c] == null ? '' : r[c]), cw - 8));
+          const h = Math.max(...cells.map((c) => c.length)) * 14 + 8; need(h);
+          if (!ri) { doc.setFillColor(234, 244, 251); doc.rect(L, y - 11, maxW, h, 'F'); }
+          doc.setTextColor(44, 33, 23);
+          cells.forEach((c, ci) => c.forEach((ln, li) => doc.text(ln, L + ci * cw + 4, y + li * 14)));
+          doc.setDrawColor(207, 226, 240); doc.line(L, y - 11 + h, R, y - 11 + h);
+          y += h;
+        });
+        y += 8;
+      }
     });
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('SS', 'normal'); doc.setFontSize(9); doc.setTextColor(120, 130, 140); doc.text('Saved from BibliCall · biblicall.com', L, H - 30); if (n > 1) doc.text(i + ' / ' + n, R, H - 30, { align: 'right' }); }
-    return new File([doc.output('blob')], fileName(title, 'pdf'), { type: 'application/pdf' });
+    return new File([doc.output('blob')], fname ? fname + '.pdf' : fileName(title, 'pdf'), { type: 'application/pdf' });
   }
-  async function makeDocx(title, blocks) {
+  async function makeDocx(title, blocks, fname) {
     const Z = await loadLib('jszip', 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', () => window.JSZip);
     const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const run = (t, o) => '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>' + (o.b ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') + '<w:color w:val="' + (o.c || '2C2117') + '"/><w:sz w:val="' + (o.s || 23) + '"/></w:rPr><w:t xml:space="preserve">' + x(t) + '</w:t></w:r>';
@@ -2859,6 +2896,11 @@
       else if (b.li) body += para(run((b.n ? b.n + '. ' : '• ') + b.li, {}), { ind: 360, after: 60 });
       else if (b.q) body += para(run(b.q, { b: true, s: 24 }), { ind: 360, after: 40 }) + para(run(b.ref + '  ✓ verified', { s: 20, c: '34506A' }), { ind: 360 });
       else if (b.p) body += para(run(b.p, { i: !!b.i, c: b.i ? '664336' : '2C2117' }));
+      else if (b.tbl) {
+        const cols = Math.max(...b.tbl.map((r) => r.length));
+        body += '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CFE2F0"/><w:bottom w:val="single" w:sz="4" w:color="CFE2F0"/><w:insideH w:val="single" w:sz="4" w:color="CFE2F0"/><w:insideV w:val="single" w:sz="4" w:color="CFE2F0"/><w:left w:val="single" w:sz="4" w:color="CFE2F0"/><w:right w:val="single" w:sz="4" w:color="CFE2F0"/></w:tblBorders></w:tblPr>' +
+          b.tbl.map((r, ri) => '<w:tr>' + Array.from({ length: cols }, (_, c) => '<w:tc>' + (ri ? '' : '<w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="EAF4FB"/></w:tcPr>') + para(run(r[c] == null ? '' : r[c], { b: !ri, s: 21 }), { after: 40 }) + '</w:tc>').join('') + '</w:tr>').join('') + '</w:tbl>' + para('', { after: 120 });
+      }
     });
     body += para(run('Saved from BibliCall · biblicall.com', { s: 18, c: '78828C' }));
     const zip = new Z();
@@ -2866,7 +2908,33 @@
     zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
     zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1200" w:right="1200" w:bottom="1200" w:left="1200" w:header="600" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>');
     const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    return new File([blob], fileName(title, 'docx'), { type: blob.type });
+    return new File([blob], fname ? fname + '.docx' : fileName(title, 'docx'), { type: blob.type });
+  }
+  async function makeXlsx(spec) {
+    const X = await loadLib('xlsx', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => window.XLSX);
+    const wb = X.utils.book_new();
+    (spec.sheets || []).forEach((sh, i) => {
+      const rows = (sh.rows || []).map((r) => r.map((v) => (typeof v === 'string' && /^=/.test(v) ? { f: v.slice(1) } : typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()) ? +v : v)));
+      const ws = X.utils.aoa_to_sheet(rows);
+      const widths = []; rows.forEach((r) => r.forEach((v, c) => { const len = String(v && v.f ? '0000000000' : v == null ? '' : v).length; widths[c] = Math.min(50, Math.max(widths[c] || 8, len + 2)); }));
+      ws['!cols'] = widths.map((w) => ({ wch: w }));
+      X.utils.book_append_sheet(wb, ws, String(sh.name || 'Sheet ' + (i + 1)).replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Sheet ' + (i + 1));
+    });
+    const out = X.write(wb, { bookType: 'xlsx', type: 'array' });
+    return new File([out], spec.filename + '.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  async function buildMadeFile(spec) {
+    if (spec.format === 'xlsx') return makeXlsx(spec);
+    const blocks = toBlocks(spec.content);
+    if (blocks.length && blocks[0].h && blocks[0].h === spec.title) blocks.shift();
+    return spec.format === 'docx' ? makeDocx(spec.title, blocks, spec.filename) : makePdf(spec.title, blocks, spec.filename);
+  }
+  async function openMadeFile(spec, how) {
+    try {
+      const f = await buildMadeFile(spec); stat('file_' + spec.format);
+      if (how === 'view' && spec.format === 'pdf') { const u = URL.createObjectURL(f); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); return; }
+      await deliverFile(f);
+    } catch (e) { toast('That file couldn’t be made just now. Please try again.'); }
   }
   async function deliverFile(file) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: file.name }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
