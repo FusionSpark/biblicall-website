@@ -3084,6 +3084,8 @@
   const TOWN_SOURCES = [
     ['Village of Hinsdale', 'https://www.villageofhinsdale.org/', 'Government, board meetings, parks & recreation, police and fire'],
     ['District 86', 'https://www.hinsdale86.org/', 'Hinsdale Central and Hinsdale South high schools'],
+    ['Hinsdale Central High School', 'https://central.hinsdale86.org/', 'News, calendar, activities and Red Devils athletics'],
+    ['Hinsdale South High School', 'https://south.hinsdale86.org/', 'News, calendar, activities and Hornets athletics'],
     ['District 181', 'https://www.d181.org/', 'Elementary and middle schools'],
     ['Hinsdale Chamber of Commerce', 'https://www.hinsdalechamber.com/', 'Business events and local shops'],
     ['The Community House', 'https://thecommunityhouse.org/', 'Programs, sports and community events'],
@@ -3119,7 +3121,7 @@
     ['Graue Mill and Museum', 'https://www.grauemill.org/', 'History and events'],
     ['DuPage County elections', 'https://www.dupageco.org/VoterLookup', 'Registration and polling places']
   ];
-  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Senior and family help nearby', 'Faith community events this week'];
+  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s happening at Hinsdale Central?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Senior and family help nearby', 'Faith community events this week'];
   function drawTown() {
     const box = el('div', 'plan town');
     const on = lsGet('bc_town', '') === 'hinsdale';
