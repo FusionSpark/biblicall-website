@@ -3077,12 +3077,18 @@
     ['St. Isaac Jogues Catholic Parish', 'https://www.sij.net/'], ['Sts. Cyril & Methodius Macedonian Orthodox Church', ''], ['Trinity Lutheran Church (Burr Ridge)', 'https://www.mytls.org/'],
     ['Union Church of Hinsdale', 'https://hinsdale.church/'], ['Unitarian Church of Hinsdale', 'https://www.hinsdaleunitarian.org/'], ['Zion Lutheran Church', 'https://www.zionhinsdale.org/']
   ];
-  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Faith community events this week'];
+  const SPORTS_GROUPS = [
+    ['AYSO Region 210 (youth soccer)', 'http://www.aysohinsdale.org/'], ['Gateway Special Recreation (adaptive sports)', 'https://www.villageofhinsdale.org/departments/parks_and_recreation/gateway_special_recreation_association.php'],
+    ['Hinsdale Central athletics', 'https://central.hinsdale86.org/athletics'], ['Hinsdale Central Hockey Club', 'https://www.hinsdalecentralhockey.net/'], ['Hinsdale Falcon Football', 'https://www.hinsdalefalcons.com/'],
+    ['Hinsdale Herd Lacrosse', 'https://www.eastavelacrosse.com/hinsdaleherd'], ['Hinsdale Little League', 'https://www.hinsdalell.org/'], ['Hinsdale Parks & Recreation', 'https://www.villageofhinsdale.org/departments/parks_and_recreation/index.php'],
+    ['Hinsdale Swim Club', 'https://www.hinsdaleswimming.org/page/home']
+  ];
+  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Faith community events this week'];
   function drawTown() {
     const box = el('div', 'plan town');
     const on = lsGet('bc_town', '') === 'hinsdale';
     box.appendChild(el('h4', 'bg-sub', '\u{1F4CD} Hinsdale, Illinois'));
-    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village, local organizations or faith communities and it reads their own websites, live.' : 'Follow Hinsdale (wherever you live) and Bibli will answer local questions straight from the village, the schools, the chamber, local organizations and faith communities, live.'));
+    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village, sports, local organizations or faith communities and it reads their own websites, live.' : 'Follow Hinsdale (wherever you live) and Bibli will answer local questions straight from the village, the schools, the chamber, local organizations and faith communities, live.'));
     const t = el('button', on ? 'acct-link' : 'act-btn', on ? 'Stop following Hinsdale' : 'Follow Hinsdale'); t.type = 'button';
     t.addEventListener('click', () => { lsSet('bc_town', on ? '' : 'hinsdale'); stat(on ? 'town_off' : 'town_on'); drawDrawer(); });
     box.appendChild(t);
@@ -3096,6 +3102,11 @@
     const ul = el('ul', 'town-src');
     TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
     box.appendChild(ul);
+    box.appendChild(el('p', 'wk-sub', 'Sports & recreation'));
+    box.appendChild(el('p', 'acct-fine', 'Park programs, youth leagues and high school athletics open to everyone, plus live scores for every Chicago pro team.'));
+    const sl = el('ul', 'town-src');
+    SPORTS_GROUPS.forEach(([n, u]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); sl.appendChild(li); });
+    box.appendChild(sl);
     box.appendChild(el('p', 'wk-sub', 'Faith communities'));
     box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogues, mosques and temple, listed alphabetically and treated alike.'));
     const fl = el('ul', 'town-src');
