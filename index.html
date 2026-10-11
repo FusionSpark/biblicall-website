@@ -303,6 +303,11 @@
   .acts{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
   .act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:16.5px}
   .act-btn{border:1.5px solid var(--earth);background:var(--earth);color:#fff;border-radius:999px;padding:6px 14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .town-pick{display:flex;flex-direction:column;gap:8px;margin:10px 0 6px}
+  .town-sel,.town-in{width:100%;font-family:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--earth);border-radius:12px;background:#fff;color:var(--ink)}
+  .town-typed{display:flex;gap:8px;align-items:center}
+  .town-typed .town-in{flex:1}
+  html .drawer .act-btn,html[data-sky] .drawer .act-btn,html.photo .drawer .act-btn{background:var(--earth);border-color:var(--earth);color:#fff;text-shadow:none}
   .act-text{flex:1;min-width:140px}
   .act-done{font-weight:700;color:#2f6b3a}
   .act-link{border:0;background:none;padding:0;color:var(--earth);font-family:inherit;font-size:16px;font-weight:600;text-decoration:underline;cursor:pointer}
@@ -3126,40 +3131,115 @@
     ['DuPage County elections', 'https://www.dupageco.org/VoterLookup', 'Registration and polling places']
   ];
   const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s happening at Hinsdale Central?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Senior and family help nearby', 'Faith community events this week'];
+  // Towns Bibli knows, alphabetical. Hinsdale keeps its fuller lists above.
+  const TOWNS_UI = {
+    burr_ridge: { name: 'Burr Ridge', src: [
+      ['Village of Burr Ridge', 'https://www.burr-ridge.gov/', 'Government, news and police'],
+      ['Burr Ridge Park District', 'https://www.brparks.org/', 'Parks, programs and sports'],
+      ['Pleasant Dale Park District', 'https://www.pleasantdaleparks.org/', 'Parks and programs (part of Burr Ridge)'],
+      ['District 180', 'https://www.d180.org/', 'Anne M. Jeans and Burr Ridge Middle School'],
+      ['Pleasantdale District 107', 'https://www.d107.org/', 'Elementary and middle school'],
+      ['District 181', 'https://www.d181.org/', 'Elementary and middle schools'],
+      ['District 86', 'https://www.hinsdale86.org/', 'Hinsdale Central and Hinsdale South'],
+      ['Lyons Township High School', 'https://www.lths.net/', 'District 204'],
+      ['Willowbrook/Burr Ridge Chamber', 'https://www.wbbrchamber.org/', 'Business events and local shops'],
+      ['Indian Prairie Public Library', 'https://www.indianprairielibrary.org/', 'Library for much of Burr Ridge'],
+      ['Downers Grove Township', 'https://dgtownship.com/', 'Seniors, food pantry and help'],
+      ['Lyons Township', 'https://lyonstownshipil.gov/', 'Seniors, food pantry and help']
+    ] },
+    clarendon_hills: { name: 'Clarendon Hills', src: [
+      ['Village of Clarendon Hills', 'https://clarendonhills.us/', 'Government, news, police and fire'],
+      ['Clarendon Hills Park District', 'https://www.clarendonhillsparkdistrict.org/', 'Parks, programs and sports'],
+      ['Clarendon Hills Public Library', 'https://www.clarendonhillslibrary.org/', 'Events and programs for all ages'],
+      ['District 181', 'https://www.d181.org/', 'Elementary and middle schools'],
+      ['Hinsdale Central High School', 'https://central.hinsdale86.org/', 'District 86 news, calendar and athletics'],
+      ['Clarendon Hills Chamber of Commerce', 'https://www.clarendonhillschamber.com/', 'Business events and local shops'],
+      ['Downers Grove Township', 'https://dgtownship.com/', 'Seniors, food pantry and help'],
+      ['Metra BNSF', 'https://www.metrarail.com/maps-schedules/train-lines/BNSF', 'Train times']
+    ] },
+    downers_grove: { name: 'Downers Grove', src: [
+      ['Village of Downers Grove', 'https://www.downers.us/', 'Government, news, police and fire'],
+      ['Downers Grove Park District', 'https://www.dgparks.org/', 'Parks, programs and sports'],
+      ['Downers Grove Public Library', 'https://dglibrary.org/', 'Events and programs for all ages'],
+      ['District 58', 'https://www.dg58.org/', 'Grade schools'],
+      ['District 99', 'https://www.csd99.org/', 'Downers Grove North and South high schools'],
+      ['Chamber630', 'https://www.chamber630.com/', 'Business events and local shops'],
+      ['Downtown Downers Grove', 'https://www.downtowndg.org/', 'Downtown events'],
+      ['Downers Grove Township', 'https://dgtownship.com/', 'Seniors, food pantry and help'],
+      ['Metra BNSF', 'https://www.metrarail.com/maps-schedules/train-lines/BNSF', 'Train times']
+    ] },
+    elmhurst: { name: 'Elmhurst', src: [
+      ['City of Elmhurst', 'https://www.elmhurst.org/', 'Government, news, police and fire'],
+      ['Elmhurst Park District', 'https://www.epd.org/', 'Parks, programs and sports'],
+      ['Elmhurst Public Library', 'https://www.elmhurstpubliclibrary.org/', 'Events and programs for all ages'],
+      ['District 205', 'https://www.elmhurst205.org/', 'Elmhurst schools and York High School'],
+      ['Elmhurst Chamber of Commerce', 'https://www.elmhurstchamber.org/', 'Business events and local shops'],
+      ['Elmhurst City Centre', 'https://www.elmhurstcitycentre.com/', 'Downtown events'],
+      ['Endeavor Health', 'https://www.endeavorhealth.org/', 'Elmhurst Hospital'],
+      ['York Township', 'https://yorktwsp.com/', 'Seniors, food pantry and help'],
+      ['Metra UP-West', 'https://www.metrarail.com/maps-schedules/train-lines/UP-W', 'Train times']
+    ] },
+    hinsdale: { name: 'Hinsdale', src: null },
+    oak_brook: { name: 'Oak Brook', src: [
+      ['Village of Oak Brook', 'https://www.oak-brook.org/', 'Government, news, police and fire'],
+      ['Oak Brook Park District', 'https://www.obparks.org/', 'Parks, programs and sports'],
+      ['Oak Brook Public Library', 'https://www.oakbrooklibrary.org/', 'Events and programs for all ages'],
+      ['Butler School District 53', 'https://www.butler53.com/', 'Elementary and junior high'],
+      ['Hinsdale Central High School', 'https://central.hinsdale86.org/', 'District 86 news, calendar and athletics'],
+      ['District 205', 'https://www.elmhurst205.org/', 'York High School area'],
+      ['Greater Oak Brook Chamber', 'https://www.obchamber.com/', 'Business events and local shops'],
+      ['Oak Brook Historical Society', 'https://www.oakbrookhistory.com/', 'History and events'],
+      ['Graue Mill and Museum', 'https://www.grauemill.org/', 'History and events'],
+      ['York Township', 'https://yorktwsp.com/', 'Seniors, food pantry and help']
+    ] }
+  };
+  const townKeyFromText = (t) => { const v = String(t || '').toLowerCase().replace(/[^a-z]/g, ''); return Object.keys(TOWNS_UI).find((k) => k.replace(/_/g, '') === v || TOWNS_UI[k].name.toLowerCase().replace(/[^a-z]/g, '') === v) || ''; };
+  let townNote = '';
+  function setTown(k) { lsSet('bc_town', k); townNote = ''; stat(k ? 'town_on' : 'town_off'); drawDrawer(); }
   function drawTown() {
     const box = el('div', 'plan town');
-    const on = lsGet('bc_town', '') === 'hinsdale';
-    box.appendChild(el('h4', 'bg-sub', '\u{1F4CD} Hinsdale, Illinois'));
-    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village, sports, local organizations or faith communities and it reads their own websites, live.' : 'Follow Hinsdale (wherever you live) and Bibli will answer local questions straight from the village, the schools, the chamber, local organizations and faith communities, live.'));
-    const t = el('button', on ? 'acct-link' : 'act-btn', on ? 'Stop following Hinsdale' : 'Follow Hinsdale'); t.type = 'button';
-    t.addEventListener('click', () => { lsSet('bc_town', on ? '' : 'hinsdale'); stat(on ? 'town_off' : 'town_on'); drawDrawer(); });
-    box.appendChild(t);
-    if (on) {
-      box.appendChild(el('p', 'wk-sub', 'Ask Bibli'));
-      const chips = el('div', 'town-asks');
-      TOWN_ASKS.forEach((a) => { const b = el('button', 'bg-chip', a); b.type = 'button'; b.addEventListener('click', () => { closeDrawer(); q.value = a; q.dispatchEvent(new Event('input')); sendBtn.click(); stat('town_ask'); }); chips.appendChild(b); });
-      box.appendChild(chips);
+    let key = lsGet('bc_town', ''); if (key && !TOWNS_UI[key]) key = '';
+    const T = key ? TOWNS_UI[key] : null;
+    box.appendChild(el('h4', 'bg-sub', '\u{1F4CD} ' + (T ? T.name + ', Illinois' : 'My town')));
+    box.appendChild(el('p', 'acct-fine', T ? 'Bibli follows ' + T.name + ' for you: ask about events, schools, the village, sports, local organizations or faith communities and it reads their own websites, live.' : 'Choose your town (wherever you live) and Bibli will answer local questions straight from the village, the schools, the chamber, local organizations and faith communities, live.'));
+    // Pick from the list, or type it.
+    const pick = el('div', 'town-pick');
+    const sel = document.createElement('select'); sel.className = 'town-sel'; sel.setAttribute('aria-label', 'Choose your town');
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = T ? 'Change town…' : 'Choose your town…'; sel.appendChild(o0);
+    Object.keys(TOWNS_UI).sort((a, b) => TOWNS_UI[a].name.localeCompare(TOWNS_UI[b].name)).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = TOWNS_UI[k].name; if (k === key) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', () => { if (sel.value && sel.value !== key) setTown(sel.value); });
+    const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'town-in'; inp.placeholder = 'Or type your town'; inp.setAttribute('aria-label', 'Type your town'); inp.autocomplete = 'off';
+    const go = el('button', 'act-btn', 'Go'); go.type = 'button';
+    const tryTyped = () => { const v = inp.value.trim(); if (!v) return; const k = townKeyFromText(v); if (k) setTown(k); else { townNote = v; drawDrawer(); } };
+    go.addEventListener('click', tryTyped); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryTyped(); } });
+    pick.appendChild(sel); const row = el('div', 'town-typed'); row.appendChild(inp); row.appendChild(go); pick.appendChild(row);
+    box.appendChild(pick);
+    if (townNote) box.appendChild(el('p', 'acct-fine', townNote + ' is coming soon. Until then Bibli still answers questions about ' + townNote + ' with live web search. Towns ready now: Burr Ridge, Clarendon Hills, Downers Grove, Elmhurst, Hinsdale and Oak Brook.'));
+    if (T) { const stop = el('button', 'acct-link', 'Stop following ' + T.name); stop.type = 'button'; stop.addEventListener('click', () => setTown('')); box.appendChild(stop); }
+    if (!T) { box.appendChild(el('p', 'acct-fine', 'Anyone, anywhere can follow any of these towns.')); return box; }
+    box.appendChild(el('p', 'wk-sub', 'Ask Bibli'));
+    const asks = key === 'hinsdale' ? TOWN_ASKS : ['What’s happening in ' + T.name + ' this weekend?', 'Village and city news this week', 'What’s coming up at the schools?', 'Park district programs and sign-ups', 'Library events this week', 'Senior and family help nearby', 'Faith community events this week'];
+    const chips = el('div', 'town-asks');
+    asks.forEach((a) => { const b = el('button', 'bg-chip', a); b.type = 'button'; b.addEventListener('click', () => { closeDrawer(); q.value = a; q.dispatchEvent(new Event('input')); sendBtn.click(); stat('town_ask'); }); chips.appendChild(b); });
+    box.appendChild(chips);
+    const list = (title, items, fine) => {
+      box.appendChild(el('p', 'wk-sub', title)); if (fine) box.appendChild(el('p', 'acct-fine', fine));
+      const ul = el('ul', 'town-src');
+      items.forEach(([n, u, d]) => { const li = el('li'); if (u) { const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); } else li.appendChild(el('b', null, n)); if (d) li.appendChild(el('span', null, ' — ' + d)); ul.appendChild(li); });
+      box.appendChild(ul);
+    };
+    if (key !== 'hinsdale') {
+      list('Where Bibli looks', T.src);
+      box.appendChild(el('p', 'wk-sub', 'Faith communities'));
+      box.appendChild(el('p', 'acct-fine', 'Ask about congregations of every faith in and near ' + T.name + '. Bibli finds them live and lists them alphabetically, treating all alike.'));
+      box.appendChild(el('p', 'acct-fine', 'Severe weather alerts come straight from the National Weather Service. Plus every other ' + T.name + ' nonprofit and public service through Bibli’s live search.'));
+      return box;
     }
-    box.appendChild(el('p', 'wk-sub', 'Where Bibli looks'));
-    const ul = el('ul', 'town-src');
-    TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
-    box.appendChild(ul);
-    box.appendChild(el('p', 'wk-sub', 'Sports & recreation'));
-    box.appendChild(el('p', 'acct-fine', 'Park programs, youth leagues and high school athletics open to everyone, plus live scores for every Chicago pro team.'));
-    const sl = el('ul', 'town-src');
-    SPORTS_GROUPS.forEach(([n, u]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); sl.appendChild(li); });
-    box.appendChild(sl);
-    box.appendChild(el('p', 'wk-sub', 'Help & public services'));
-    box.appendChild(el('p', 'acct-fine', 'Severe weather alerts come straight from the National Weather Service; police, fire and road news from the Village.'));
-    const pl = el('ul', 'town-src');
-    PUBLIC_SERVICES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); pl.appendChild(li); });
-    box.appendChild(pl);
-    box.appendChild(el('p', 'wk-sub', 'Faith communities'));
-    box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogues, mosques and temple, listed alphabetically and treated alike.'));
-    const fl = el('ul', 'town-src');
-    FAITH_COMMUNITIES.forEach(([n, u]) => { const li = el('li'); if (u) { const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); } else li.appendChild(el('b', null, n)); fl.appendChild(li); });
-    box.appendChild(fl);
-    box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli\u2019s live search. Anyone, anywhere can follow Hinsdale. More towns coming soon: Oak Brook, Elmhurst, Downers Grove.'));
+    list('Where Bibli looks', TOWN_SOURCES);
+    list('Sports & recreation', SPORTS_GROUPS, 'Park programs, youth leagues and high school athletics open to everyone, plus live scores for every Chicago pro team.');
+    list('Help & public services', PUBLIC_SERVICES, 'Severe weather alerts come straight from the National Weather Service; police, fire and road news from the Village.');
+    list('Faith communities', FAITH_COMMUNITIES, 'Every congregation in the Village of Hinsdale’s directory, plus nearby synagogues, mosques and temple, listed alphabetically and treated alike.');
+    box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli’s live search.'));
     return box;
   }
   function drawApps() {

@@ -114,9 +114,9 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
     const now = new Date(), f = (tz) => now.toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     s += `\n\nThe exact time right now: ${f('America/New_York')} Eastern = ${f('America/Chicago')} Central = ${f('America/Los_Angeles')} Pacific (${now.toISOString()} UTC). Sports and TV start times are usually listed in Eastern time; convert carefully before saying whether something has started, and for any game or score use the live_scores tool instead of guessing from articles.`;
   }
-  if (town === 'hinsdale') s += `
+  if (town && TOWNS[town]) s += `
 
-This person follows Hinsdale, Illinois in BibliCall. For anything local ("around here", "this weekend", the village, the schools, Hinsdale organizations or events), use the local_guide tool first and name the source (for example "the Village of Hinsdale" or "District 86"), then web search for anything it doesn't cover.`;
+This person follows ${TOWNS[town].name} in BibliCall. For anything local ("around here", "this weekend", the village or city, the schools, local organizations or events), use the local_guide tool first with town "${town}" and name the source, then web search for anything it doesn't cover.`;
   if (name && !group) s += `\n\nThis person's first name is ${name}. When you use their name, call them ${name}. Never call them by a joking nickname or a name that came up in banter (with friends, in earlier messages or in memory) unless they clearly ask to be called that.`;
   else if (!group) s += `\n\nNever call this person by a joking nickname that came up in banter or memory unless they clearly ask to be called that.`;
   if (plan && !group) {
@@ -585,12 +585,109 @@ const TOWNS = {
     faithNoSite: 'Also in the Village directory (no website listed): First Church of Christ, Scientist (First and Oak Streets, 630-323-4740); Oak Community Church (620 N. Oak St., 630-323-0087); Sts. Cyril & Methodius Macedonian Orthodox Church (10 S 330 Route 83, 630-654-0016); Hinsdale Seventh-day Adventist Church (201 N. Oak, 630-323-0182); Burr Ridge United Church of Christ (15 W 100 Plainfield Rd, 630-654-4544); The Mecca Center (mosque), Willowbrook.'
   }
 };
+// Shared regional sources for the nearby towns.
+const SH = {
+  health: { name: 'DuPage County Health Department', urls: ['https://www.dupagehealth.org/'] },
+  forest: { name: 'Forest Preserve District of DuPage County', urls: ['https://www.dupageforest.org/events'] },
+  elections: { name: 'DuPage County elections (registration, polling places)', urls: ['https://www.dupageco.org/VoterLookup'] },
+  bnsf: { name: 'Metra BNSF line', urls: ['https://www.metrarail.com/maps-schedules/train-lines/BNSF'] },
+  upw: { name: 'Metra Union Pacific West line', urls: ['https://www.metrarail.com/maps-schedules/train-lines/UP-W'] },
+  dgtownship: { name: 'Downers Grove Township (seniors, food pantry, assistance)', urls: ['https://dgtownship.com/'] },
+  york: { name: 'York Township (seniors, food pantry, assistance)', urls: ['https://yorktwsp.com/'] },
+  lyons: { name: 'Lyons Township (seniors, food pantry, assistance)', urls: ['https://lyonstownshipil.gov/'] },
+  d86: { name: 'Hinsdale Township High School District 86 (Hinsdale Central, Hinsdale South)', urls: ['https://www.hinsdale86.org/our-district/news-and-announcements'] },
+  hc: { name: 'Hinsdale Central High School', urls: ['https://central.hinsdale86.org/', 'https://central.hinsdale86.org/our-school/calendars'] },
+  d181: { name: 'Community Consolidated School District 181', urls: ['https://www.d181.org/district/news', 'https://www.d181.org/calendars'] },
+  d205: { name: 'Elmhurst Community Unit School District 205 (York High School)', urls: ['https://www.elmhurst205.org/'] },
+  grauemill: { name: 'Graue Mill and Museum', urls: ['https://www.grauemill.org/'] }
+};
+const NOFAITH = 'BibliCall has not stored this town\'s faith communities yet. Use web search for congregations of every faith in and near this town, list them alphabetically and treat them all equally; never rank or recommend one over another.';
+Object.assign(TOWNS, {
+  burr_ridge: {
+    name: 'Burr Ridge, Illinois',
+    sources: {
+      village: { name: 'Village of Burr Ridge (government, news, police)', urls: ['https://www.burr-ridge.gov/'] },
+      brparks: { name: 'Burr Ridge Park District', urls: ['https://www.brparks.org/'] },
+      pdparks: { name: 'Pleasant Dale Park District (part of Burr Ridge)', urls: ['https://www.pleasantdaleparks.org/'] },
+      d180: { name: 'Burr Ridge Community Consolidated School District 180 (Anne M. Jeans, Burr Ridge Middle School)', urls: ['https://www.d180.org/'] },
+      d107: { name: 'Pleasantdale School District 107', urls: ['https://www.d107.org/'] },
+      d181: SH.d181, d86: SH.d86,
+      lths: { name: 'Lyons Township High School District 204', urls: ['https://www.lths.net/'] },
+      chamber: { name: 'Willowbrook/Burr Ridge Chamber of Commerce', urls: ['https://www.wbbrchamber.org/'] },
+      library: { name: 'Indian Prairie Public Library (serves much of Burr Ridge)', urls: ['https://www.indianprairielibrary.org/'] },
+      dgtownship: SH.dgtownship, lyons: SH.lyons, health: SH.health, forest: SH.forest, elections: SH.elections
+    },
+    groups: { government: ['village'], events: ['village', 'brparks', 'pdparks', 'chamber', 'library'], news: ['village', 'd180', 'd107', 'chamber'], schools: ['d180', 'd107', 'd181', 'd86', 'lths'], sports: ['brparks', 'pdparks', 'd86', 'lths'], services: ['dgtownship', 'lyons', 'health', 'forest', 'elections'], nonprofits: ['library', 'chamber'], faith: [] },
+    faithNoSite: NOFAITH
+  },
+  clarendon_hills: {
+    name: 'Clarendon Hills, Illinois',
+    sources: {
+      village: { name: 'Village of Clarendon Hills (government, news, police and fire)', urls: ['https://clarendonhills.us/'] },
+      parks: { name: 'Clarendon Hills Park District', urls: ['https://www.clarendonhillsparkdistrict.org/'] },
+      library: { name: 'Clarendon Hills Public Library', urls: ['https://www.clarendonhillslibrary.org/'] },
+      d181: SH.d181, d86: SH.d86, hc: SH.hc,
+      chamber: { name: 'Clarendon Hills Chamber of Commerce', urls: ['https://www.clarendonhillschamber.com/'] },
+      dgtownship: SH.dgtownship, bnsf: SH.bnsf, health: SH.health, forest: SH.forest, elections: SH.elections
+    },
+    groups: { government: ['village'], events: ['village', 'parks', 'library', 'chamber'], news: ['village', 'd181', 'd86', 'chamber'], schools: ['d181', 'd86', 'hc'], sports: ['parks', 'hc'], services: ['dgtownship', 'bnsf', 'health', 'forest', 'elections'], nonprofits: ['library', 'chamber'], faith: [] },
+    faithNoSite: NOFAITH
+  },
+  downers_grove: {
+    name: 'Downers Grove, Illinois',
+    sources: {
+      village: { name: 'Village of Downers Grove (government, news, police and fire)', urls: ['https://www.downers.us/'] },
+      parks: { name: 'Downers Grove Park District', urls: ['https://www.dgparks.org/'] },
+      library: { name: 'Downers Grove Public Library', urls: ['https://dglibrary.org/'] },
+      d58: { name: 'Downers Grove Grade School District 58', urls: ['https://www.dg58.org/'] },
+      d99: { name: 'Community High School District 99 (Downers Grove North and South)', urls: ['https://www.csd99.org/'] },
+      chamber: { name: 'Chamber630 (Downers Grove area chamber of commerce)', urls: ['https://www.chamber630.com/'] },
+      downtown: { name: 'Downtown Downers Grove (events and shops)', urls: ['https://www.downtowndg.org/'] },
+      dgtownship: SH.dgtownship, bnsf: SH.bnsf, health: SH.health, forest: SH.forest, elections: SH.elections
+    },
+    groups: { government: ['village'], events: ['village', 'parks', 'library', 'downtown', 'chamber'], news: ['village', 'd58', 'd99', 'chamber'], schools: ['d58', 'd99'], sports: ['parks', 'd99'], services: ['dgtownship', 'bnsf', 'health', 'forest', 'elections'], nonprofits: ['library', 'chamber', 'downtown'], faith: [] },
+    faithNoSite: NOFAITH
+  },
+  elmhurst: {
+    name: 'Elmhurst, Illinois',
+    sources: {
+      city: { name: 'City of Elmhurst (government, news, police and fire)', urls: ['https://www.elmhurst.org/'] },
+      parks: { name: 'Elmhurst Park District', urls: ['https://www.epd.org/'] },
+      library: { name: 'Elmhurst Public Library', urls: ['https://www.elmhurstpubliclibrary.org/'] },
+      d205: SH.d205,
+      chamber: { name: 'Elmhurst Chamber of Commerce & Industry', urls: ['https://www.elmhurstchamber.org/'] },
+      citycentre: { name: 'Elmhurst City Centre (downtown events and shops)', urls: ['https://www.elmhurstcitycentre.com/'] },
+      hospital: { name: 'Endeavor Health (Elmhurst Hospital)', urls: ['https://www.endeavorhealth.org/'] },
+      york: SH.york, upw: SH.upw, health: SH.health, forest: SH.forest, elections: SH.elections
+    },
+    groups: { government: ['city'], events: ['city', 'parks', 'library', 'citycentre', 'chamber'], news: ['city', 'd205', 'chamber'], schools: ['d205'], sports: ['parks', 'd205'], services: ['hospital', 'york', 'upw', 'health', 'forest', 'elections'], nonprofits: ['library', 'chamber', 'citycentre'], faith: [] },
+    faithNoSite: NOFAITH
+  },
+  oak_brook: {
+    name: 'Oak Brook, Illinois',
+    sources: {
+      village: { name: 'Village of Oak Brook (government, news, police and fire)', urls: ['https://www.oak-brook.org/'] },
+      parks: { name: 'Oak Brook Park District', urls: ['https://www.obparks.org/'] },
+      library: { name: 'Oak Brook Public Library', urls: ['https://www.oakbrooklibrary.org/'] },
+      d53: { name: 'Butler School District 53', urls: ['https://www.butler53.com/'] },
+      d86: SH.d86, hc: SH.hc, d205: SH.d205,
+      chamber: { name: 'Greater Oak Brook Chamber of Commerce', urls: ['https://www.obchamber.com/'] },
+      history: { name: 'Oak Brook Historical Society', urls: ['https://www.oakbrookhistory.com/'] },
+      grauemill: SH.grauemill,
+      york: SH.york, health: SH.health, forest: SH.forest, elections: SH.elections
+    },
+    groups: { government: ['village'], events: ['village', 'parks', 'library', 'chamber', 'grauemill'], news: ['village', 'd53', 'd86', 'chamber'], schools: ['d53', 'd86', 'hc', 'd205'], sports: ['parks', 'hc'], services: ['york', 'health', 'forest', 'elections'], nonprofits: ['library', 'history', 'grauemill', 'chamber'], faith: [] },
+    faithNoSite: NOFAITH
+  }
+});
+const TOWN_KEYS = Object.keys(TOWNS);
 const TOPIC_GROUPS = { services: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('p_') === 0), sports: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('s_') === 0), faith: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('f_') === 0), schools: ['d86', 'hinsdale_central', 'hinsdale_south', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
 const LOCAL_GUIDE_TOOL = {
   name: 'local_guide',
-  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 (Hinsdale Central High School and Hinsdale South High School, each with its own news, calendar and athletics) and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus sports and recreation open to the public (topic "sports": Hinsdale Parks & Recreation, Gateway Special Recreation for people with disabilities, Hinsdale Central athletics, Hinsdale Little League, Hinsdale Falcon Football, AYSO soccer, Hinsdale Swim Club, Hinsdale Central Hockey Club, Hinsdale Herd Lacrosse and Hinsdale South athletics; for scores and schedules of Chicago pro teams such as the Bears, Cubs, White Sox, Bulls, Blackhawks, Fire, Sky and Stars use live_scores and latest_news instead), plus public services (topic "services": the hospital, DuPage County Health Department, HCS Family Services, Downers Grove and Lyons townships for seniors, food pantries and assistance, Metra BNSF trains, the Forest Preserves and Fullersburg Woods, Graue Mill, and DuPage County elections and polling places; police, fire and road news come from the Village), plus the area\'s faith communities (topic "faith": every church in the Village directory and nearby synagogues, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this (topic "sports") for youth sports, leagues, sign-ups, tryouts, park programs or high school games around Hinsdale, ALWAYS use this (topic "services") for help, seniors, food pantries, health, trains, nature, voting or elections around Hinsdale, ALWAYS use this (topic "faith") when someone asks about churches, synagogues, mosques, temples or worship near Hinsdale, and ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
+  description: 'Live information straight from local community sources for Burr Ridge, Clarendon Hills, Downers Grove, Elmhurst, Hinsdale and Oak Brook, Illinois (pass town; generic topics events, news, schools, government, sports, services, nonprofits and faith work for every town). For Hinsdale: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 (Hinsdale Central High School and Hinsdale South High School, each with its own news, calendar and athletics) and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus sports and recreation open to the public (topic "sports": Hinsdale Parks & Recreation, Gateway Special Recreation for people with disabilities, Hinsdale Central athletics, Hinsdale Little League, Hinsdale Falcon Football, AYSO soccer, Hinsdale Swim Club, Hinsdale Central Hockey Club, Hinsdale Herd Lacrosse and Hinsdale South athletics; for scores and schedules of Chicago pro teams such as the Bears, Cubs, White Sox, Bulls, Blackhawks, Fire, Sky and Stars use live_scores and latest_news instead), plus public services (topic "services": the hospital, DuPage County Health Department, HCS Family Services, Downers Grove and Lyons townships for seniors, food pantries and assistance, Metra BNSF trains, the Forest Preserves and Fullersburg Woods, Graue Mill, and DuPage County elections and polling places; police, fire and road news come from the Village), plus the area\'s faith communities (topic "faith": every church in the Village directory and nearby synagogues, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this (topic "sports") for youth sports, leagues, sign-ups, tryouts, park programs or high school games around Hinsdale, ALWAYS use this (topic "services") for help, seniors, food pantries, health, trains, nature, voting or elections around Hinsdale, ALWAYS use this (topic "faith") when someone asks about churches, synagogues, mosques, temples or worship near Hinsdale, and ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
   input_schema: { type: 'object', properties: {
     topic: { type: 'string', enum: ['events', 'news', 'schools', 'hinsdale_central', 'hinsdale_south', 'government', 'nonprofits', 'sports', 'services', 'faith', 's_hs_athletics', 'p_hospital', 'p_health', 'p_hcs', 'p_dgtownship', 'p_lyonstownship', 'p_metra', 'p_forest', 'p_grauemill', 'p_elections', 's_parks', 's_gateway', 's_hc_athletics', 's_littleleague', 's_falcons', 's_ayso', 's_swim', 's_hockey', 's_lacrosse', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
+    town: { type: 'string', enum: ['burr_ridge', 'clarendon_hills', 'downers_grove', 'elmhurst', 'hinsdale', 'oak_brook'], description: 'Which town to read. Default: the town the person follows, otherwise the town they ask about.' },
     query: { type: 'string', description: 'Optional words to look for, e.g. "board meeting", "homecoming", "Santa"' } }, required: ['topic'] }
 };
 function htmlToText(h) {
@@ -620,7 +717,9 @@ async function readSource(url, query) {
 async function localGuide(input) {
   const town = TOWNS[String(input.town || 'hinsdale').toLowerCase()] || TOWNS.hinsdale;
   const topic = String(input.topic || 'events');
-  const keys = TOPIC_GROUPS[topic] || (town.sources[topic] ? [topic] : TOPIC_GROUPS.events);
+  const groups = town.groups || TOPIC_GROUPS;
+  const keys = (groups[topic] || (town.sources[topic] ? [topic] : groups.events)).filter((k) => town.sources[k]);
+  if (!keys.length) return (topic === 'faith' ? town.faithNoSite : 'No stored sources for that in ' + town.name + '. Use web search.');
   const parts = await Promise.all(keys.map(async (k) => {
     const src = town.sources[k];
     const texts = await Promise.all(src.urls.map((u) => readSource(u, input.query)));
