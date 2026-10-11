@@ -73,7 +73,7 @@ If they ask to plan their week, help them choose a few goals across work, family
 Prayer journal: when they ask you to pray for someone or something, or share a concern they are carrying to God (an illness, a decision, a loved one), you may offer to add it to their prayer journal with a line [[prayer|short prayer request, e.g. Sarah's surgery on Friday]]. At most one per reply.
 Payments: BibliCall never moves money itself. When they say they need to pay someone (an employee, a family member, a vendor), you may add [[pay|Name|amount|what it is for]] (amount as a number, or empty) so a button opens Venmo, PayPal, Cash App or their bank for them to approve; if there is a day, also add a remind line like "Pay Jack $300". Never ask for passwords, account or card numbers.
 Evening reflection: if they ask to reflect on their day, guide a short, gentle reflection: ask one question at a time (what went well, where they saw God at work, anything to let go of or be thankful for), listen warmly, and close with a brief prayer of thanks after two or three exchanges.`;
-function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith, name) {
+function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith, name, town) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
@@ -114,6 +114,9 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
     const now = new Date(), f = (tz) => now.toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     s += `\n\nThe exact time right now: ${f('America/New_York')} Eastern = ${f('America/Chicago')} Central = ${f('America/Los_Angeles')} Pacific (${now.toISOString()} UTC). Sports and TV start times are usually listed in Eastern time; convert carefully before saying whether something has started, and for any game or score use the live_scores tool instead of guessing from articles.`;
   }
+  if (town === 'hinsdale') s += `
+
+This person follows Hinsdale, Illinois in BibliCall. For anything local ("around here", "this weekend", the village, the schools, Hinsdale organizations or events), use the local_guide tool first and name the source (for example "the Village of Hinsdale" or "District 86"), then web search for anything it doesn't cover.`;
   if (name && !group) s += `\n\nThis person's first name is ${name}. When you use their name, call them ${name}. Never call them by a joking nickname or a name that came up in banter (with friends, in earlier messages or in memory) unless they clearly ask to be called that.`;
   else if (!group) s += `\n\nNever call this person by a joking nickname that came up in banter or memory unless they clearly ask to be called that.`;
   if (plan && !group) {
@@ -230,11 +233,7 @@ export default {
       }
     }
 
-    if (body.mode === 'probe' && body.key === 'hinsdale-probe-2026') {
-      const urls = (body.urls || []).slice(0, 20), out = [];
-      await Promise.all(urls.map(async (u) => { try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0; +https://biblicall.com)' }, redirect: 'follow' }); const t = await r.text(); const title = (t.match(/<title[^>]*>([^<]*)/i) || [])[1] || ''; const links = [...new Set([...t.matchAll(/href="([^"#]+)"/gi)].map((m) => m[1]).filter((h) => /event|calendar|news|agenda|meeting|program|announce|feed|rss|ical/i.test(h)))].slice(0, 25); out.push({ u, final: r.url, status: r.status, title: title.trim().slice(0, 80), len: t.length, links }); } catch (e) { out.push({ u, err: e.message }); } }));
-      return json(out);
-    }
+    if (body.mode === 'localtest' && body.key === 'hinsdale-probe-2026') return json({ out: await localGuide({ town: 'hinsdale', topic: String(body.topic || 'all'), query: String(body.query || '') }) });
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
@@ -337,8 +336,8 @@ export default {
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0, String(body.name || '').replace(/[^A-Za-z\u00C0-\u024F' -]/g, '').trim().slice(0, 30)), messages,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL]
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0, String(body.name || '').replace(/[^A-Za-z\u00C0-\u024F' -]/g, '').trim().slice(0, 30), TOWNS[String(body.town || '')] ? String(body.town) : ''), messages,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL, LOCAL_GUIDE_TOOL]
         };
 
     try {
@@ -435,6 +434,7 @@ async function runTool(name, input) {
   if (name === 'live_scores') return liveScores(input);
   if (name === 'latest_news') return latestNews(input);
   if (name === 'weather') return weatherNow(input);
+  if (name === 'local_guide') return localGuide(input);
   return 'Unknown tool';
 }
 async function latestNews(input) {
@@ -464,6 +464,69 @@ async function weatherNow(input) {
     const w = await (await fetch(u)).json();
     return JSON.stringify({ place: loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : ''), current: w.current, daily: w.daily, units: 'F, mph, inches; weather_code is WMO (0 clear, 1-3 partly cloudy, 45 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorms)' });
   } catch (e) { return 'Weather is unavailable right now.'; }
+}
+
+// ---- Local guide: the town's own sources (village, schools, chamber, nonprofits), read live ----
+const TOWNS = {
+  hinsdale: {
+    name: 'Hinsdale, Illinois',
+    sources: {
+      village: { name: 'Village of Hinsdale (government, board meetings, parks & recreation, police and fire news)', urls: ['https://www.villageofhinsdale.org/news_list.php', 'https://www.villageofhinsdale.org/calendar.php'] },
+      d86: { name: 'Hinsdale Township High School District 86 (Hinsdale Central, Hinsdale South)', urls: ['https://www.hinsdale86.org/our-district/news-and-announcements', 'https://www.hinsdale86.org/our-district/calendars'] },
+      d181: { name: 'Community Consolidated School District 181 (elementary and middle schools)', urls: ['https://www.d181.org/district/news', 'https://www.d181.org/calendars', 'https://www.d181.org/families/family-education-events'] },
+      chamber: { name: 'Hinsdale Chamber of Commerce', urls: ['https://business.hinsdalechamber.com/events/calendar', 'https://www.hinsdalechamber.com/feed/'] },
+      community_house: { name: 'The Community House', urls: ['https://thecommunityhouse.org/events/', 'https://thecommunityhouse.org/feed/'] },
+      wellness_house: { name: 'Wellness House (free support for people affected by cancer)', urls: ['https://wellnesshouse.org/program-list/', 'https://wellnesshouse.org/feed/'] },
+      library: { name: 'Hinsdale Public Library', urls: ['https://hinsdale.libnet.info/events', 'https://www.hinsdalelibrary.info/'] },
+      history: { name: 'Hinsdale Historical Society', urls: ['https://www.hinsdalehistory.org/upcoming-events'] },
+      humane_society: { name: 'Hinsdale Humane Society', urls: ['https://hinsdalehumanesociety.org/events/', 'https://hinsdalehumanesociety.org/feed/'] },
+      hinsdale_magazine: { name: 'Hinsdale Magazine (local stories)', urls: ['https://hinsdalemag.com/feed/'] }
+    }
+  }
+};
+const TOPIC_GROUPS = { schools: ['d86', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
+const LOCAL_GUIDE_TOOL = {
+  name: 'local_guide',
+  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine. ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
+  input_schema: { type: 'object', properties: {
+    topic: { type: 'string', enum: ['events', 'news', 'schools', 'government', 'nonprofits', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
+    query: { type: 'string', description: 'Optional words to look for, e.g. "board meeting", "homecoming", "Santa"' } }, required: ['topic'] }
+};
+function htmlToText(h) {
+  return String(h).replace(/<(script|style|noscript|svg|header|footer|nav|form|iframe)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr|article|section)>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#8217;|&rsquo;|&#39;/g, "'").replace(/&#8220;|&#8221;|&quot;/g, '"').replace(/&#8211;|&ndash;/g, '-').replace(/&#\d+;/g, ' ')
+    .split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l.length > 2).join('\n');
+}
+async function readSource(url, query) {
+  try {
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0; +https://biblicall.com)' }, cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!r.ok) return '';
+    const t = await r.text();
+    if (/<rss|<feed/i.test(t.slice(0, 500))) {
+      const tag = (s, k) => { const m = s.match(new RegExp('<' + k + '[^>]*>([\\s\\S]*?)</' + k + '>')); return m ? htmlToText(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : ''; };
+      return (t.match(/<item>[\s\S]*?<\/item>/g) || []).slice(0, 8).map((it) => '- ' + tag(it, 'title') + ' (' + tag(it, 'pubDate').slice(0, 16) + '): ' + tag(it, 'description').slice(0, 220)).join('\n');
+    }
+    let text = htmlToText(t);
+    if (query) {
+      const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+      const lines = text.split('\n'), keep = new Set();
+      lines.forEach((l, i) => { if (words.some((w) => l.toLowerCase().includes(w))) for (let k = Math.max(0, i - 2); k <= Math.min(lines.length - 1, i + 3); k++) keep.add(k); });
+      if (keep.size) text = [...keep].sort((a, b) => a - b).map((i) => lines[i]).join('\n');
+    }
+    return text.slice(0, 3500);
+  } catch (e) { return ''; }
+}
+async function localGuide(input) {
+  const town = TOWNS[String(input.town || 'hinsdale').toLowerCase()] || TOWNS.hinsdale;
+  const topic = String(input.topic || 'events');
+  const keys = TOPIC_GROUPS[topic] || (town.sources[topic] ? [topic] : TOPIC_GROUPS.events);
+  const parts = await Promise.all(keys.map(async (k) => {
+    const src = town.sources[k];
+    const texts = await Promise.all(src.urls.map((u) => readSource(u, input.query)));
+    const body = texts.filter(Boolean).join('\n').slice(0, keys.length > 2 ? 2200 : 5000);
+    return '### ' + src.name + ' (' + src.urls[0] + ')\n' + (body || '(nothing could be read right now)');
+  }));
+  return 'Read live from ' + town.name + ' sources at ' + new Date().toISOString() + ' UTC:\n\n' + parts.join('\n\n');
 }
 
 // ---- Cost tracking: totals per day, and per anonymous person (hashed), for the weekly email ----

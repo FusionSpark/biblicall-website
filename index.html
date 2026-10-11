@@ -720,6 +720,11 @@
   .invme{margin-top:6px;font-size:14px;color:var(--muted);display:flex;gap:6px;align-items:center}
   .invme b{color:var(--ink)}
   .invchg{border:0;background:none;padding:0;font-family:inherit;font-size:14px;color:var(--earth);text-decoration:underline;cursor:pointer}
+
+  .town-asks{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+  .town-src{margin:4px 0 10px;padding-left:18px;font-size:15px;line-height:1.5}
+  .town-src a{font-weight:700;color:var(--earth)}
+  .town-src span{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1036,7 +1041,7 @@
   <div class="dr-head"><button type="button" class="dr-new" id="newChat">+ New conversation</button><button type="button" class="dr-close" id="drawerClose" aria-label="Close">&times;</button></div>
   <button type="button" class="dr-invite" data-call aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Invite to a live conversation<small>Talk this through with a friend, together</small></span></button>
   <div class="dr-daily" id="drDaily"><button type="button" class="dr-invite" id="drDailyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>Daily North Star<small>A verse each morning, by email</small></span></button></div>
-  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="apps"><span class="ti" aria-hidden="true">🔗</span>Sync apps</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button><button type="button" class="dr-moretabs" id="drMoreTabs" hidden>＋ More tools</button></div>
+  <div class="dr-tabs" role="tablist"><button type="button" data-tab="convos" class="on"><span class="ti" aria-hidden="true">💬</span>Chats</button><button type="button" data-tab="plan"><span class="ti" aria-hidden="true">📅</span>Week</button><button type="button" data-tab="town"><span class="ti" aria-hidden="true">📍</span>My town</button><button type="button" data-tab="prayer"><span class="ti" aria-hidden="true">🙏</span>Prayer</button><button type="button" data-tab="memory"><span class="ti" aria-hidden="true">🧠</span>Memory</button><button type="button" data-tab="style"><span class="ti" aria-hidden="true">🎨</span>Personalize</button><button type="button" data-tab="files"><span class="ti" aria-hidden="true">📁</span>Files</button><button type="button" data-tab="apps"><span class="ti" aria-hidden="true">🔗</span>Sync apps</button><button type="button" data-tab="pay"><span class="ti" aria-hidden="true">💸</span>Pay</button><button type="button" data-tab="account"><span class="ti" aria-hidden="true">👤</span>Me</button><button type="button" class="dr-moretabs" id="drMoreTabs" hidden>＋ More tools</button></div>
   <div class="dr-body" id="drBody"></div>
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
@@ -1954,7 +1959,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: myName() || undefined, messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined, faith: faithLvl })
+        body: JSON.stringify({ name: myName() || undefined, town: lsGet('bc_town', '') || undefined, messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined, faith: faithLvl })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -3050,6 +3055,41 @@
     } catch (e) { if (loud) toast('Monday.com sync stopped: ' + e.message); }
     monRunning = false; if (!drawer.hidden && drTab === 'apps') drawDrawer();
   }
+  // ---- My town: Bibli reads the town's own sources live (village, schools, chamber, nonprofits) ----
+  const TOWN_SOURCES = [
+    ['Village of Hinsdale', 'https://www.villageofhinsdale.org/', 'Government, board meetings, parks & recreation, police and fire'],
+    ['District 86', 'https://www.hinsdale86.org/', 'Hinsdale Central and Hinsdale South high schools'],
+    ['District 181', 'https://www.d181.org/', 'Elementary and middle schools'],
+    ['Hinsdale Chamber of Commerce', 'https://www.hinsdalechamber.com/', 'Business events and local shops'],
+    ['The Community House', 'https://thecommunityhouse.org/', 'Programs, sports and community events'],
+    ['Wellness House', 'https://wellnesshouse.org/', 'Free support for people affected by cancer'],
+    ['Hinsdale Public Library', 'https://www.hinsdalelibrary.info/', 'Events and programs for all ages'],
+    ['Hinsdale Historical Society', 'https://www.hinsdalehistory.org/', 'History, tours and events'],
+    ['Hinsdale Humane Society', 'https://hinsdalehumanesociety.org/', 'Adoptions and events'],
+    ['Hinsdale Magazine', 'https://hinsdalemag.com/', 'Local stories and people']
+  ];
+  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week'];
+  function drawTown() {
+    const box = el('div', 'plan town');
+    const on = lsGet('bc_town', '') === 'hinsdale';
+    box.appendChild(el('h4', 'bg-sub', '\u{1F4CD} Hinsdale, Illinois'));
+    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village or local organizations and it reads their own websites, live.' : 'Follow Hinsdale and Bibli will answer local questions straight from the village, the schools, the chamber and local organizations, live.'));
+    const t = el('button', on ? 'acct-link' : 'act-btn', on ? 'Stop following Hinsdale' : 'Follow Hinsdale'); t.type = 'button';
+    t.addEventListener('click', () => { lsSet('bc_town', on ? '' : 'hinsdale'); stat(on ? 'town_off' : 'town_on'); drawDrawer(); });
+    box.appendChild(t);
+    if (on) {
+      box.appendChild(el('p', 'wk-sub', 'Ask Bibli'));
+      const chips = el('div', 'town-asks');
+      TOWN_ASKS.forEach((a) => { const b = el('button', 'bg-chip', a); b.type = 'button'; b.addEventListener('click', () => { closeDrawer(); q.value = a; q.dispatchEvent(new Event('input')); sendBtn.click(); stat('town_ask'); }); chips.appendChild(b); });
+      box.appendChild(chips);
+    }
+    box.appendChild(el('p', 'wk-sub', 'Where Bibli looks'));
+    const ul = el('ul', 'town-src');
+    TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
+    box.appendChild(ul);
+    box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli\u2019s live search. More towns coming soon: Oak Brook, Elmhurst, Downers Grove.'));
+    return box;
+  }
   function drawApps() {
     const box = el('div', 'plan apps');
     box.appendChild(el('p', 'acct-fine', 'Connect the apps you already use, so your BibliCall to-do list and calendar show up where you work.'));
@@ -3552,7 +3592,7 @@
   }
   window.BC_STYLE_REDRAW = () => { if (!drawer.hidden && drTab === 'style') drawDrawer(); };
   // First five minutes: Chats, Week, Personalize and Me. Other tabs appear as the person needs them, or all at once with "More tools".
-  const CORE_TABS = ['convos', 'plan', 'style', 'account'];
+  const CORE_TABS = ['convos', 'plan', 'town', 'style', 'account'];
   function tabUnlocked(t) {
     if (CORE_TABS.includes(t) || lsGet('bc_all_tabs', false) || (lsGet('bc_tabs', []) || []).includes(t)) return true;
     const days = +lsGet('bc_days', 0);
@@ -3579,6 +3619,7 @@
     if (drTab === 'files') { drBody.appendChild(drawFiles()); return; }
     if (drTab === 'pay') { drBody.appendChild(drawPay()); return; }
     if (drTab === 'apps') { drBody.appendChild(drawApps()); return; }
+    if (drTab === 'town') { drBody.appendChild(drawTown()); return; }
     if (drTab === 'convos') {
       if (!convos.length) { drBody.appendChild(el('p', 'dr-empty', 'Your conversations will appear here, saved automatically on this device.')); return; }
       convos.forEach((c) => {
