@@ -4400,10 +4400,11 @@
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.type === 'welcome') {
         // The call is open: hand back the link right away (the Bible text for verses can finish loading after).
+        room.invites = d.invites || [];
         const ready = room.onReady; room.onReady = null;
         if (ready) ready(room.id);
         await loadBible();
-        room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking; room.invites = d.invites || [];
+        room.you = myUid(); room.live = true; room.tries = 0; room.thinking = !!d.thinking;
         if (room.seed && (!d.msgs || !d.msgs.length) && room.seed.length) {
           conversation = []; // the seeded messages stream back from the room
           roomSend({ type: 'seed', msgs: room.seed });
