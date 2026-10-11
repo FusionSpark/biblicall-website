@@ -228,6 +228,7 @@ export default {
       }
     }
 
+    if (body.mode === 'newstest') { const r = await fetch('https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=' + encodeURIComponent(String(body.q || 'world') + ' when:1h'), { headers: { 'User-Agent': 'Mozilla/5.0 (BibliCall)' } }); const t = await r.text(); return json({ status: r.status, head: t.slice(0, 400), parsed: await latestNews({ query: String(body.q || 'world'), hours: 1 }) }); }
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
