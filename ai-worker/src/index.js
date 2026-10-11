@@ -228,7 +228,7 @@ export default {
       }
     }
 
-    if (body.mode === 'newstest') { const r = await fetch('https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=' + encodeURIComponent(String(body.q || 'world') + ' when:1h'), { headers: { 'User-Agent': 'Mozilla/5.0 (BibliCall)' } }); const t = await r.text(); return json({ status: r.status, head: t.slice(0, 400), parsed: await latestNews({ query: String(body.q || 'world'), hours: 1 }) }); }
+    if (body.mode === 'newstest') { const out = {}; for (const [k, u] of [['bing', 'https://www.bing.com/news/search?format=rss&qft=sortbydate%3d%221%22&q=' + encodeURIComponent(String(body.q || 'world'))], ['gdelt', 'https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=datedesc&maxrecords=5&timespan=1h&query=' + encodeURIComponent(String(body.q || 'world') + ' sourcelang:english')]]) { try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0)' } }); out[k] = r.status + ' ' + (await r.text()).slice(0, 500); } catch (e) { out[k] = 'err ' + e.message; } } return json(out); }
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
