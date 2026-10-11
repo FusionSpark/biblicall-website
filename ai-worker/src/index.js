@@ -233,11 +233,6 @@ export default {
       }
     }
 
-    if (body.mode === 'probe' && body.key === 'hinsdale-probe-2026') {
-      const out = [];
-      await Promise.all((body.urls || []).slice(0, 30).map(async (u) => { try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0)' }, redirect: 'follow' }); const t = await r.text(); out.push({ u, final: r.url, status: r.status, title: ((t.match(/<title[^>]*>([^<]*)/i) || [])[1] || '').trim().slice(0, 70), len: t.length }); } catch (e) { out.push({ u, err: e.message }); } }));
-      return json(out);
-    }
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
@@ -484,16 +479,34 @@ const TOWNS = {
       library: { name: 'Hinsdale Public Library', urls: ['https://hinsdale.libnet.info/events', 'https://www.hinsdalelibrary.info/'] },
       history: { name: 'Hinsdale Historical Society', urls: ['https://www.hinsdalehistory.org/upcoming-events'] },
       humane_society: { name: 'Hinsdale Humane Society', urls: ['https://hinsdalehumanesociety.org/events/', 'https://hinsdalehumanesociety.org/feed/'] },
-      hinsdale_magazine: { name: 'Hinsdale Magazine (local stories)', urls: ['https://hinsdalemag.com/feed/'] }
-    }
+      hinsdale_magazine: { name: 'Hinsdale Magazine (local stories)', urls: ['https://hinsdalemag.com/feed/'] },
+      // Faith communities: every congregation in the Village of Hinsdale's directory plus nearby synagogue, mosques and temple, treated alike.
+      f_avenue: { name: 'Avenue Christian Church (formerly Christian Church of Clarendon Hills)', urls: ['https://www.avenuechristian.com/'] },
+      f_christchurch: { name: 'Christ Church of Oak Brook', urls: ['https://christchurch.us/oakbrook'] },
+      f_chcpc: { name: 'Community Presbyterian Church, Clarendon Hills', urls: ['https://www.chcpc.org/'] },
+      f_etzchaim: { name: 'Congregation Etz Chaim (synagogue), Lombard', urls: ['https://www.mycec.org/'] },
+      f_covenant: { name: 'Evangelical Covenant Church (Hinsdale Covenant)', urls: ['https://www.hinsdalecovenant.com/'] },
+      f_faithfellowship: { name: 'Faith Fellowship Church, Oak Brook', urls: ['https://www.churchfaithfellowship.org/'] },
+      f_grace: { name: 'Grace Episcopal Church', urls: ['https://www.gracehinsdale.org/'] },
+      f_htgc: { name: 'Hindu Temple of Greater Chicago, Lemont', urls: ['https://www.htgc.org/'] },
+      f_humc: { name: 'Hinsdale United Methodist Church', urls: ['https://www.hinsdaleumc.com/'] },
+      f_islamicfoundation: { name: 'Islamic Foundation (mosque), Villa Park', urls: ['https://www.islamicfoundation.org/'] },
+      f_redeemer: { name: 'Redeemer Lutheran Church', urls: ['https://redeemerhinsdale.org/'] },
+      f_sij: { name: 'St. Isaac Jogues Catholic Parish', urls: ['https://www.sij.net/'] },
+      f_trinitylutheran: { name: 'Trinity Lutheran Church, Burr Ridge', urls: ['https://www.mytls.org/'] },
+      f_union: { name: 'Union Church of Hinsdale', urls: ['https://hinsdale.church/'] },
+      f_unitarian: { name: 'Unitarian Church of Hinsdale', urls: ['https://www.hinsdaleunitarian.org/'] },
+      f_zion: { name: 'Zion Lutheran Church', urls: ['https://www.zionhinsdale.org/'] }
+    },
+    faithNoSite: 'Also in the Village directory (no website listed): First Church of Christ, Scientist (First and Oak Streets, 630-323-4740); Oak Community Church (620 N. Oak St., 630-323-0087); Sts. Cyril & Methodius Macedonian Orthodox Church (10 S 330 Route 83, 630-654-0016); Hinsdale Seventh-day Adventist Church (201 N. Oak, 630-323-0182); Burr Ridge United Church of Christ (15 W 100 Plainfield Rd, 630-654-4544); The Mecca Center (mosque), Willowbrook.'
   }
 };
-const TOPIC_GROUPS = { schools: ['d86', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
+const TOPIC_GROUPS = { faith: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('f_') === 0), schools: ['d86', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
 const LOCAL_GUIDE_TOOL = {
   name: 'local_guide',
-  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine. ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
+  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus the area's faith communities (topic "faith": every church in the Village directory and nearby synagogue, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
   input_schema: { type: 'object', properties: {
-    topic: { type: 'string', enum: ['events', 'news', 'schools', 'government', 'nonprofits', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
+    topic: { type: 'string', enum: ['events', 'news', 'schools', 'government', 'nonprofits', 'faith', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
     query: { type: 'string', description: 'Optional words to look for, e.g. "board meeting", "homecoming", "Santa"' } }, required: ['topic'] }
 };
 function htmlToText(h) {
@@ -527,10 +540,10 @@ async function localGuide(input) {
   const parts = await Promise.all(keys.map(async (k) => {
     const src = town.sources[k];
     const texts = await Promise.all(src.urls.map((u) => readSource(u, input.query)));
-    const body = texts.filter(Boolean).join('\n').slice(0, keys.length > 2 ? 2200 : 5000);
+    const body = texts.filter(Boolean).join('\n').slice(0, Math.max(500, Math.floor(14000 / keys.length)));
     return '### ' + src.name + ' (' + src.urls[0] + ')\n' + (body || '(nothing could be read right now)');
   }));
-  return 'Read live from ' + town.name + ' sources at ' + new Date().toISOString() + ' UTC:\n\n' + parts.join('\n\n');
+  return 'Read live from ' + town.name + ' sources at ' + new Date().toISOString() + ' UTC:\n\n' + parts.join('\n\n') + (topic === 'faith' ? '\n\n' + town.faithNoSite : '');
 }
 
 // ---- Cost tracking: totals per day, and per anonymous person (hashed), for the weekly email ----

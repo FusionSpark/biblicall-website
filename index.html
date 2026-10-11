@@ -3068,12 +3068,21 @@
     ['Hinsdale Humane Society', 'https://hinsdalehumanesociety.org/', 'Adoptions and events'],
     ['Hinsdale Magazine', 'https://hinsdalemag.com/', 'Local stories and people']
   ];
-  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week'];
+  const FAITH_COMMUNITIES = [
+    ['Avenue Christian Church (Clarendon Hills)', 'https://www.avenuechristian.com/'], ['Burr Ridge United Church of Christ', ''], ['Christ Church of Oak Brook', 'https://christchurch.us/oakbrook'],
+    ['Community Presbyterian Church (Clarendon Hills)', 'https://www.chcpc.org/'], ['Congregation Etz Chaim (Lombard)', 'https://www.mycec.org/'], ['Evangelical Covenant Church', 'https://www.hinsdalecovenant.com/'],
+    ['Faith Fellowship Church (Oak Brook)', 'https://www.churchfaithfellowship.org/'], ['First Church of Christ, Scientist', ''], ['Grace Episcopal Church', 'https://www.gracehinsdale.org/'],
+    ['Hindu Temple of Greater Chicago (Lemont)', 'https://www.htgc.org/'], ['Hinsdale Seventh-day Adventist Church', ''], ['Hinsdale United Methodist Church', 'https://www.hinsdaleumc.com/'],
+    ['Islamic Foundation (Villa Park)', 'https://www.islamicfoundation.org/'], ['The Mecca Center (Willowbrook)', ''], ['Oak Community Church', ''], ['Redeemer Lutheran Church', 'https://redeemerhinsdale.org/'],
+    ['St. Isaac Jogues Catholic Parish', 'https://www.sij.net/'], ['Sts. Cyril & Methodius Macedonian Orthodox Church', ''], ['Trinity Lutheran Church (Burr Ridge)', 'https://www.mytls.org/'],
+    ['Union Church of Hinsdale', 'https://hinsdale.church/'], ['Unitarian Church of Hinsdale', 'https://www.hinsdaleunitarian.org/'], ['Zion Lutheran Church', 'https://www.zionhinsdale.org/']
+  ];
+  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Faith community events this week'];
   function drawTown() {
     const box = el('div', 'plan town');
     const on = lsGet('bc_town', '') === 'hinsdale';
     box.appendChild(el('h4', 'bg-sub', '\u{1F4CD} Hinsdale, Illinois'));
-    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village or local organizations and it reads their own websites, live.' : 'Follow Hinsdale and Bibli will answer local questions straight from the village, the schools, the chamber and local organizations, live.'));
+    box.appendChild(el('p', 'acct-fine', on ? 'Bibli follows Hinsdale for you: ask about events, schools, the village, local organizations or faith communities and it reads their own websites, live.' : 'Follow Hinsdale (wherever you live) and Bibli will answer local questions straight from the village, the schools, the chamber, local organizations and faith communities, live.'));
     const t = el('button', on ? 'acct-link' : 'act-btn', on ? 'Stop following Hinsdale' : 'Follow Hinsdale'); t.type = 'button';
     t.addEventListener('click', () => { lsSet('bc_town', on ? '' : 'hinsdale'); stat(on ? 'town_off' : 'town_on'); drawDrawer(); });
     box.appendChild(t);
@@ -3087,7 +3096,12 @@
     const ul = el('ul', 'town-src');
     TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
     box.appendChild(ul);
-    box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli\u2019s live search. More towns coming soon: Oak Brook, Elmhurst, Downers Grove.'));
+    box.appendChild(el('p', 'wk-sub', 'Faith communities'));
+    box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogue, mosques and temple, listed alphabetically and treated alike.'));
+    const fl = el('ul', 'town-src');
+    FAITH_COMMUNITIES.forEach(([n, u]) => { const li = el('li'); if (u) { const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); } else li.appendChild(el('b', null, n)); fl.appendChild(li); });
+    box.appendChild(fl);
+    box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli\u2019s live search. Anyone, anywhere can follow Hinsdale. More towns coming soon: Oak Brook, Elmhurst, Downers Grove.'));
     return box;
   }
   function drawApps() {
