@@ -2190,8 +2190,15 @@
   function positionInline() {
     const ytInline = document.getElementById('ytInline');
     if (!nowSong || nowSong.status !== 'ok') { if (ytInline) ytInline.hidden = true; return; }
+    if (!conversation.includes(nowSong.m)) {
+      // The conversation moved into a live call (its messages were re-created): keep the same song playing.
+      const alt = [...conversation].reverse().find((x) => x.songs && x.songs[nowSong.i] && x.songs[nowSong.i].title === nowSong.sg.title);
+      if (alt) { nowSong.m = alt; renderThread(); return; }
+      if (room && Date.now() - (room.opened || 0) < 15000) { ytInline.hidden = true; return; }
+      closeInline(); return;
+    }
     const slot = threadBox.querySelector('.song-slot');
-    if (!slot || !conversation.includes(nowSong.m)) { closeInline(); return; }
+    if (!slot) { closeInline(); return; }
     const box = convoEl.getBoundingClientRect(), r = slot.getBoundingClientRect();
     ytInline.style.top = (r.top - box.top + convoEl.scrollTop) + 'px';
     ytInline.style.left = (r.left - box.left + convoEl.scrollLeft) + 'px';
@@ -4166,6 +4173,8 @@
   }
   function inviteText(link) {
     const who = myName();
+    const withSong = [...conversation].slice(-4).reverse().find((x) => x.role === 'assistant' && x.songs && x.songs.length);
+    if (withSong) { const sg = withSong.songs[0]; return (who ? who : 'A friend') + ' shared \u201c' + sg.title + '\u201d' + (sg.artist ? ' by ' + sg.artist : '') + ' with you on BibliCall. Tap to listen together and join the conversation (just say \u201cBibli\u201d to ask it anything): ' + link; }
     return (who ? who + ' invited you to' : 'Join me in') + " a live conversation on BibliCall. Just say \u201cBibli\u201d when you want to ask it something. Tap to join the conversation: " + link;
   }
   function parseInvite(t) {
@@ -4404,6 +4413,12 @@
           if (lastAns) scrollToStart(lastAns);
         }
         if (room.onReady) { room.onReady(room.id); room.onReady = null; }
+        // A friend opening an invite: the song that was just shared opens right in the conversation, ready to play.
+        if (room.fromLink && !room.songShown) {
+          room.songShown = true;
+          const recent = conversation.slice(-4).reverse().find((x) => x.role === 'assistant' && x.songs && x.songs.length);
+          if (recent) setTimeout(() => playInline(recent, 0, recent.songs[0]), 500);
+        }
         drawRoomBar(); renderThread();
       } else if (d.type === 'msg') {
         const prev = [...conversation].reverse().find((m) => m.role === 'user');
@@ -4448,7 +4463,7 @@
   function openRoom(id, opts) {
     document.body.classList.add('chatting'); threadBox.classList.add('show');
     try { localStorage.setItem('bc_session', JSON.stringify({ room: id, conv: convId, t: Date.now() })); } catch (e) {}
-    room = { id, people: [], live: false, thinking: false, seed: opts && opts.seed, askName: opts && opts.askName, onReady: opts && opts.onReady };
+    room = { id, people: [], live: false, thinking: false, seed: opts && opts.seed, askName: opts && opts.askName, onReady: opts && opts.onReady, fromLink: !!(opts && opts.fromLink), opened: Date.now() };
     const u = new URL(location.href); u.searchParams.set('room', id); u.hash = '';
     history.replaceState(null, '', u.pathname + u.search);
     drawRoomBar();
@@ -4458,13 +4473,16 @@
     if (room && room.live) return Promise.resolve(room.id);
     if (room) return new Promise((res) => { const t = setTimeout(() => res(null), 6000); room.onReady = (id) => { clearTimeout(t); res(id); }; });
     const seed = conversation.filter((m) => !m.loading).slice(-8).map((m) => {
-      const o = { role: m.role, content: String(m.content).slice(0, 4000) };
+      // Songs travel with the conversation, so friends who join get the same play buttons.
+      const songs = (m.songs || []).map((sg) => '\n[[song|' + sg.title + '|' + (sg.artist || '') + ']]').join('');
+      const o = { role: m.role, content: String(m.content).slice(0, 4000 - songs.length) + songs };
       if (m.ns && m.ns !== 'loading') o.ns = { northStar: m.ns.teach, verses: m.ns.verses.map((v) => ({ ref: v.label, why: v.why })), reflect: m.ns.reflect };
       return o;
     });
+    const playing = nowSong && nowSong.status === 'ok' ? { title: nowSong.v.title, author: nowSong.v.author } : null;
     return new Promise((res) => {
       const t = setTimeout(() => { leaveRoom(); res(null); }, 6000);
-      openRoom(newRoomId(), { seed, askName: !myName(), onReady: (id) => { clearTimeout(t); res(id); } });
+      openRoom(newRoomId(), { seed, askName: !myName(), onReady: (id) => { clearTimeout(t); if (playing) roomSend({ type: 'playing', title: playing.title, author: playing.author }); res(id); } });
     });
   }
   function leaveRoom() {
@@ -4514,7 +4532,7 @@
     if (!ROOMS_WS || !id || !/^[A-Za-z0-9_-]{12,40}$/.test(id)) return;
     document.body.classList.add('chatting');
     threadBox.classList.add('show');
-    openRoom(id, { askName: !myName() });
+    openRoom(id, { askName: !myName(), fromLink: true });
   })();
 
   // ---- Joining from an invite link ----
