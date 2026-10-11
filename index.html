@@ -1318,7 +1318,7 @@
   // Faith in my answers: 1 Everyday Wisdom, 2 Gentle Guidance (default), 3 Faith Forward. Faith is never zero, only quieter;
   // the person chooses, and BibliCall may invite (once in a while) to move up, never on its own.
   let faithLvl = (() => { const v = +lsGet('bc_faith', 2); return [1, 2, 3].includes(v) ? v : 2; })();
-  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Plain, wise answers. Scripture only when you ask for it or tap North Star.'], [2, 'Gentle Guidance', 'Plain answers, with a small \u2726 now and then for meaningful moments. Tap it when you want a verse.'], [3, 'Faith Forward', 'A small \u2726 after every answer, ready whenever you want Scripture. Prayer when you ask.']];
+  const FAITH_LEVELS = [[1, 'Everyday Wisdom', 'Plain, wise answers. Scripture only when you ask for it or tap North Star.'], [2, 'Gentle Guidance', 'Plain answers, with a small \u2726 now and then for meaningful moments. Tap it when you want a verse.'], [3, 'Faith Forward', 'A deeper, faith-centered conversation: biblical wisdom for life\u2019s meaningful moments, a verse when things are hard, and a \u2726 after every answer. Everyday questions stay plain.']];
   function setFaith(v) { if (![1, 2, 3].includes(v)) return; faithLvl = v; lsSet('bc_faith', v); stat('faith_set_' + v); }
   window.BC_FAITH = { get: () => faithLvl, set: setFaith };
   const FAITH_WORDS = /\b(god|jesus|christ|bible|biblical|scripture|verse|pray|praying|prayer|church|faith|holy spirit|lord|psalms?|gospel|sermon|pastor|salvation|heaven)\b/i;
@@ -1948,7 +1948,7 @@
     const history = conversation.slice(0, -2).map(({ role, content }) => ({ role, content }));
     const ack = isAck(question);
     // UNIVERSAL RULE: no Scripture or North Star unless the person asks for it directly (or taps \u2726 / North Star).
-    const nsPromise = !ack && faithAsk(question) ? fetchNorthStar(question, history, true) : Promise.resolve(null);
+    const nsPromise = !ack && (faithAsk(question) || (faithLvl === 3 && hardMoment(question))) ? fetchNorthStar(question, history, faithAsk(question)) : Promise.resolve(null);
 
     try {
       const res = await fetch(WORKER_URL, {
