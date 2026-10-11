@@ -3764,11 +3764,15 @@
       return;
     }
     const read = el('div', 'web-read');
-    read.textContent = info.summary || (host + ' doesn\u2019t let other apps show its pages, and Bibli couldn\u2019t read it just now.');
+    read.textContent = info.summary || (host + ' doesn\u2019t let other apps show its pages. Bibli can look it up for you.');
     const note = el('span', 'web-note');
     note.appendChild(document.createTextNode(info.summary ? 'Bibli\u2019s summary of ' + host + ', which doesn\u2019t allow its pages to show inside other apps. ' : ''));
     const a = el('a', null, 'Open their site \u2197'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; note.appendChild(a);
-    read.appendChild(note); body.appendChild(read);
+    read.appendChild(note);
+    const label = name || (info.title || '').split(/ [>|\u2013-] /)[0] || host;
+    const ask = el('button', 'act-btn', 'Ask Bibli about ' + label); ask.type = 'button'; ask.style.marginTop = '18px';
+    ask.addEventListener('click', () => { closeWeb(); closeDrawer(); q.value = 'Tell me about ' + label + ': what\u2019s coming up, and how do I sign up or get involved?'; q.dispatchEvent(new Event('input')); sendBtn.click(); });
+    read.appendChild(ask); body.appendChild(read);
   }
   webWin.querySelector('.web-x').addEventListener('click', closeWeb);
   webWin.addEventListener('click', (e) => { if (e.target === webWin) closeWeb(); });
