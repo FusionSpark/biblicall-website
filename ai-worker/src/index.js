@@ -228,7 +228,6 @@ export default {
       }
     }
 
-    if (body.mode === 'newstest') { const out = {}; for (const [k, u] of [['bing', 'https://www.bing.com/news/search?format=rss&qft=sortbydate%3d%221%22&q=' + encodeURIComponent(String(body.q || 'world'))], ['gdelt', 'https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=datedesc&maxrecords=5&timespan=1h&query=' + encodeURIComponent(String(body.q || 'world') + ' sourcelang:english')]]) { try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0)' } }); out[k] = r.status + ' ' + (await r.text()).slice(0, 500); } catch (e) { out[k] = 'err ' + e.message; } } return json(out); }
     // Find the YouTube video for a song mentioned in conversation (plays inside BibliCall in YouTube's own player).
     if (body.mode === 'song') {
       const title = String(body.title || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120), artist = String(body.artist || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
@@ -434,15 +433,17 @@ async function runTool(name, input) {
 async function latestNews(input) {
   try {
     const hours = Math.min(168, Math.max(1, +input.hours || 24));
-    const q = String(input.query || '').slice(0, 200) + ' when:' + (hours <= 24 ? Math.ceil(hours) + 'h' : Math.ceil(hours / 24) + 'd');
-    const r = await fetch('https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=' + encodeURIComponent(q), { headers: { 'User-Agent': 'Mozilla/5.0 (BibliCall)' }, cf: { cacheTtl: 60 } });
+    const r = await fetch('https://www.bing.com/news/search?format=rss&qft=sortbydate%3d%221%22&q=' + encodeURIComponent(String(input.query || '').slice(0, 200)), { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0)' }, cf: { cacheTtl: 60 } });
     if (!r.ok) return 'News is unavailable right now.';
     const xml = await r.text();
-    const tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\s\\S]*?)</' + t + '>')); return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim() : ''; };
-    const items = (xml.match(/<item>[\s\S]*?<\/item>/g) || []).map((it) => ({ title: tag(it, 'title'), source: tag(it, 'source'), published_utc: new Date(tag(it, 'pubDate')).toISOString(), link: tag(it, 'link') }))
-      .filter((x) => x.title).sort((a, b) => b.published_utc.localeCompare(a.published_utc)).slice(0, 12);
+    const dec = (x) => x.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+    const tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\s\\S]*?)</' + t + '>')); return m ? dec(m[1]) : ''; };
     const now = Date.now();
-    items.forEach((x) => { x.minutes_ago = Math.round((now - Date.parse(x.published_utc)) / 60000); });
+    const items = (xml.match(/<item>[\s\S]*?<\/item>/g) || []).map((it) => {
+      const t = Date.parse(tag(it, 'pubDate'));
+      return { title: tag(it, 'title'), summary: tag(it, 'description').slice(0, 300), source: tag(it, 'News:Source'), published_utc: isNaN(t) ? undefined : new Date(t).toISOString(), minutes_ago: isNaN(t) ? undefined : Math.round((now - t) / 60000) };
+    }).filter((x) => x.title && (x.minutes_ago == null || x.minutes_ago <= hours * 60))
+      .sort((a, b) => (a.minutes_ago ?? 1e9) - (b.minutes_ago ?? 1e9)).slice(0, 12);
     return items.length ? JSON.stringify({ checked_at_utc: new Date().toISOString(), headlines: items }) : 'No news found in that time window. Try a broader query or more hours.';
   } catch (e) { return 'News is unavailable right now.'; }
 }
