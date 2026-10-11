@@ -86,6 +86,8 @@ Music: when the person mentions, asks about, or wants to hear a specific song, h
 
 Your friendly nickname is Bibli: people (and their friends in a live call) call you "Bibli", and you may call yourself Bibli too ("I'm Bibli"), while the app is BibliCall. When someone says "Bibli" they are talking to you.
 
+ALWAYS UP TO THE MINUTE (universal rule): for anything that happens in the world (news, events, games, markets, weather, prices, people in the news, schedules), use your live tools before answering: live_scores for games, latest_news for news and current events (newest first, with minutes ago), weather for weather, and web search for detail. Compare publish times with the exact time right now; trust the newest sources; never say something hasn't happened or hasn't started based on older articles; and say how fresh the information is when it matters (for example "as of 7:52 p.m. Central"). Never rely on memory for current facts.
+
 BibliCall can bring friends into a conversation: if they want to invite or include someone (a friend, family member or co-worker), tell them warmly to tap "Invite a friend" just above the chat box (it is also at the top of the menu, "Invite to a live conversation"); the friend gets a link and joins this conversation live. Never say you can't invite people.
 
 When the person shares files or photos, read them carefully and ground your answer in what they actually contain. Say so plainly if something is unreadable.
@@ -329,7 +331,7 @@ export default {
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
           model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0), messages,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL]
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL]
         };
 
     try {
@@ -357,7 +359,7 @@ export default {
         convo = [...convo, { role: 'assistant', content: data.content }];
         if (data.stop_reason === 'tool_use') {
           const results = [];
-          for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: b.name === 'live_scores' ? await liveScores(b.input || {}) : 'Unknown tool' });
+          for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: await runTool(b.name, b.input || {}) });
           convo.push({ role: 'user', content: results });
         }
         const cont = await call({ ...payload, messages: convo });
@@ -409,6 +411,50 @@ async function liveScores(input) {
         tv: (c.broadcasts || []).flatMap((b) => b.names || []).join(', ') || undefined };
     }) });
   } catch (e) { return 'Live scores are unavailable right now.'; }
+}
+
+// ---- Latest news (Google News, minutes old) and live weather (Open-Meteo): Bibli is never behind on what's happening ----
+const LATEST_NEWS_TOOL = {
+  name: 'latest_news',
+  description: 'The newest headlines from news outlets worldwide, with the exact time each was published (usually minutes old). ALWAYS use this for news, current events, breaking stories, elections, markets, business, weather events, deaths, launches, or anything that may have changed recently, then use web search for detail if needed. Results are sorted newest first.',
+  input_schema: { type: 'object', properties: { query: { type: 'string', description: 'What to look for, e.g. "White Sox Guardians Game 5" or "hurricane Florida"' }, hours: { type: 'number', description: 'How far back to look, in hours (default 24)' } }, required: ['query'] }
+};
+const WEATHER_TOOL = {
+  name: 'weather',
+  description: 'Current weather and the next 3 days for any place, live. Use for any weather question.',
+  input_schema: { type: 'object', properties: { place: { type: 'string', description: 'City or town, e.g. "Hinsdale, Illinois"' } }, required: ['place'] }
+};
+async function runTool(name, input) {
+  if (name === 'live_scores') return liveScores(input);
+  if (name === 'latest_news') return latestNews(input);
+  if (name === 'weather') return weatherNow(input);
+  return 'Unknown tool';
+}
+async function latestNews(input) {
+  try {
+    const hours = Math.min(168, Math.max(1, +input.hours || 24));
+    const q = String(input.query || '').slice(0, 200) + ' when:' + (hours <= 24 ? Math.ceil(hours) + 'h' : Math.ceil(hours / 24) + 'd');
+    const r = await fetch('https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=' + encodeURIComponent(q), { headers: { 'User-Agent': 'Mozilla/5.0 (BibliCall)' }, cf: { cacheTtl: 60 } });
+    if (!r.ok) return 'News is unavailable right now.';
+    const xml = await r.text();
+    const tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\s\\S]*?)</' + t + '>')); return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim() : ''; };
+    const items = (xml.match(/<item>[\s\S]*?<\/item>/g) || []).map((it) => ({ title: tag(it, 'title'), source: tag(it, 'source'), published_utc: new Date(tag(it, 'pubDate')).toISOString(), link: tag(it, 'link') }))
+      .filter((x) => x.title).sort((a, b) => b.published_utc.localeCompare(a.published_utc)).slice(0, 12);
+    const now = Date.now();
+    items.forEach((x) => { x.minutes_ago = Math.round((now - Date.parse(x.published_utc)) / 60000); });
+    return items.length ? JSON.stringify({ checked_at_utc: new Date().toISOString(), headlines: items }) : 'No news found in that time window. Try a broader query or more hours.';
+  } catch (e) { return 'News is unavailable right now.'; }
+}
+async function weatherNow(input) {
+  try {
+    const place = String(input.place || '').slice(0, 100);
+    const g = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(place.split(',')[0]))).json();
+    const loc = g && g.results && g.results[0];
+    if (!loc) return 'Could not find that place.';
+    const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + loc.latitude + '&longitude=' + loc.longitude + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=3';
+    const w = await (await fetch(u)).json();
+    return JSON.stringify({ place: loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : ''), current: w.current, daily: w.daily, units: 'F, mph, inches; weather_code is WMO (0 clear, 1-3 partly cloudy, 45 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorms)' });
+  } catch (e) { return 'Weather is unavailable right now.'; }
 }
 
 // ---- Cost tracking: totals per day, and per anonymous person (hashed), for the weekly email ----
