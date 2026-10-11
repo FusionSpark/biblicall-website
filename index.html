@@ -1894,7 +1894,11 @@
     const nmSet = sending.length ? null : question.match(/^\s*(?:hey\s+)?(?:bibli(?:call)?[,!.]?\s+)?(?:please\s+)?(?:call me|my name is|my first name is)\s+([A-Za-z][A-Za-z'\u2019-]{1,20})\s*[.!]?\s*$/i);
     if (nmSet) {
       const nn = nmSet[1][0].toUpperCase() + nmSet[1].slice(1);
+      const old = myName();
       setMyName(nn); q.value = ''; q.style.height = 'auto';
+      const before = memory.length;
+      memory = memory.filter((x) => !/\b(call me|my name is|nickname|known as)\b/i.test(x.text) && !(old && old !== nn && x.text.toLowerCase().includes(old.toLowerCase())));
+      if (memory.length !== before) { lsSet('bc_memory', memory); syncMemorySoon(); }
       toast('\u2713 Got it. Friends will see you as ' + nn + '.');
       if (room) drawRoomBar();
       return;
@@ -1950,7 +1954,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined, faith: faithLvl })
+        body: JSON.stringify({ name: myName() || undefined, messages: apiMessages(wantsRemember), memory: memory.slice(0, 40).map((m) => m.text), attachments, token: acct ? acct.token : undefined, ambience: ambience(), tradition: tradKey || undefined, plan: planContext(), lang: langKey !== 'en' ? langKey : undefined, faith: faithLvl })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(res.status === 429 ? 'busy' : (data.error || 'Upstream error'));
@@ -4306,8 +4310,9 @@
   }
   // First name shown to friends in a live call: the name they gave, or the first name on their BibliCall account.
   function myName() {
-    let n = ''; try { n = localStorage.getItem('bc_name') || ''; } catch (e) {}
-    if (!n) { try { const a = JSON.parse(localStorage.getItem('bc_acct') || 'null'); n = a && a.name ? String(a.name).trim().split(/\s+/)[0] : ''; } catch (e) {} }
+    let n = '';
+    try { const a = JSON.parse(localStorage.getItem('bc_acct') || 'null'); n = a && a.name ? String(a.name).trim().split(/\s+/)[0] : ''; } catch (e) {}
+    if (!n) { try { n = localStorage.getItem('bc_name') || ''; } catch (e) {} }
     return n.slice(0, 40);
   }
   function setMyName(v) {

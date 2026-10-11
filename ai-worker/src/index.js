@@ -73,7 +73,7 @@ If they ask to plan their week, help them choose a few goals across work, family
 Prayer journal: when they ask you to pray for someone or something, or share a concern they are carrying to God (an illness, a decision, a loved one), you may offer to add it to their prayer journal with a line [[prayer|short prayer request, e.g. Sarah's surgery on Friday]]. At most one per reply.
 Payments: BibliCall never moves money itself. When they say they need to pay someone (an employee, a family member, a vendor), you may add [[pay|Name|amount|what it is for]] (amount as a number, or empty) so a button opens Venmo, PayPal, Cash App or their bank for them to approve; if there is a day, also add a remind line like "Pay Jack $300". Never ask for passwords, account or card numbers.
 Evening reflection: if they ask to reflect on their day, guide a short, gentle reflection: ask one question at a time (what went well, where they saw God at work, anything to let go of or be thankful for), listen warmly, and close with a brief prayer of thanks after two or three exchanges.`;
-function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith) {
+function systemPrompt(today, memory, group, decide, ambience, tradition, plan, lang, faith, name) {
   const base = `You are BibliCall, a full-capability AI assistant guided by biblical wisdom and morality. You help with anything a great AI assistant helps with: business strategy, writing, planning, hard decisions, creative work, research, and everyday questions.
 
 Today's date is ${today}. You have a real-time web_search tool connected. You MUST use it before answering any question touching news, current events, prices, markets, schedules, sports results, who currently holds a position or role, or anything that could have changed since your training. Never say you lack real-time access or can't check current information, because you can: search first, then answer. Only skip searching for timeless questions (personal judgment calls, general advice, math, writing help) where searching would add nothing.
@@ -114,6 +114,8 @@ Be direct, warm, and practical. Keep responses focused and conversational, typic
     const now = new Date(), f = (tz) => now.toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     s += `\n\nThe exact time right now: ${f('America/New_York')} Eastern = ${f('America/Chicago')} Central = ${f('America/Los_Angeles')} Pacific (${now.toISOString()} UTC). Sports and TV start times are usually listed in Eastern time; convert carefully before saying whether something has started, and for any game or score use the live_scores tool instead of guessing from articles.`;
   }
+  if (name && !group) s += `\n\nThis person's first name is ${name}. When you use their name, call them ${name}. Never call them by a joking nickname or a name that came up in banter (with friends, in earlier messages or in memory) unless they clearly ask to be called that.`;
+  else if (!group) s += `\n\nNever call this person by a joking nickname that came up in banter or memory unless they clearly ask to be called that.`;
   if (plan && !group) {
     s += `\n\nThis person's local date and time right now: ${plan.local}.`;
     if (plan.prayers) s += `\nOn their prayer list: ${plan.prayers}`;
@@ -330,7 +332,7 @@ export default {
     const payload = northStar
       ? { model: NS_MODEL, max_tokens: 700, system: NORTH_STAR_SYSTEM, messages }
       : {
-          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0), messages,
+          model: MODEL, max_tokens: files.length ? 1600 : 1024, system: systemPrompt(today, memory, !!body.group, !!body.decide, String(body.ambience || '').replace(/[\u0000-\u001f`]/g, ' ').slice(0, 700), String(body.tradition || ''), cleanPlan(body.plan), String(body.lang || ''), +body.faith || 0, String(body.name || '').replace(/[^A-Za-z\u00C0-\u024F' -]/g, '').trim().slice(0, 30)), messages,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }, LIVE_SCORES_TOOL, LATEST_NEWS_TOOL, WEATHER_TOOL]
         };
 
