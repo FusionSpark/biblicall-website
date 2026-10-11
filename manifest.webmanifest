@@ -1,7 +1,7 @@
 {
   "name": "BibliCall",
   "short_name": "BibliCall",
-  "description": "An AI assistant guided by biblical wisdom.",
+  "description": "Ask anything. Find your North Star.",
   "start_url": "/?source=homescreen",
   "scope": "/",
   "display": "standalone",
