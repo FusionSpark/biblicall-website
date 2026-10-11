@@ -277,6 +277,46 @@ export default {
       }
     }
 
+    // In-app web window: can this page show inside BibliCall? If the site forbids it, a short summary of the page instead.
+    if (body.mode === 'page') {
+      let u;
+      try { u = new URL(String(body.url || '').slice(0, 600)); } catch (e) { return json({ error: 'bad_url' }, 400); }
+      if (!/^https?:$/.test(u.protocol) || u.hostname.indexOf('.') < 0 || /^(localhost|\d+\.\d+\.\d+\.\d+)$|^\[/i.test(u.hostname)) return json({ error: 'bad_url' }, 400);
+      const D = env.DIRECTORY.get(env.DIRECTORY.idFromName('main'));
+      const dcall = async (b) => (await D.fetch('https://do/', { method: 'POST', body: JSON.stringify(b) })).json();
+      const key = 'page:' + u.href.slice(0, 400);
+      const hit = await dcall({ op: 'map.get', key });
+      if (hit && hit.t > Date.now() - 6 * 3600000) return json(hit.v);
+      if (!(await underQuota(env, visitor, 'page', 1, 150))) return json({ frame: u.protocol === 'https:', url: u.href, summary: '' });
+      let frame = u.protocol === 'https:', title = '', text = '';
+      try {
+        const r = await fetch(u.href, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BibliCall/1.0; +https://biblicall.com)', Accept: 'text/html,*/*' }, redirect: 'follow' });
+        const xfo = (r.headers.get('x-frame-options') || '').trim();
+        const fa = ((r.headers.get('content-security-policy') || '').toLowerCase().match(/frame-ancestors([^;]*)/) || [])[1];
+        if (xfo) frame = false;
+        if (fa !== undefined && !/(^|\s)\*(\s|$)|biblicall\.com/.test(fa)) frame = false;
+        if (r.url && new URL(r.url).protocol !== 'https:') frame = false;
+        const h = (await r.text()).slice(0, 500000);
+        title = htmlToText((h.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '').split('\n')[0];
+        text = htmlToText(h).slice(0, 9000);
+      } catch (e) {}
+      let summary = '';
+      if (!frame && text.length > 150) {
+        try {
+          const pl = { model: NS_MODEL, max_tokens: 500, system: 'You summarize a web page for someone reading it inside the BibliCall app. Calm, friendly, plain words. First one short sentence on what the page is. Then up to 7 lines starting with "• " giving the most useful details on the page: upcoming dates and times, how to sign up or join, hours, prices, address, phone or email. Only facts that are on the page. No links, no markdown headings, no faith commentary.', messages: [{ role: 'user', content: 'Page title: ' + title + '\nAddress: ' + u.href + '\n\n' + text }] };
+          const r = await fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(pl) });
+          const data = await r.json();
+          if (r.ok) {
+            summary = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim().slice(0, 2000);
+            ctx && ctx.waitUntil(recordCost(env, visitor, { page: usageCost(data), n_page: 1 }));
+          }
+        } catch (e) {}
+      }
+      const v = { frame, url: u.href, title: title.slice(0, 120), summary };
+      await dcall({ op: 'map.put', key, value: { t: Date.now(), v } });
+      return json(v);
+    }
+
     // Speech to text for the microphone button (Workers AI Whisper).
     if (body.mode === 'transcribe') {
       const audio = typeof body.audio === 'string' ? body.audio : '';
@@ -476,7 +516,12 @@ async function weatherNow(input) {
     if (!loc) return 'Could not find that place.';
     const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + loc.latitude + '&longitude=' + loc.longitude + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=3';
     const w = await (await fetch(u)).json();
-    return JSON.stringify({ place: loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : ''), current: w.current, daily: w.daily, units: 'F, mph, inches; weather_code is WMO (0 clear, 1-3 partly cloudy, 45 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorms)' });
+    let alerts = [];
+    try {
+      const a = await (await fetch('https://api.weather.gov/alerts/active?point=' + loc.latitude.toFixed(4) + ',' + loc.longitude.toFixed(4), { headers: { 'User-Agent': 'BibliCall (biblicall.com)', Accept: 'application/geo+json' } })).json();
+      alerts = ((a && a.features) || []).slice(0, 4).map((f) => ({ event: f.properties.event, headline: f.properties.headline, ends: f.properties.ends || f.properties.expires, instruction: String(f.properties.instruction || '').slice(0, 300) }));
+    } catch (e) {}
+    return JSON.stringify({ alerts_from_national_weather_service: alerts, place: loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : ''), current: w.current, daily: w.daily, units: 'F, mph, inches; weather_code is WMO (0 clear, 1-3 partly cloudy, 45 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorms)' });
   } catch (e) { return 'Weather is unavailable right now.'; }
 }
 
@@ -505,6 +550,17 @@ const TOWNS = {
       s_swim: { name: 'Hinsdale Swim Club', urls: ['https://www.hinsdaleswimming.org/page/home'] },
       s_hockey: { name: 'Hinsdale Central Hockey Club', urls: ['https://www.hinsdalecentralhockey.net/'] },
       s_lacrosse: { name: 'Hinsdale Herd Lacrosse (youth)', urls: ['https://www.eastavelacrosse.com/hinsdaleherd', 'https://www.villageofhinsdale.org/departments/parks_and_recreation/adult_activities_and_leagues/hinsdale_herd_lacrosse.php'] },
+      s_hs_athletics: { name: 'Hinsdale South Hornets athletics (D86)', urls: ['https://south.hinsdale86.org/athletics'] },
+      // Public services everyone may need.
+      p_hospital: { name: 'UChicago Medicine AdventHealth Hinsdale (hospital)', urls: ['https://www.uchicagomedicineadventhealth.org/uchicago-medicine-adventhealth-hinsdale'] },
+      p_health: { name: 'DuPage County Health Department', urls: ['https://www.dupagehealth.org/'] },
+      p_hcs: { name: 'HCS Family Services (food pantry and family support)', urls: ['https://www.hcsfamilyservices.org/'] },
+      p_dgtownship: { name: 'Downers Grove Township (seniors, food pantry, assistance; covers the DuPage side of Hinsdale)', urls: ['https://dgtownship.com/'] },
+      p_lyonstownship: { name: 'Lyons Township (seniors, food pantry, assistance; covers the Cook County side of Hinsdale)', urls: ['https://lyonstownshipil.gov/'] },
+      p_metra: { name: 'Metra BNSF line (Hinsdale, West Hinsdale and Highlands stations)', urls: ['https://www.metrarail.com/maps-schedules/train-lines/BNSF'] },
+      p_forest: { name: 'Forest Preserve District of DuPage County (Fullersburg Woods and trails)', urls: ['https://www.dupageforest.org/events'] },
+      p_grauemill: { name: 'Graue Mill and Museum', urls: ['https://www.grauemill.org/'] },
+      p_elections: { name: 'DuPage County elections (registration, polling places, sample ballots)', urls: ['https://www.dupageco.org/VoterLookup'] },
       // Faith communities: every congregation in the Village of Hinsdale's directory plus nearby synagogues, mosques and temple, treated alike.
       f_chabad: { name: 'Chabad Jewish Center of Hinsdale (synagogue)', urls: ['https://www.jewishhinsdale.com/'] },
       f_avenue: { name: 'Avenue Christian Church (formerly Christian Church of Clarendon Hills)', urls: ['https://www.avenuechristian.com/'] },
@@ -527,12 +583,12 @@ const TOWNS = {
     faithNoSite: 'Also in the Village directory (no website listed): First Church of Christ, Scientist (First and Oak Streets, 630-323-4740); Oak Community Church (620 N. Oak St., 630-323-0087); Sts. Cyril & Methodius Macedonian Orthodox Church (10 S 330 Route 83, 630-654-0016); Hinsdale Seventh-day Adventist Church (201 N. Oak, 630-323-0182); Burr Ridge United Church of Christ (15 W 100 Plainfield Rd, 630-654-4544); The Mecca Center (mosque), Willowbrook.'
   }
 };
-const TOPIC_GROUPS = { sports: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('s_') === 0), faith: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('f_') === 0), schools: ['d86', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
+const TOPIC_GROUPS = { services: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('p_') === 0), sports: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('s_') === 0), faith: Object.keys(TOWNS.hinsdale.sources).filter((k) => k.indexOf('f_') === 0), schools: ['d86', 'd181'], events: ['village', 'chamber', 'community_house', 'library', 'history', 'humane_society'], news: ['village', 'd86', 'd181', 'hinsdale_magazine', 'chamber'], nonprofits: ['community_house', 'wellness_house', 'humane_society', 'history', 'library'], government: ['village'] };
 const LOCAL_GUIDE_TOOL = {
   name: 'local_guide',
-  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus sports and recreation open to the public (topic "sports": Hinsdale Parks & Recreation, Gateway Special Recreation for people with disabilities, Hinsdale Central athletics, Hinsdale Little League, Hinsdale Falcon Football, AYSO soccer, Hinsdale Swim Club, Hinsdale Central Hockey Club and Hinsdale Herd Lacrosse; for scores and schedules of Chicago pro teams such as the Bears, Cubs, White Sox, Bulls, Blackhawks, Fire, Sky and Stars use live_scores and latest_news instead), plus the area's faith communities (topic "faith": every church in the Village directory and nearby synagogues, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this (topic "sports") for youth sports, leagues, sign-ups, tryouts, park programs or high school games around Hinsdale, ALWAYS use this (topic "faith") when someone asks about churches, synagogues, mosques, temples or worship near Hinsdale, and ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
+  description: 'Live information straight from Hinsdale, Illinois community sources: the Village of Hinsdale (government, board meetings, parks & recreation, police/fire news), District 86 and District 181 schools, the Hinsdale Chamber of Commerce, The Community House, Wellness House, Hinsdale Public Library, Hinsdale Historical Society, Hinsdale Humane Society and Hinsdale Magazine, plus sports and recreation open to the public (topic "sports": Hinsdale Parks & Recreation, Gateway Special Recreation for people with disabilities, Hinsdale Central athletics, Hinsdale Little League, Hinsdale Falcon Football, AYSO soccer, Hinsdale Swim Club, Hinsdale Central Hockey Club, Hinsdale Herd Lacrosse and Hinsdale South athletics; for scores and schedules of Chicago pro teams such as the Bears, Cubs, White Sox, Bulls, Blackhawks, Fire, Sky and Stars use live_scores and latest_news instead), plus public services (topic "services": the hospital, DuPage County Health Department, HCS Family Services, Downers Grove and Lyons townships for seniors, food pantries and assistance, Metra BNSF trains, the Forest Preserves and Fullersburg Woods, Graue Mill, and DuPage County elections and polling places; police, fire and road news come from the Village), plus the area's faith communities (topic "faith": every church in the Village directory and nearby synagogues, mosques and Hindu temple, treated equally and listed alphabetically; never rank or recommend one over another). Anyone can ask about Hinsdale, wherever they live. ALWAYS use this (topic "sports") for youth sports, leagues, sign-ups, tryouts, park programs or high school games around Hinsdale, ALWAYS use this (topic "services") for help, seniors, food pantries, health, trains, nature, voting or elections around Hinsdale, ALWAYS use this (topic "faith") when someone asks about churches, synagogues, mosques, temples or worship near Hinsdale, and ALWAYS use this for questions about Hinsdale events, schools, village business, local organizations, or "what is happening around here". Use web search and latest_news for anything else local (other nonprofits, restaurants, businesses).',
   input_schema: { type: 'object', properties: {
-    topic: { type: 'string', enum: ['events', 'news', 'schools', 'government', 'nonprofits', 'sports', 'faith', 's_parks', 's_gateway', 's_hc_athletics', 's_littleleague', 's_falcons', 's_ayso', 's_swim', 's_hockey', 's_lacrosse', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
+    topic: { type: 'string', enum: ['events', 'news', 'schools', 'government', 'nonprofits', 'sports', 'services', 'faith', 's_hs_athletics', 'p_hospital', 'p_health', 'p_hcs', 'p_dgtownship', 'p_lyonstownship', 'p_metra', 'p_forest', 'p_grauemill', 'p_elections', 's_parks', 's_gateway', 's_hc_athletics', 's_littleleague', 's_falcons', 's_ayso', 's_swim', 's_hockey', 's_lacrosse', 'village', 'd86', 'd181', 'chamber', 'community_house', 'wellness_house', 'library', 'history', 'humane_society', 'hinsdale_magazine'], description: 'Which source or group to read' },
     query: { type: 'string', description: 'Optional words to look for, e.g. "board meeting", "homecoming", "Santa"' } }, required: ['topic'] }
 };
 function htmlToText(h) {
@@ -588,7 +644,7 @@ async function recordCost(env, who, parts) {
     const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('cost:' + who));
     const h = [...new Uint8Array(dig)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
     const inc = (key, n) => D.fetch('https://do/', { method: 'POST', body: JSON.stringify({ op: 'inc', key, n }) });
-    const money = (parts.ask || 0) + (parts.ns || 0) + (parts.voice || 0) + (parts.stt || 0) + (parts.song || 0);
+    const money = (parts.ask || 0) + (parts.ns || 0) + (parts.voice || 0) + (parts.stt || 0) + (parts.song || 0) + (parts.page || 0);
     const jobs = Object.entries(parts).filter(([, n]) => n > 0).map(([k, n]) => inc('cost:' + day + ':' + k, n));
     if (money > 0) jobs.push(inc('cu:' + day + ':' + h, money));
     await Promise.all(jobs);

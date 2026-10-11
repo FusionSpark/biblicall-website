@@ -119,7 +119,7 @@ export async function runDaily(env, force) {
   return out;
 }
 
-const LABELS = [['level_1', 'Faith level: Everyday Wisdom (people-days)'], ['level_2', 'Faith level: Gentle Guidance (people-days)'], ['level_3', 'Faith level: Faith Forward (people-days)'], ['faith_invite', 'Invited to include more Scripture'], ['ns_more', 'Tapped More on a North Star'], ['offer_open', 'Tapped the launch offer'], ['offer_reserve', 'Reserved the launch offer'], ['talk', 'Started a spoken Talk'], ['pickup_show', 'Shown "picking up from last time"'], ['pickup_yes', 'Picked up from last time'], ['pickup_no', 'Said not now to picking up'], ['tabs_all', 'Opened all menu tools'], ['faith_up', 'Accepted the invitation'], ['visit', 'Visits (devices per day)'], ['visit_new', 'New visitors'], ['question', 'Questions asked'], ['northstar', 'North Stars shown'],
+const LABELS = [['web_open', 'Web pages opened inside BibliCall'], ['level_1', 'Faith level: Everyday Wisdom (people-days)'], ['level_2', 'Faith level: Gentle Guidance (people-days)'], ['level_3', 'Faith level: Faith Forward (people-days)'], ['faith_invite', 'Invited to include more Scripture'], ['ns_more', 'Tapped More on a North Star'], ['offer_open', 'Tapped the launch offer'], ['offer_reserve', 'Reserved the launch offer'], ['talk', 'Started a spoken Talk'], ['pickup_show', 'Shown "picking up from last time"'], ['pickup_yes', 'Picked up from last time'], ['pickup_no', 'Said not now to picking up'], ['tabs_all', 'Opened all menu tools'], ['faith_up', 'Accepted the invitation'], ['visit', 'Visits (devices per day)'], ['visit_new', 'New visitors'], ['question', 'Questions asked'], ['northstar', 'North Stars shown'],
   ['listen', 'Listen (voice) taps'], ['music', 'Music turned on'], ['share', 'Verses shared'], ['shared_open', 'Shared verses opened by friends'], ['shared_ask', 'Friends who then asked a question'], ['fb_up', '👍 Helpful'], ['fb_down', '👎 Not helpful'],
   ['waitlist', 'Waitlist signups'], ['daily_sub', 'Daily North Star signups'], ['account', 'Accounts created'], ['call', 'Invite window opened'], ['invite_offer', 'Invite suggested in a chat'], ['invite_yes', 'Invite suggestion accepted'], ['read_chapter', 'Chapters opened from a verse'], ['pray', 'Pray with me taps'], ['push_on', 'Phones that turned on reminders'], ['reminder', 'Reminders set'], ['goal', 'Weekly goals added'], ['goal_done', 'Weekly goals completed'], ['share_week', 'Weeks shared'], ['week_open', 'Shared weeks opened'], ['cheer', 'Encouragements sent'], ['save_pdf', 'Saved as PDF'], ['save_docx', 'Saved as Word'], ['prayer_add', 'Prayers added to journals'], ['prayer_answered', 'Prayers marked answered'], ['read_plan', 'Reading-plan chapters read'], ['group_create', 'Family / group weeks started'], ['group_join', 'People who joined a group week'], ['daily_sent', 'Daily emails sent']];
 
@@ -130,7 +130,7 @@ async function costSection(D, days, big) {
     (await call(D, { op: 'list', prefix: 'cost:', start: 'cost:' + days[0], limit: 2000 })).forEach(([k, v]) => { const [, d, kind] = k.split(':'); if (days.includes(d)) tot[kind] = (tot[kind] || 0) + v; });
     const per = {};
     for (const d of days) (await call(D, { op: 'list', prefix: 'cu:' + d + ':', limit: 5000 })).forEach(([k, v]) => { const h = k.split(':')[2]; per[h] = (per[h] || 0) + v; });
-    const all = (tot.ask || 0) + (tot.ns || 0) + (tot.voice || 0) + (tot.stt || 0) + (tot.song || 0);
+    const all = (tot.ask || 0) + (tot.ns || 0) + (tot.voice || 0) + (tot.stt || 0) + (tot.song || 0) + (tot.page || 0);
     if (!all) return '<h3 style="color:#4a2f26;margin:18px 0 6px">Costs</h3><p style="color:#6b5948;font-size:14px">Cost tracking started; numbers appear once people use BibliCall this week.</p>';
     const $ = (micro) => '$' + (micro / 1e6).toFixed(micro < 1e5 ? 3 : 2);
     const vals = Object.values(per).sort((a, b) => b - a), n = vals.length;
@@ -139,7 +139,7 @@ async function costSection(D, days, big) {
     const month = (x) => x * 30 / 7;
     const cacheShare = tot.tokens_in ? Math.round(100 * (tot.cache_read || 0) / tot.tokens_in) : 0;
     return '<h3 style="color:#4a2f26;margin:18px 0 6px">Costs</h3><table cellpadding="0" cellspacing="0" style="width:100%;max-width:520px;border-collapse:collapse">' +
-      big('Total cost this week', $(all), 'Answers ' + $(tot.ask || 0) + ' \u00b7 North Star ' + $(tot.ns || 0) + ' \u00b7 Voice ' + $(tot.voice || 0) + ' \u00b7 Speaking ' + $(tot.stt || 0) + (tot.song ? ' \u00b7 Finding songs ' + $(tot.song) : '')) +
+      big('Total cost this week', $(all), 'Answers ' + $(tot.ask || 0) + ' \u00b7 North Star ' + $(tot.ns || 0) + ' \u00b7 Voice ' + $(tot.voice || 0) + ' \u00b7 Speaking ' + $(tot.stt || 0) + (tot.song ? ' \u00b7 Finding songs ' + $(tot.song) : '') + (tot.page ? ' \u00b7 Page summaries ' + $(tot.page) : '')) +
       big('Cost per question', tot.n_ask ? $((tot.ask || 0) / tot.n_ask) : '\u2014', (tot.n_ask || 0) + ' questions answered' + (tot.n_voice ? ' \u00b7 voice: ' + Math.round(tot.n_voice / 1000) + 'k characters read aloud' : '')) +
       big('Average person, per month', $(month(avg)), n + ' people this week \u00b7 compare with the $20 plan') +
       big('Busiest 10% of people, per month', $(month(topAvg)), 'Busiest single person: ' + $(month(vals[0] || 0)) + ' a month') +

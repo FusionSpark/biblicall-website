@@ -669,6 +669,20 @@
   html[data-sky="night"] .song-btn,html.photo .song-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
   .ytwin{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,10,24,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
   .ytwin[hidden]{display:none}
+  .webwin{position:fixed;inset:0;z-index:62;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(6,10,24,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .webwin[hidden]{display:none}
+  .web-box{width:100%;max-width:900px;height:min(88vh,1000px);height:min(88dvh,1000px);display:flex;flex-direction:column;background:var(--bg);border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+  .web-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 18px;border-bottom:1px solid var(--line)}
+  .web-title{flex:1;min-width:0;font-weight:600;color:var(--earth-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
+  .web-out{font-size:14px;color:var(--muted);text-decoration:none;white-space:nowrap}
+  .web-x{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--earth-deep);font-size:22px;line-height:1;cursor:pointer;flex:none}
+  .web-body{flex:1;position:relative;overflow:auto;-webkit-overflow-scrolling:touch}
+  .web-body iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+  .web-read{max-width:62ch;margin:0 auto;padding:22px 22px 30px;font-size:18px;line-height:1.6;color:var(--ink);white-space:pre-line}
+  .web-read .web-note{display:block;margin-top:18px;font-size:15px;color:var(--muted)}
+  .web-read .web-note a{color:var(--earth)}
+  .web-wait{padding:40px 22px;text-align:center;color:var(--muted);font-size:16px}
+  .bubble a.weblink{color:var(--earth);text-decoration:underline;text-underline-offset:2px}
   .yt-box{position:relative;width:100%;max-width:760px}
   .yt-x{position:absolute;top:-46px;right:0;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);background:rgba(255,255,255,.14);color:#fff;font-size:24px;line-height:1;cursor:pointer}
   .yt-frame{position:relative;width:100%;aspect-ratio:16/9;min-height:200px;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 18px 50px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
@@ -1046,6 +1060,7 @@
   <p class="dr-fine" id="drFine">Saved only on this device. Nothing here is sent to anyone unless you ask BibliCall a question.</p>
 </aside>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="webwin" id="webWin" hidden role="dialog" aria-label="Web page"><div class="web-box"><div class="web-bar"><span class="web-title"></span><a class="web-out" target="_blank" rel="noopener">Open their site ↗</a><button type="button" class="web-x" aria-label="Close">&times;</button></div><div class="web-body"></div></div></div>
 <div class="ytwin" id="ytWin" hidden role="dialog" aria-label="Music from YouTube"><div class="yt-box"><button type="button" class="yt-x" aria-label="Close">&times;</button><div class="yt-frame"></div><div class="yt-cap"></div></div></div>
 <div class="installtip" id="installTip" hidden><img src="apple-touch-icon.png" alt=""><span id="installText"></span><button type="button" class="go" id="installGo" hidden>Install</button><button type="button" class="x" id="installX" aria-label="Dismiss">&times;</button></div>
 
@@ -1485,12 +1500,22 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // Links in answers open in BibliCall's own window (see openWeb), never a new tab.
+  function linkify(s) {
+    return s.replace(/\[([^\]\n]{1,120})\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<]+|(?<![@\w.\/])(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|org|net|gov|edu|church|info|us)(?:\/[^\s<]*)?)/gi, (m, txt, href, bare) => {
+      if (href) return '<a class="weblink" href="' + href + '">' + txt + '</a>';
+      let tail = ''; const t = bare.match(/[.,;:!?)\]]+$/); if (t) { tail = t[0]; bare = bare.slice(0, -tail.length); }
+      const url = /^https?:/i.test(bare) ? bare : 'https://' + bare;
+      return '<a class="weblink" href="' + url + '">' + bare.replace(/^https?:\/\//i, '') + '</a>' + tail;
+    });
+  }
   function formatAnswer(str) {
     let s = escapeHtml(str);
     s = s.replace(/\n{2,}/g, '\n');
     s = s.replace(/(^|\n)#{1,6}\s+([^\n]+)/g, '$1<strong>$2</strong>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|\n)[-*]\s+/g, '$1• ');
+    s = linkify(s);
     return s;
   }
 
@@ -3081,9 +3106,20 @@
     ['AYSO Region 210 (youth soccer)', 'http://www.aysohinsdale.org/'], ['Gateway Special Recreation (adaptive sports)', 'https://www.villageofhinsdale.org/departments/parks_and_recreation/gateway_special_recreation_association.php'],
     ['Hinsdale Central athletics', 'https://central.hinsdale86.org/athletics'], ['Hinsdale Central Hockey Club', 'https://www.hinsdalecentralhockey.net/'], ['Hinsdale Falcon Football', 'https://www.hinsdalefalcons.com/'],
     ['Hinsdale Herd Lacrosse', 'https://www.eastavelacrosse.com/hinsdaleherd'], ['Hinsdale Little League', 'https://www.hinsdalell.org/'], ['Hinsdale Parks & Recreation', 'https://www.villageofhinsdale.org/departments/parks_and_recreation/index.php'],
-    ['Hinsdale Swim Club', 'https://www.hinsdaleswimming.org/page/home']
+    ['Hinsdale South athletics', 'https://south.hinsdale86.org/athletics'], ['Hinsdale Swim Club', 'https://www.hinsdaleswimming.org/page/home']
   ];
-  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Faith community events this week'];
+  const PUBLIC_SERVICES = [
+    ['UChicago Medicine AdventHealth Hinsdale', 'https://www.uchicagomedicineadventhealth.org/uchicago-medicine-adventhealth-hinsdale', 'Hospital'],
+    ['DuPage County Health Department', 'https://www.dupagehealth.org/', 'Clinics, vaccines and health alerts'],
+    ['HCS Family Services', 'https://www.hcsfamilyservices.org/', 'Food pantry and family support'],
+    ['Downers Grove Township', 'https://dgtownship.com/', 'Seniors, food pantry and help (DuPage side)'],
+    ['Lyons Township', 'https://lyonstownshipil.gov/', 'Seniors, food pantry and help (Cook side)'],
+    ['Metra BNSF', 'https://www.metrarail.com/maps-schedules/train-lines/BNSF', 'Train times'],
+    ['Forest Preserves of DuPage', 'https://www.dupageforest.org/events', 'Fullersburg Woods, trails and nature programs'],
+    ['Graue Mill and Museum', 'https://www.grauemill.org/', 'History and events'],
+    ['DuPage County elections', 'https://www.dupageco.org/VoterLookup', 'Registration and polling places']
+  ];
+  const TOWN_ASKS = ['What\u2019s happening in Hinsdale this weekend?', 'When is the next Village Board meeting?', 'What\u2019s coming up at District 86?', 'Any District 181 news this week?', 'What\u2019s on at The Community House?', 'Chamber of Commerce events coming up', 'Wellness House programs this month', 'Library events this week', 'Youth sports sign-ups and games', 'Senior and family help nearby', 'Faith community events this week'];
   function drawTown() {
     const box = el('div', 'plan town');
     const on = lsGet('bc_town', '') === 'hinsdale';
@@ -3100,17 +3136,22 @@
     }
     box.appendChild(el('p', 'wk-sub', 'Where Bibli looks'));
     const ul = el('ul', 'town-src');
-    TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
+    TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
     box.appendChild(ul);
     box.appendChild(el('p', 'wk-sub', 'Sports & recreation'));
     box.appendChild(el('p', 'acct-fine', 'Park programs, youth leagues and high school athletics open to everyone, plus live scores for every Chicago pro team.'));
     const sl = el('ul', 'town-src');
-    SPORTS_GROUPS.forEach(([n, u]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); sl.appendChild(li); });
+    SPORTS_GROUPS.forEach(([n, u]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); sl.appendChild(li); });
     box.appendChild(sl);
+    box.appendChild(el('p', 'wk-sub', 'Help & public services'));
+    box.appendChild(el('p', 'acct-fine', 'Severe weather alerts come straight from the National Weather Service; police, fire and road news from the Village.'));
+    const pl = el('ul', 'town-src');
+    PUBLIC_SERVICES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); pl.appendChild(li); });
+    box.appendChild(pl);
     box.appendChild(el('p', 'wk-sub', 'Faith communities'));
     box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogues, mosques and temple, listed alphabetically and treated alike.'));
     const fl = el('ul', 'town-src');
-    FAITH_COMMUNITIES.forEach(([n, u]) => { const li = el('li'); if (u) { const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); } else li.appendChild(el('b', null, n)); fl.appendChild(li); });
+    FAITH_COMMUNITIES.forEach(([n, u]) => { const li = el('li'); if (u) { const a = el('a', 'weblink', n); a.href = u; li.appendChild(a); } else li.appendChild(el('b', null, n)); fl.appendChild(li); });
     box.appendChild(fl);
     box.appendChild(el('p', 'acct-fine', 'Plus every other Hinsdale nonprofit and public service through Bibli\u2019s live search. Anyone, anywhere can follow Hinsdale. More towns coming soon: Oak Brook, Elmhurst, Downers Grove.'));
     return box;
@@ -3381,7 +3422,7 @@
   // Keep everyone on the newest BibliCall: if a newer version is live, reload quietly at a calm moment and reopen the same conversation.
   (function stayFresh() {
     const loaded = new Date(document.lastModified).getTime();
-    const calm = () => !q.value.trim() && !room && !sendBtn.disabled && !conversation.some((m) => m.loading) && !(typeof nowSong !== 'undefined' && nowSong) && !(typeof talkMode !== 'undefined' && talkMode) && !speaking && document.getElementById('ytWin').hidden && !pendingFiles.length;
+    const calm = () => !q.value.trim() && !room && !sendBtn.disabled && !conversation.some((m) => m.loading) && !(typeof nowSong !== 'undefined' && nowSong) && !(typeof talkMode !== 'undefined' && talkMode) && !speaking && document.getElementById('ytWin').hidden && document.getElementById('webWin').hidden && !pendingFiles.length;
     async function check() {
       try {
         const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
@@ -3700,6 +3741,44 @@
   }
   function openDrawer(tab) { if (tab) { drTab = tab; unlockTab(tab); } drawer.hidden = false; drawerBack.hidden = false; drawDailyMenu(); drawDrawer(); }
   function closeDrawer() { drawer.hidden = true; drawerBack.hidden = true; }
+  // BibliCall's own window for outside web pages: the page itself when the site allows it, otherwise Bibli's short summary of it.
+  const webWin = document.getElementById('webWin');
+  let webSeq = 0;
+  function closeWeb() { webSeq++; webWin.hidden = true; webWin.querySelector('.web-body').innerHTML = ''; }
+  async function openWeb(url, name) {
+    const my = ++webSeq, body = webWin.querySelector('.web-body');
+    let host = url; try { host = new URL(url).hostname.replace(/^www\./, ''); } catch (e) {}
+    webWin.querySelector('.web-title').textContent = name || host;
+    const out = webWin.querySelector('.web-out'); out.href = url;
+    body.innerHTML = ''; body.appendChild(el('div', 'web-wait', 'Opening ' + host + '\u2026'));
+    webWin.hidden = false; stat('web_open');
+    let info = null;
+    try { const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'page', url }) }); info = await r.json(); } catch (e) {}
+    if (my !== webSeq) return;
+    body.innerHTML = '';
+    if (!info || info.error || info.frame) {
+      const f = document.createElement('iframe'); f.src = url; f.title = name || host; f.referrerPolicy = 'strict-origin-when-cross-origin';
+      f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+      body.appendChild(f);
+      if (info && info.title && !name) webWin.querySelector('.web-title').textContent = info.title;
+      return;
+    }
+    const read = el('div', 'web-read');
+    read.textContent = info.summary || (host + ' doesn\u2019t let other apps show its pages, and Bibli couldn\u2019t read it just now.');
+    const note = el('span', 'web-note');
+    note.appendChild(document.createTextNode(info.summary ? 'Bibli\u2019s summary of ' + host + ', which doesn\u2019t allow its pages to show inside other apps. ' : ''));
+    const a = el('a', null, 'Open their site \u2197'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; note.appendChild(a);
+    read.appendChild(note); body.appendChild(read);
+  }
+  webWin.querySelector('.web-x').addEventListener('click', closeWeb);
+  webWin.addEventListener('click', (e) => { if (e.target === webWin) closeWeb(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !webWin.hidden) closeWeb(); });
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a.weblink');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    openWeb(a.href, a.closest('.bubble') ? '' : a.textContent);
+  }, true);
   document.getElementById('menuBtn').addEventListener('click', () => openDrawer());
   // Opened from a reminder notification: go to that conversation, or to My week.
   (function fromNotification() {
