@@ -373,6 +373,21 @@ export default {
         if (data.stop_reason === 'pause_turn') d2.content = [...(data.content || []), ...(d2.content || [])];
         data = d2;
       }
+      // Still mid-research after all rounds (a many-part question)? Hand over what was found and ask for the answer now, with no more tools.
+      if (data.stop_reason === 'pause_turn' || data.stop_reason === 'tool_use') {
+        try {
+          extraCost += usageCost(data);
+          convo = [...convo, { role: 'assistant', content: data.content }];
+          if (data.stop_reason === 'tool_use') {
+            const results = [];
+            for (const b of data.content || []) if (b.type === 'tool_use') results.push({ type: 'tool_result', tool_use_id: b.id, content: await runTool(b.name, b.input || {}) });
+            convo.push({ role: 'user', content: results });
+          }
+          const fin = await call({ ...payload, messages: convo, tool_choice: { type: 'none' } });
+          const d3 = await fin.json();
+          if (fin.ok) data = d3;
+        } catch (e) { console.error('final answer', e && e.message); }
+      }
       // What this answer cost BibliCall, in millionths of a dollar (no content is recorded).
       ctx && ctx.waitUntil(recordCost(env, visitor, northStar ? { ns: usageCost(data), n_ns: 1 } : { ask: usageCost(data) + extraCost, n_ask: 1, cache_read: (data.usage && data.usage.cache_read_input_tokens) || 0, tokens_in: ((data.usage && data.usage.input_tokens) || 0) + ((data.usage && data.usage.cache_read_input_tokens) || 0) + ((data.usage && data.usage.cache_creation_input_tokens) || 0) }));
       // With web search the answer arrives in pieces split around citations; join them back into one text.
