@@ -3069,7 +3069,7 @@
     ['Hinsdale Magazine', 'https://hinsdalemag.com/', 'Local stories and people']
   ];
   const FAITH_COMMUNITIES = [
-    ['Avenue Christian Church (Clarendon Hills)', 'https://www.avenuechristian.com/'], ['Burr Ridge United Church of Christ', ''], ['Christ Church of Oak Brook', 'https://christchurch.us/oakbrook'],
+    ['Avenue Christian Church (Clarendon Hills)', 'https://www.avenuechristian.com/'], ['Burr Ridge United Church of Christ', ''], ['Chabad Jewish Center of Hinsdale', 'https://www.jewishhinsdale.com/'], ['Christ Church of Oak Brook', 'https://christchurch.us/oakbrook'],
     ['Community Presbyterian Church (Clarendon Hills)', 'https://www.chcpc.org/'], ['Congregation Etz Chaim (Lombard)', 'https://www.mycec.org/'], ['Evangelical Covenant Church', 'https://www.hinsdalecovenant.com/'],
     ['Faith Fellowship Church (Oak Brook)', 'https://www.churchfaithfellowship.org/'], ['First Church of Christ, Scientist', ''], ['Grace Episcopal Church', 'https://www.gracehinsdale.org/'],
     ['Hindu Temple of Greater Chicago (Lemont)', 'https://www.htgc.org/'], ['Hinsdale Seventh-day Adventist Church', ''], ['Hinsdale United Methodist Church', 'https://www.hinsdaleumc.com/'],
@@ -3097,7 +3097,7 @@
     TOWN_SOURCES.forEach(([n, u, d]) => { const li = el('li'); const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); li.appendChild(el('span', null, ' \u2014 ' + d)); ul.appendChild(li); });
     box.appendChild(ul);
     box.appendChild(el('p', 'wk-sub', 'Faith communities'));
-    box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogue, mosques and temple, listed alphabetically and treated alike.'));
+    box.appendChild(el('p', 'acct-fine', 'Every congregation in the Village of Hinsdale\u2019s directory, plus nearby synagogues, mosques and temple, listed alphabetically and treated alike.'));
     const fl = el('ul', 'town-src');
     FAITH_COMMUNITIES.forEach(([n, u]) => { const li = el('li'); if (u) { const a = el('a', null, n); a.href = u; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); } else li.appendChild(el('b', null, n)); fl.appendChild(li); });
     box.appendChild(fl);
